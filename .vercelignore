@@ -1,0 +1,9 @@
+.env
+.env.local
+node_modules
+.next
+.git
+test_result.md
+tests/
+*.log
+.DS_Store
