@@ -24,20 +24,38 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { PLAN_CREDITS, FEATURE_COSTS, FEATURE_TIERS, getLevel } from '@/lib/plans';
+import { supabaseBrowser } from '@/lib/supabase/browser';
 
 function App() {
   const router = useRouter();
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(null); // Supabase access_token
   const [user, setUser] = useState(null);
   const [view, setView] = useState('chat');
   const [loading, setLoading] = useState(true);
   const [showPlans, setShowPlans] = useState(false);
 
   useEffect(() => {
-    const t = localStorage.getItem('nv_token');
-    if (!t) { router.replace('/'); return; }
-    setToken(t);
-    refreshUser(t).then((u) => { if (u) { setUser(u); setLoading(false); } else { localStorage.removeItem('nv_token'); router.replace('/'); } });
+    const sb = supabaseBrowser();
+    let unsub = null;
+    sb.auth.getSession()
+      .then(({ data }) => {
+        const t = data?.session?.access_token || null;
+        if (!t) { router.replace('/'); return; }
+        setToken(t);
+        refreshUser(t).then((u) => {
+          if (u) { setUser(u); setLoading(false); }
+          else { router.replace('/'); }
+        });
+      })
+      .catch(() => router.replace('/'));
+
+    unsub = sb.auth.onAuthStateChange((_event, session) => {
+      const t = session?.access_token || null;
+      if (!t) { setToken(null); setUser(null); router.replace('/'); return; }
+      setToken(t);
+    }).data?.subscription;
+
+    return () => unsub?.unsubscribe?.();
   }, [router]);
 
   async function refreshUser(t = token) {
@@ -50,8 +68,9 @@ function App() {
     } catch { return null; }
   }
 
-  function logout() {
-    localStorage.removeItem('nv_token'); localStorage.removeItem('nv_user');
+  async function logout() {
+    try { await supabaseBrowser().auth.signOut(); } catch {}
+    setToken(null); setUser(null);
     router.replace('/');
   }
 
@@ -73,7 +92,7 @@ function App() {
             <Brain className="h-5 w-5 text-white" />
           </div>
           <RailBtn active={view==='chat'} onClick={()=>setView('chat')} icon={MessageSquare} label="Chat" />
-          <RailBtn active={view==='quiz'} onClick={()=>setView('quiz')} icon={Zap} label="Quiz" locked={!isPro} />
+          <RailBtn active={view==='quiz'} onClick={()=>setView('quiz')} icon={Zap} label="Quiz" locked={false} />
           <RailBtn active={view==='flashcards'} onClick={()=>setView('flashcards')} icon={BookOpen} label="Cards" locked={!isPro} />
           <RailBtn active={view==='notes'} onClick={()=>setView('notes')} icon={NotebookPen} label="Notes" locked={!isPro} />
           <RailBtn active={view==='plan'} onClick={()=>setView('plan')} icon={Calendar} label="Plan" locked={!isPro} />
@@ -90,7 +109,7 @@ function App() {
           <Topbar user={user} onUpgrade={()=>setShowPlans(true)} />
           <div className="flex-1 min-h-0 flex flex-col">
             {view === 'chat' && <ChatView token={token} user={user} refreshUser={refreshUser} setShowPlans={setShowPlans} setView={setView} />}
-            {view === 'quiz' && (isPro ? <QuizView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="Quizzes" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
+            {view === 'quiz' && <QuizView token={token} user={user} refreshUser={refreshUser} setShowPlans={setShowPlans} />}
             {view === 'flashcards' && (isPro ? <FlashcardsView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="Flashcards" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
             {view === 'notes' && (isPro ? <NotesView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="AI Notes" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
             {view === 'plan' && (isPro ? <StudyPlanView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} setView={setView} /> : <LockedView feature="Smart Study Plan" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
@@ -111,9 +130,15 @@ function Topbar({ user, onUpgrade }) {
   const lvl = user.level || getLevel(user.xp || 0);
   const credits = user.credits ?? PLAN_CREDITS[user.plan || 'free'];
   const max = user.credits_max ?? PLAN_CREDITS[user.plan || 'free'];
+  const sub = user.subscription_status || 'inactive';
   return (
     <div className="border-b border-white/5 px-4 md:px-6 h-14 flex items-center justify-between bg-[#0a0a0f]/80 backdrop-blur shrink-0">
       <div className="flex items-center gap-3">
+        {sub === 'past_due' && (
+          <button onClick={onUpgrade} className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 text-xs">
+            Payment failed · Update plan
+          </button>
+        )}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/10">
           <Trophy className={`h-4 w-4 ${lvl.color}`} />
           <span className="text-xs font-medium">{lvl.name}</span>
@@ -237,8 +262,6 @@ function ChatView({ token, user, refreshUser, setShowPlans, setView }) {
     await fetch(`/api/chats/${id}`, { method: 'PATCH', headers: { ...auth(), 'Content-Type':'application/json' }, body: JSON.stringify({ title: t }) });
     loadChats();
   }
-
-  function logout() { localStorage.removeItem('nv_token'); localStorage.removeItem('nv_user'); window.location.href = '/'; }
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -1138,20 +1161,21 @@ function QuickAction({ icon: Icon, label, onClick }) {
 function PlansModal({ open, onOpenChange, user, token, refreshUser }) {
   async function pay(plan) {
     try {
-      const r = await fetch('/api/create-order', { method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan }) });
+      const r = await fetch('/api/billing/create-subscription', { method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan }) });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Order failed');
+      if (!r.ok) throw new Error(d.error || 'Subscription failed');
       if (!window.Razorpay) throw new Error('Razorpay SDK still loading');
       if (!d.key_id) throw new Error('Razorpay not configured');
       const opts = {
-        key: d.key_id, amount: d.amount, currency: d.currency, order_id: d.order_id,
+        key: d.key_id, subscription_id: d.subscription_id,
         name: 'Notevoro AI', description: `${plan.toUpperCase()} plan`,
         theme: { color: '#a855f7' }, prefill: { name: user.name, email: user.email },
-        handler: async (resp) => {
-          const v = await fetch('/api/verify-payment', { method:'POST', headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify({ ...resp, plan }) });
-          const vd = await v.json();
-          if (!v.ok) return toast.error(vd.error || 'Verification failed');
-          toast.success(`Welcome to ${plan.toUpperCase()}!`); refreshUser(); onOpenChange(false);
+        handler: async () => {
+          toast.success('Payment initiated. Finalizing subscription…');
+          // Webhook will apply plan + credits; we just refresh UI.
+          setTimeout(() => { refreshUser(); }, 1500);
+          setTimeout(() => { refreshUser(); }, 4000);
+          onOpenChange(false);
         },
       };
       new window.Razorpay(opts).open();
@@ -1159,9 +1183,9 @@ function PlansModal({ open, onOpenChange, user, token, refreshUser }) {
   }
 
   const plans = [
-    { id:'free', name:'Free', price:'₹0', credits: PLAN_CREDITS.free, features: ['Basic AI chat (1 credit / msg)','Public notes view','Streak & XP'] },
-    { id:'pro', name:'Pro', price:'₹499', credits: PLAN_CREDITS.pro, highlighted: true, features: ['Everything in Free','AI Quizzes (5c)','Flashcards (4c)','AI Notes (3c)','Smart Study Plan','Contextual chat memory','Advanced analytics'] },
-    { id:'premium', name:'Premium', price:'₹999', credits: PLAN_CREDITS.premium, features: ['Everything in Pro','Mock Tests (10c)','PDF/Image analysis (8c)','Priority support','Highest credit limit'] },
+    { id:'free', name:'Free', price:'₹0', credits: PLAN_CREDITS.free, features: ['Chat (2 credits/msg)', 'Quizzes (free, 5/month limit)', 'Basic AI'] },
+    { id:'pro', name:'Pro', price:'₹499', credits: PLAN_CREDITS.pro, highlighted: true, features: ['Everything in Free', 'Quizzes (5 credits)', 'Flashcards (5 credits)', 'AI Notes (4 credits)', 'Study planner (3 credits)', 'Chat memory', 'Better AI'] },
+    { id:'premium', name:'Premium', price:'₹999', credits: PLAN_CREDITS.premium, features: ['Everything in Pro', 'Mock tests (15 credits)', 'File analysis (8 credits)', 'Advanced AI', 'Faster responses + priority processing'] },
   ];
 
   return (
@@ -1191,7 +1215,7 @@ function PlansModal({ open, onOpenChange, user, token, refreshUser }) {
             </div>
           ))}
         </div>
-        <div className="mt-3 text-[11px] text-zinc-500 text-center">Costs: chat 1c · quiz 5c · flashcards 4c · notes 3c · mock test 10c · file analysis 8c</div>
+        <div className="mt-3 text-[11px] text-zinc-500 text-center">Costs: chat 2c · quiz 5c · flashcards 5c · notes 4c · study plan 3c · mock test 15c · file analysis 8c</div>
       </DialogContent>
     </Dialog>
   );

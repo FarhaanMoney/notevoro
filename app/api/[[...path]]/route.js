@@ -3,14 +3,20 @@ import { v4 as uuidv4 } from 'uuid';
 import OpenAI from 'openai';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { OAuth2Client } from 'google-auth-library';
 import { getDb } from '@/lib/mongo';
-import { signToken, hashPassword, comparePassword, getUserFromRequest } from '@/lib/auth';
-import { PLAN_CREDITS, FEATURE_COSTS, FEATURE_TIERS, getLevel } from '@/lib/plans';
+import { getUserFromRequest } from '@/lib/auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { sendEmail, emailEnabled } from '@/lib/email';
+import { PLAN_CREDITS, FEATURE_COSTS, FEATURE_TIERS, FREE_QUIZ_MONTHLY_LIMIT, getLevel } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
-const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+function modelFor(user) {
+  const plan = user?.plan || 'free';
+  if (plan === 'premium') return process.env.OPENAI_MODEL_PREMIUM || process.env.OPENAI_MODEL_PRO || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  if (plan === 'pro') return process.env.OPENAI_MODEL_PRO || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  return process.env.OPENAI_MODEL_FREE || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+}
 
 function openai() {
   if (!process.env.OPENAI_API_KEY) {
@@ -29,28 +35,88 @@ function razorpayClient() {
   return new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
 }
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 function json(data, init = {}) { return NextResponse.json(data, init); }
 function err(message, status = 400, extra = {}) { return NextResponse.json({ error: message, ...extra }, { status }); }
 
+function idempotencyKey(req, fallback) {
+  return req.headers.get('x-idempotency-key') || req.headers.get('idempotency-key') || fallback;
+}
+
 async function requireUser(req) {
-  const u = getUserFromRequest(req);
+  const u = await getUserFromRequest(req);
   if (!u) return null;
   const db = await getDb();
-  const user = await db.collection('users').findOne({ id: u.id });
-  if (!user) return null;
+  let user = await db.collection('users').findOne({ id: u.id });
+  if (!user) {
+    // First-time login: create profile row. (Supabase Auth is source of truth for identity.)
+    user = {
+      id: u.id,
+      name: (u.user_metadata?.full_name || u.user_metadata?.name || u.email || '').split('@')[0] || 'User',
+      email: (u.email || '').toLowerCase(),
+      avatar: u.user_metadata?.avatar_url || u.user_metadata?.picture || null,
+      google_id: null,
+      xp: 0,
+      streak: 0,
+      plan: 'free',
+      credits: PLAN_CREDITS.free,
+      credits_reset_at: new Date().toISOString(),
+      quizzes_taken: 0,
+      correct_answers: 0,
+      total_questions: 0,
+      last_active: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      // New SaaS fields (safe even if unused yet)
+      subscription_status: 'inactive',
+      quiz_count_month: 0,
+      quiz_count_month_reset_at: new Date().toISOString(),
+      last_reset_date: new Date().toISOString(),
+      daily_reward_date: null,
+    };
+    await db.collection('users').insertOne(user);
+    // Welcome email (no-op unless RESEND_* configured)
+    if (emailEnabled() && user.email) {
+      sendEmail({
+        to: user.email,
+        subject: 'Welcome to Notevoro AI',
+        html: `<p>Hi ${user.name || 'there'},</p><p>Welcome to Notevoro AI. Your monthly credits are ready—let’s start studying.</p>`,
+      }).catch(() => {});
+    }
+  }
   // Auto-reset credits monthly
   const now = new Date();
   const reset = user.credits_reset_at ? new Date(user.credits_reset_at) : null;
   if (!reset || now - reset > 30 * 86400000) {
-    const max = PLAN_CREDITS[user.plan || 'free'] || 50;
+    const active = (user.subscription_status || 'inactive') === 'active';
+    const plan = active ? (user.plan || 'free') : 'free';
+    const max = PLAN_CREDITS[plan] || PLAN_CREDITS.free;
     await db.collection('users').updateOne(
       { id: user.id },
-      { $set: { credits: max, credits_reset_at: now.toISOString() } }
+      { $set: { credits: max, credits_reset_at: now.toISOString(), last_reset_date: now.toISOString() } }
     );
     user.credits = max;
     user.credits_reset_at = now.toISOString();
+    user.last_reset_date = now.toISOString();
+  }
+
+  // Daily login reward (+5 credits), capped to monthly plan max
+  const today = now.toISOString().slice(0, 10);
+  if ((user.daily_reward_date || '').slice(0, 10) !== today) {
+    const active = (user.subscription_status || 'inactive') === 'active';
+    const plan = active ? (user.plan || 'free') : 'free';
+    const max = PLAN_CREDITS[plan] || PLAN_CREDITS.free;
+    const cur = Number(user.credits ?? 0) || 0;
+    const next = Math.min(max, cur + 5);
+    if (next !== cur) {
+      await db.collection('users').updateOne(
+        { id: user.id },
+        { $set: { credits: next, daily_reward_date: today } }
+      );
+      user.credits = next;
+      user.daily_reward_date = today;
+    } else {
+      await db.collection('users').updateOne({ id: user.id }, { $set: { daily_reward_date: today } });
+      user.daily_reward_date = today;
+    }
   }
   return user;
 }
@@ -61,9 +127,13 @@ function publicUser(u) {
   return {
     id: u.id, name: u.name, email: u.email, avatar: u.avatar || null,
     xp: u.xp || 0, streak: u.streak || 0, plan: u.plan || 'free',
+    subscription_status: u.subscription_status || 'inactive',
     credits: u.credits ?? PLAN_CREDITS[u.plan || 'free'],
     credits_max: PLAN_CREDITS[u.plan || 'free'],
     credits_reset_at: u.credits_reset_at || null,
+    free_quiz_limit: FREE_QUIZ_MONTHLY_LIMIT,
+    free_quiz_used: u.quiz_count_month || 0,
+    free_quiz_remaining: Math.max(0, FREE_QUIZ_MONTHLY_LIMIT - (u.quiz_count_month || 0)),
     level: lvl,
     quizzes_taken: u.quizzes_taken || 0,
     correct_answers: u.correct_answers || 0,
@@ -91,6 +161,9 @@ function checkAccess(user, feature) {
   if (tiers && !tiers.includes(plan)) {
     return { ok: false, error: `${feature} is locked on the ${plan} plan. Upgrade to unlock.`, status: 403, upgrade: true };
   }
+  if (feature === 'quiz' && plan === 'free') {
+    return { ok: true, cost: 0, free_quiz: true };
+  }
   const cost = FEATURE_COSTS[feature] || 0;
   if ((user.credits ?? 0) < cost) {
     return { ok: false, error: `Out of credits. You need ${cost} but have ${user.credits ?? 0}.`, status: 402, upgrade: true, cost };
@@ -98,9 +171,18 @@ function checkAccess(user, feature) {
   return { ok: true, cost };
 }
 
-async function deductCredits(db, userId, cost) {
-  if (!cost) return;
-  await db.collection('users').updateOne({ id: userId }, { $inc: { credits: -cost } });
+async function deductCredits({ userId, cost, feature, reason, idem }) {
+  if (!cost) return null;
+  const sb = supabaseAdmin();
+  const { data, error } = await sb.rpc('deduct_credits', {
+    p_user: userId,
+    p_amount: cost,
+    p_feature: feature || null,
+    p_reason: reason || null,
+    p_idempotency: idem || null,
+  });
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 async function buildPersonalContext(db, user) {
@@ -119,60 +201,11 @@ async function handler(req, { params }) {
   const method = req.method;
 
   try {
-    if (path === '' || path === 'health') return json({ ok: true, service: 'Notevoro AI', model: MODEL });
+    if (path === '' || path === 'health') return json({ ok: true, service: 'Notevoro AI' });
 
     /* ============ AUTH ============ */
-    if (path === 'auth/signup' && method === 'POST') {
-      const { name, email, password } = await req.json();
-      if (!email || !password) return err('Email and password required');
-      const db = await getDb();
-      if (await db.collection('users').findOne({ email: email.toLowerCase() })) return err('User already exists', 409);
-      const id = uuidv4();
-      const user = {
-        id, name: name || email.split('@')[0], email: email.toLowerCase(),
-        password: await hashPassword(password),
-        xp: 0, streak: 0, plan: 'free',
-        credits: PLAN_CREDITS.free, credits_reset_at: new Date().toISOString(),
-        quizzes_taken: 0, correct_answers: 0, total_questions: 0,
-        last_active: new Date().toISOString(), created_at: new Date().toISOString(),
-      };
-      await db.collection('users').insertOne(user);
-      return json({ token: signToken({ id, email: user.email }), user: publicUser(user) });
-    }
-
-    if (path === 'auth/google' && method === 'POST') {
-      const { credential } = await req.json();
-      if (!credential) return err('credential required');
-      if (!process.env.GOOGLE_CLIENT_ID) return err('Google OAuth not configured. Add GOOGLE_CLIENT_ID to /app/.env', 500);
-      const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
-      const payload = ticket.getPayload();
-      if (!payload?.email) return err('Invalid Google token', 401);
-      const db = await getDb();
-      let user = await db.collection('users').findOne({ email: payload.email.toLowerCase() });
-      if (!user) {
-        const id = uuidv4();
-        user = {
-          id, name: payload.name || payload.email.split('@')[0], email: payload.email.toLowerCase(),
-          avatar: payload.picture || null, google_id: payload.sub,
-          xp: 0, streak: 0, plan: 'free',
-          credits: PLAN_CREDITS.free, credits_reset_at: new Date().toISOString(),
-          quizzes_taken: 0, correct_answers: 0, total_questions: 0,
-          last_active: new Date().toISOString(), created_at: new Date().toISOString(),
-        };
-        await db.collection('users').insertOne(user);
-      } else if (!user.google_id) {
-        await db.collection('users').updateOne({ id: user.id }, { $set: { google_id: payload.sub, avatar: payload.picture || user.avatar } });
-      }
-      return json({ token: signToken({ id: user.id, email: user.email }), user: publicUser(user) });
-    }
-
-    if (path === 'auth/login' && method === 'POST') {
-      const { email, password } = await req.json();
-      if (!email || !password) return err('Email and password required');
-      const db = await getDb();
-      const user = await db.collection('users').findOne({ email: email.toLowerCase() });
-      if (!user || !(await comparePassword(password, user.password || ''))) return err('Invalid credentials', 401);
-      return json({ token: signToken({ id: user.id, email: user.email }), user: publicUser(user) });
+    if ((path === 'auth/signup' || path === 'auth/login' || path === 'auth/google') && method === 'POST') {
+      return err('Auth moved to Supabase Auth. Use Supabase client signUp/signIn/signInWithOAuth and then call /api/auth/me with the access_token.', 410);
     }
 
     if (path === 'auth/me' && method === 'GET') {
@@ -255,7 +288,7 @@ async function handler(req, { params }) {
 
       const cli = openai();
       const stream = await cli.chat.completions.create({
-        model: MODEL, stream: true,
+        model: modelFor(user), stream: true,
         messages: [{ role: 'system', content: sys }, ...history.map((m) => ({ role: m.role, content: m.content }))],
       });
 
@@ -271,7 +304,7 @@ async function handler(req, { params }) {
             await db.collection('messages').insertOne({
               id: uuidv4(), chat_id, role: 'assistant', content: fullText, created_at: new Date().toISOString(),
             });
-            await deductCredits(db, user.id, access.cost);
+            await deductCredits({ userId: user.id, cost: access.cost, feature: 'chat', reason: 'chat message', idem: null });
             await db.collection('users').updateOne({ id: user.id }, { $inc: { xp: 5 }, $set: { last_active: new Date().toISOString() } });
             const u2 = await db.collection('users').findOne({ id: user.id });
             await updateStreak(db, u2);
@@ -292,9 +325,31 @@ async function handler(req, { params }) {
       if (!access.ok) return err(access.error, access.status, { upgrade: access.upgrade });
       const { topic, difficulty = 'medium', count = 5 } = await req.json();
       if (!topic) return err('topic required');
+
+      // Free plan special rule: only 5 quizzes/month, no credit usage
+      if (access.free_quiz) {
+        const sb = supabaseAdmin();
+        const idem = idempotencyKey(req, null);
+        const { error } = await sb.rpc('consume_free_quiz', {
+          p_user: user.id,
+          p_monthly_limit: FREE_QUIZ_MONTHLY_LIMIT,
+          p_idempotency: idem,
+        });
+        if (error) {
+          const msg = (error.message || '').toUpperCase();
+          if (msg.includes('QUIZ_LIMIT')) {
+            return err(`Free plan quiz limit reached (${FREE_QUIZ_MONTHLY_LIMIT}/month). Upgrade to continue.`, 403, { upgrade: true });
+          }
+          return err('Failed to consume free quiz quota: ' + error.message, 500);
+        }
+      }
+
+      // Pro/Premium: deduct credits before execution
+      await deductCredits({ userId: user.id, cost: access.cost, feature: 'quiz', reason: 'quiz generate', idem: idempotencyKey(req, null) });
+
       const cli = openai();
       const resp = await cli.chat.completions.create({
-        model: MODEL,
+        model: modelFor(user),
         messages: [
           { role: 'system', content: 'You generate concise, accurate educational MCQs and return only valid JSON.' },
           { role: 'user', content: `Create a multiple-choice quiz of exactly ${count} questions about "${topic}" at ${difficulty} difficulty. Return ONLY valid JSON: {"questions":[{"id":"q1","question":"...","options":["A","B","C","D"],"answer_index":0,"explanation":"..."}]}` },
@@ -305,7 +360,6 @@ async function handler(req, { params }) {
       const quizId = uuidv4();
       const db = await getDb();
       await db.collection('quizzes').insertOne({ id: quizId, user_id: user.id, topic, difficulty, questions: parsed.questions || [], created_at: new Date().toISOString() });
-      await deductCredits(db, user.id, access.cost);
       return json({ id: quizId, topic, difficulty, questions: parsed.questions || [] });
     }
 
@@ -343,9 +397,12 @@ async function handler(req, { params }) {
       if (!access.ok) return err(access.error, access.status, { upgrade: access.upgrade });
       const { topic, count = 8 } = await req.json();
       if (!topic) return err('topic required');
+
+      await deductCredits({ userId: user.id, cost: access.cost, feature: 'flashcards', reason: 'flashcards generate', idem: idempotencyKey(req, null) });
+
       const cli = openai();
       const resp = await cli.chat.completions.create({
-        model: MODEL,
+        model: modelFor(user),
         messages: [
           { role: 'system', content: 'You create concise, high-quality flashcards. Return only valid JSON.' },
           { role: 'user', content: `Create exactly ${count} flashcards about "${topic}". Return ONLY JSON: {"cards":[{"front":"...","back":"..."}]}.` },
@@ -361,7 +418,6 @@ async function handler(req, { params }) {
         created_at: new Date().toISOString(),
       };
       await db.collection('flashcard_decks').insertOne(deck);
-      await deductCredits(db, user.id, access.cost);
       await db.collection('users').updateOne({ id: user.id }, { $inc: { xp: 10 }, $set: { last_active: new Date().toISOString() } });
       const { _id, ...rest } = deck;
       return json(rest);
@@ -393,12 +449,15 @@ async function handler(req, { params }) {
         body = msgs.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
       }
       if (!body && !topic) return err('Provide chat_id, source, or topic');
+
+      await deductCredits({ userId: user.id, cost: access.cost, feature: 'notes', reason: 'notes generate', idem: idempotencyKey(req, null) });
+
       const cli = openai();
       const prompt = topic
         ? `Create comprehensive, structured study notes on the topic "${topic}". Use markdown with #, ##, bullet points, **bold** terms, and short examples. Make it exam-ready.`
         : `Convert the following into well-structured study notes. Use markdown headings (#, ##), bullet points, **bold** key terms, and a "Key Takeaways" section at the end.\n\n${body.slice(0, 8000)}`;
       const resp = await cli.chat.completions.create({
-        model: MODEL,
+        model: modelFor(user),
         messages: [
           { role: 'system', content: 'You produce clear, exam-ready study notes in markdown.' },
           { role: 'user', content: prompt },
@@ -414,7 +473,6 @@ async function handler(req, { params }) {
         created_at: new Date().toISOString(),
       };
       await db.collection('notes').insertOne(note);
-      await deductCredits(db, user.id, access.cost);
       await db.collection('users').updateOne({ id: user.id }, { $inc: { xp: 5 }, $set: { last_active: new Date().toISOString() } });
       const { _id, ...rest } = note;
       return json(rest);
@@ -476,9 +534,12 @@ async function handler(req, { params }) {
       const { goal = 'general study' } = await req.json();
       const db = await getDb();
       const ctx = await buildPersonalContext(db, user);
+
+      await deductCredits({ userId: user.id, cost: access.cost, feature: 'study_plan', reason: 'study plan generate', idem: idempotencyKey(req, null) });
+
       const cli = openai();
       const resp = await cli.chat.completions.create({
-        model: MODEL,
+        model: modelFor(user),
         messages: [
           { role: 'system', content: 'You build short, achievable daily study plans for students. Return JSON only.' },
           { role: 'user', content: `Build a 7-day study plan toward this goal: "${goal}". Each day must have 3 tasks (mix of: read/chat, quiz, flashcards). ${ctx}\n\nReturn ONLY JSON: {"goal":"...","days":[{"day":"Day 1","title":"...","tasks":[{"type":"chat|quiz|flashcards|notes","label":"...","topic":"..."}]}]}` },
@@ -490,7 +551,6 @@ async function handler(req, { params }) {
       const plan = { id, user_id: user.id, goal, ...parsed, created_at: new Date().toISOString() };
       await db.collection('study_plans').deleteMany({ user_id: user.id });
       await db.collection('study_plans').insertOne(plan);
-      await deductCredits(db, user.id, access.cost);
       const { _id, ...rest } = plan;
       return json(rest);
     }
@@ -509,9 +569,12 @@ async function handler(req, { params }) {
       if (!access.ok) return err(access.error, access.status, { upgrade: access.upgrade });
       const { topic, count = 15, duration_minutes = 20 } = await req.json();
       if (!topic) return err('topic required');
+
+      await deductCredits({ userId: user.id, cost: access.cost, feature: 'mock', reason: 'mock test generate', idem: idempotencyKey(req, null) });
+
       const cli = openai();
       const resp = await cli.chat.completions.create({
-        model: MODEL,
+        model: modelFor(user),
         messages: [
           { role: 'system', content: 'You generate full mock tests. Return JSON only.' },
           { role: 'user', content: `Create a mock test of ${count} mixed-difficulty MCQs on "${topic}". Return ONLY: {"questions":[{"question":"...","options":["A","B","C","D"],"answer_index":0,"explanation":"..."}]}` },
@@ -522,7 +585,6 @@ async function handler(req, { params }) {
       const id = uuidv4();
       const db = await getDb();
       await db.collection('mock_tests').insertOne({ id, user_id: user.id, topic, duration_minutes, questions: parsed.questions || [], created_at: new Date().toISOString() });
-      await deductCredits(db, user.id, access.cost);
       return json({ id, topic, duration_minutes, questions: parsed.questions || [] });
     }
 
@@ -563,6 +625,9 @@ async function handler(req, { params }) {
       const file = formData.get('file');
       const action = formData.get('action') || 'summarize';
       if (!file || typeof file === 'string') return err('file required');
+
+      await deductCredits({ userId: user.id, cost: access.cost, feature: 'file', reason: 'file analysis', idem: idempotencyKey(req, null) });
+
       const arrayBuffer = await file.arrayBuffer();
       const buf = Buffer.from(arrayBuffer);
       const cli = openai();
@@ -597,14 +662,13 @@ async function handler(req, { params }) {
       } else {
         return err('Only images and PDFs are supported', 400);
       }
-      const resp = await cli.chat.completions.create({ model: MODEL, messages });
+      const resp = await cli.chat.completions.create({ model: modelFor(user), messages });
       const result = resp.choices[0].message.content || '';
       const db = await getDb();
       const id = uuidv4();
       await db.collection('file_analyses').insertOne({
         id, user_id: user.id, filename: file.name, type: ftype, action, result, created_at: new Date().toISOString(),
       });
-      await deductCredits(db, user.id, access.cost);
       return json({ id, filename: file.name, action, result });
     }
 
@@ -645,6 +709,162 @@ async function handler(req, { params }) {
     }
 
     /* ============ PAYMENTS ============ */
+    if (path === 'billing/create-subscription' && method === 'POST') {
+      const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
+      const { plan } = await req.json();
+      if (!['pro', 'premium'].includes(plan)) return err('Invalid plan');
+
+      const planId = plan === 'pro' ? process.env.RAZORPAY_PLAN_ID_PRO : process.env.RAZORPAY_PLAN_ID_PREMIUM;
+      if (!planId) return err('Razorpay plan id not configured', 500);
+
+      const rp = razorpayClient();
+      let customerId = user.razorpay_customer_id || null;
+      if (!customerId) {
+        const customer = await rp.customers.create({
+          name: user.name || 'User',
+          email: user.email || undefined,
+          notes: { user_id: user.id },
+        });
+        customerId = customer.id;
+      }
+
+      const subscription = await rp.subscriptions.create({
+        plan_id: planId,
+        customer_notify: 1,
+        total_count: 120,
+        notes: { user_id: user.id, plan },
+      });
+
+      const db = await getDb();
+      await db.collection('users').updateOne(
+        { id: user.id },
+        { $set: { razorpay_customer_id: customerId, razorpay_subscription_id: subscription.id, subscription_status: 'inactive' } }
+      );
+
+      return json({
+        subscription_id: subscription.id,
+        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
+      });
+    }
+
+    if (path === 'webhooks/razorpay' && method === 'POST') {
+      const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+      if (!secret) return err('Webhook secret not configured', 500);
+      const sig = req.headers.get('x-razorpay-signature') || '';
+      const body = await req.text();
+      const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
+      if (expected !== sig) return err('Invalid signature', 400);
+
+      let payload;
+      try { payload = JSON.parse(body); } catch { return err('Invalid JSON', 400); }
+      const eventId = payload?.id || null;
+      const event = payload?.event || '';
+      if (!eventId) return err('Missing webhook id', 400);
+
+      // Idempotency: store event id once
+      const sb = supabaseAdmin();
+      const ins = await sb.from('razorpay_events').insert({ event_id: eventId }).select('event_id').limit(1);
+      if (ins.error) {
+        // duplicate insert => already processed
+        return json({ ok: true, deduped: true });
+      }
+
+      const sub = payload?.payload?.subscription?.entity || null;
+      const payment = payload?.payload?.payment?.entity || null;
+      const subId = sub?.id || null;
+      const userId = sub?.notes?.user_id || payload?.payload?.subscription?.entity?.notes?.user_id || null;
+      const plan = sub?.notes?.plan || null;
+
+      if (!userId) return json({ ok: true, ignored: true });
+
+      const db = await getDb();
+      const nowIso = new Date().toISOString();
+      const nextBilling = sub?.current_end ? new Date(sub.current_end * 1000).toISOString() : null;
+      const paidAt = payment?.created_at ? new Date(payment.created_at * 1000).toISOString() : nowIso;
+
+      if (event === 'subscription.charged') {
+        const newPlan = plan === 'premium' ? 'premium' : 'pro';
+        const credits = PLAN_CREDITS[newPlan] || PLAN_CREDITS.free;
+        await db.collection('users').updateOne(
+          { id: userId },
+          { $set: {
+              plan: newPlan,
+              subscription_status: 'active',
+              razorpay_subscription_id: subId,
+              next_billing_date: nextBilling,
+              last_payment_date: paidAt,
+            } }
+        );
+        await sb.rpc('reset_credits', {
+          p_user: userId,
+          p_new_credits: credits,
+          p_reason: 'subscription charged',
+          p_idempotency: `rzp:${eventId}`,
+        });
+        if (emailEnabled()) {
+          const urow = await db.collection('users').findOne({ id: userId });
+          if (urow?.email) {
+            sendEmail({
+              to: urow.email,
+              subject: 'Subscription payment successful',
+              html: `<p>Your ${newPlan.toUpperCase()} subscription payment was successful.</p><p>Credits have been reset to <b>${credits}</b>.</p>`,
+            }).catch(() => {});
+          }
+        }
+        return json({ ok: true });
+      }
+
+      if (event === 'subscription.payment_failed') {
+        await db.collection('users').updateOne(
+          { id: userId },
+          { $set: { plan: 'free', subscription_status: 'past_due', razorpay_subscription_id: subId } }
+        );
+        await sb.rpc('reset_credits', {
+          p_user: userId,
+          p_new_credits: PLAN_CREDITS.free,
+          p_reason: 'subscription payment failed',
+          p_idempotency: `rzp:${eventId}`,
+        });
+        if (emailEnabled()) {
+          const urow = await db.collection('users').findOne({ id: userId });
+          if (urow?.email) {
+            sendEmail({
+              to: urow.email,
+              subject: 'Payment failed — action required',
+              html: `<p>Your subscription payment failed.</p><p>Your plan has been reset to <b>Free</b> and credits reset to <b>${PLAN_CREDITS.free}</b>. Update your payment method to restore Pro/Premium.</p>`,
+            }).catch(() => {});
+          }
+        }
+        return json({ ok: true });
+      }
+
+      if (event === 'subscription.cancelled') {
+        await db.collection('users').updateOne(
+          { id: userId },
+          { $set: { plan: 'free', subscription_status: 'cancelled', razorpay_subscription_id: subId } }
+        );
+        await sb.rpc('reset_credits', {
+          p_user: userId,
+          p_new_credits: PLAN_CREDITS.free,
+          p_reason: 'subscription cancelled',
+          p_idempotency: `rzp:${eventId}`,
+        });
+        if (emailEnabled()) {
+          const urow = await db.collection('users').findOne({ id: userId });
+          if (urow?.email) {
+            sendEmail({
+              to: urow.email,
+              subject: 'Subscription cancelled',
+              html: `<p>Your subscription was cancelled.</p><p>You’re now on the <b>Free</b> plan.</p>`,
+            }).catch(() => {});
+          }
+        }
+        return json({ ok: true });
+      }
+
+      return json({ ok: true, ignored: true });
+    }
+
     if (path === 'create-order' && method === 'POST') {
       const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
       const { plan } = await req.json();
@@ -683,7 +903,73 @@ async function handler(req, { params }) {
 
     /* ============ CONFIG ============ */
     if (path === 'config/plans' && method === 'GET') {
-      return json({ credits: PLAN_CREDITS, costs: FEATURE_COSTS, tiers: FEATURE_TIERS });
+      return json({ credits: PLAN_CREDITS, costs: FEATURE_COSTS, tiers: FEATURE_TIERS, free_quiz_monthly_limit: FREE_QUIZ_MONTHLY_LIMIT });
+    }
+
+    /* ============ CRON ============ */
+    if (path === 'cron/monthly-reset' && method === 'POST') {
+      const secret = process.env.CRON_SECRET;
+      if (!secret) return err('CRON_SECRET not configured', 500);
+      if ((req.headers.get('x-cron-secret') || '') !== secret) return err('Unauthorized', 401);
+
+      const sb = supabaseAdmin();
+      const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10); // YYYY-MM-DD
+      const { data: users, error } = await sb
+        .from('users')
+        .select('id, plan, subscription_status, last_reset_date')
+        .lt('last_reset_date', cutoff)
+        .limit(5000);
+      if (error) return err(error.message, 500);
+
+      let reset = 0;
+      for (const u of users || []) {
+        const active = (u.subscription_status || 'inactive') === 'active';
+        const plan = active ? (u.plan || 'free') : 'free';
+        const credits = PLAN_CREDITS[plan] || PLAN_CREDITS.free;
+        const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const { error: rerr } = await sb.rpc('reset_credits', {
+          p_user: u.id,
+          p_new_credits: credits,
+          p_reason: 'monthly reset',
+          p_idempotency: `monthly:${u.id}:${monthKey}`,
+        });
+        if (!rerr) reset++;
+      }
+
+      return json({ ok: true, scanned: (users || []).length, reset });
+    }
+
+    if (path === 'cron/daily-emails' && method === 'POST') {
+      const secret = process.env.CRON_SECRET;
+      if (!secret) return err('CRON_SECRET not configured', 500);
+      if ((req.headers.get('x-cron-secret') || '') !== secret) return err('Unauthorized', 401);
+      if (!emailEnabled()) return json({ ok: true, skipped: true });
+
+      const sb = supabaseAdmin();
+      const { data: users, error } = await sb
+        .from('users')
+        .select('email,name,credits,streak,plan')
+        .not('email', 'is', null)
+        .limit(5000);
+      if (error) return err(error.message, 500);
+
+      let sent = 0;
+      for (const u of users || []) {
+        try {
+          await sendEmail({
+            to: u.email,
+            subject: 'Your daily study reminder',
+            html: `<p>Hi ${u.name || 'there'},</p>
+              <p>Quick reminder to keep your streak going.</p>
+              <p><b>Plan:</b> ${String(u.plan || 'free').toUpperCase()} · <b>Credits remaining:</b> ${u.credits ?? 0} · <b>Streak:</b> ${u.streak ?? 0} days</p>`,
+          });
+          sent++;
+        } catch {
+          // ignore per-user failures
+        }
+      }
+
+      return json({ ok: true, sent, scanned: (users || []).length });
     }
 
     return err('Not found: ' + path, 404);

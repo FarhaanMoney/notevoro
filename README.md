@@ -60,19 +60,25 @@ git push -u origin main
 ```bash
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-NEXT_PUBLIC_BASE_URL=https://your-app.vercel.app
-JWT_SECRET=<long random string>
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 
 OPENAI_API_KEY=sk-...                            (your AICredits key)
 OPENAI_BASE_URL=https://api.aicredits.in/v1
-OPENAI_MODEL=gpt-4o-mini
-
-GOOGLE_CLIENT_ID=...                              (optional)
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=...                  (same as above)
+OPENAI_MODEL_FREE=gpt-4o-mini
+OPENAI_MODEL_PRO=gpt-4o-mini
+OPENAI_MODEL_PREMIUM=gpt-4o-mini
 
 RAZORPAY_KEY_ID=...
 RAZORPAY_KEY_SECRET=...
 NEXT_PUBLIC_RAZORPAY_KEY_ID=...                   (same as KEY_ID)
+RAZORPAY_WEBHOOK_SECRET=...
+RAZORPAY_PLAN_ID_PRO=...
+RAZORPAY_PLAN_ID_PREMIUM=...
+CRON_SECRET=<long random string>
+
+RESEND_API_KEY=...
+RESEND_FROM="Notevoro AI <noreply@yourdomain.com>"
 ```
 
 4. Click **Deploy**.
@@ -88,10 +94,10 @@ NEXT_PUBLIC_RAZORPAY_KEY_ID=...                   (same as KEY_ID)
 ```bash
 npm install
 # create .env.local and fill in the keys below
-# SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_BASE_URL, JWT_SECRET
-# OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
-# GOOGLE_CLIENT_ID, NEXT_PUBLIC_GOOGLE_CLIENT_ID
+# SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL_FREE, OPENAI_MODEL_PRO, OPENAI_MODEL_PREMIUM
 # RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, NEXT_PUBLIC_RAZORPAY_KEY_ID
+# RAZORPAY_WEBHOOK_SECRET, RAZORPAY_PLAN_ID_PRO, RAZORPAY_PLAN_ID_PREMIUM, CRON_SECRET
 npm run dev
 ```
 

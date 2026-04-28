@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Brain, MessageSquare, Sparkles, Zap, BookOpen, Trophy, ArrowRight } from 'lucide-react';
+import { supabaseBrowser } from '@/lib/supabase/browser';
 
 function App() {
   const router = useRouter();
@@ -17,67 +17,53 @@ function App() {
   const [tab, setTab] = useState('login');
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const googleBtnRef = useRef(null);
-  const googleBtnRef2 = useRef(null);
-  const [gsiReady, setGsiReady] = useState(false);
+  const googleBtnRef = useRef(null); // kept for layout spacing (no-op)
+  const googleBtnRef2 = useRef(null); // kept for layout spacing (no-op)
 
   useEffect(() => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('nv_token') : null;
-    if (!t) return;
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${t}` } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d?.user) router.replace('/dashboard'); })
+    const sb = supabaseBrowser();
+    sb.auth.getSession()
+      .then(({ data }) => {
+        if (data?.session) router.replace('/dashboard');
+      })
       .catch(() => {});
   }, [router]);
 
-  // Google Identity Services
-  useEffect(() => {
-    if (!gsiReady) return;
-    const cid = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!cid || !window.google?.accounts?.id) return;
-    window.google.accounts.id.initialize({
-      client_id: cid,
-      callback: async (resp) => {
-        try {
-          const r = await fetch('/api/auth/google', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ credential: resp.credential }),
-          });
-          const data = await r.json();
-          if (!r.ok) throw new Error(data.error || 'Google sign-in failed');
-          localStorage.setItem('nv_token', data.token);
-          localStorage.setItem('nv_user', JSON.stringify(data.user));
-          toast.success('Welcome!');
-          router.push('/dashboard');
-        } catch (e) { toast.error(e.message); }
-      },
-    });
-    [googleBtnRef, googleBtnRef2].forEach((ref) => {
-      if (ref.current) {
-        ref.current.innerHTML = '';
-        window.google.accounts.id.renderButton(ref.current, {
-          theme: 'filled_black', size: 'large', text: 'continue_with', shape: 'rectangular', width: 360,
-        });
-      }
-    });
-  }, [gsiReady, authOpen, router]);
+  async function googleSignIn() {
+    try {
+      setLoading(true);
+      const sb = supabaseBrowser();
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
+    } catch (e) {
+      toast.error(e.message || 'Google sign-in failed');
+      setLoading(false);
+    }
+  }
 
   async function submit(e) {
     e.preventDefault();
     setLoading(true);
     try {
-      const url = tab === 'login' ? '/api/auth/login' : '/api/auth/signup';
-      const body = tab === 'login' ? { email: form.email, password: form.password } : form;
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      const sb = supabaseBrowser();
+      if (tab === 'login') {
+        const { error } = await sb.auth.signInWithPassword({ email: form.email, password: form.password });
+        if (error) throw error;
+        toast.success('Welcome back!');
+        router.push('/dashboard');
+        return;
+      }
+
+      const { error } = await sb.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { data: { full_name: form.name || null } },
       });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed');
-      localStorage.setItem('nv_token', data.token);
-      localStorage.setItem('nv_user', JSON.stringify(data.user));
-      toast.success(tab === 'login' ? 'Welcome back!' : 'Account created!');
+      if (error) throw error;
+      toast.success('Account created!');
       router.push('/dashboard');
     } catch (e) {
       toast.error(e.message);
@@ -88,7 +74,6 @@ function App() {
 
   return (
     <>
-      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onLoad={() => setGsiReady(true)} />
       <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#0b0b12] to-[#0a0a0f] text-zinc-100 overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-0">
           <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-purple-500/20 blur-[120px]" />
@@ -128,7 +113,9 @@ function App() {
                   Login
                 </Button>
               </div>
-              <div ref={googleBtnRef} className="mt-2" />
+              <Button disabled={loading} onClick={googleSignIn} variant="outline" className="mt-2 h-11 px-6 bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 hover:text-white">
+                Continue with Google
+              </Button>
             </div>
           </div>
 
@@ -300,11 +287,13 @@ function App() {
                 <div className="flex-1 h-px bg-white/10" />
               </div>
               <div className="flex justify-center">
-                <div ref={googleBtnRef2} />
+                <Button disabled={loading} onClick={googleSignIn} variant="outline" className="w-full bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 hover:text-white">
+                  Continue with Google
+                </Button>
               </div>
-              {!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
-                <p className="text-[10px] text-center text-zinc-500 mt-2">Set NEXT_PUBLIC_GOOGLE_CLIENT_ID in .env to enable Google login</p>
-              )}
+              <p className="text-[10px] text-center text-zinc-500 mt-2">
+                Configure Google provider in Supabase Auth.
+              </p>
             </Tabs>
           </DialogContent>
         </Dialog>
