@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import OpenAI from 'openai';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { getDb } from '@/lib/mongo';
+import { getDb } from '@/lib/db';
 import { getUserFromRequest } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendEmail, emailEnabled } from '@/lib/email';
@@ -48,13 +48,13 @@ async function requireUser(req) {
   const db = await getDb();
   let user = await db.collection('users').findOne({ id: u.id });
   if (!user) {
+    const today = new Date().toISOString().slice(0, 10);
     // First-time login: create profile row. (Supabase Auth is source of truth for identity.)
     user = {
       id: u.id,
       name: (u.user_metadata?.full_name || u.user_metadata?.name || u.email || '').split('@')[0] || 'User',
       email: (u.email || '').toLowerCase(),
       avatar: u.user_metadata?.avatar_url || u.user_metadata?.picture || null,
-      google_id: null,
       xp: 0,
       streak: 0,
       plan: 'free',
@@ -68,8 +68,8 @@ async function requireUser(req) {
       // New SaaS fields (safe even if unused yet)
       subscription_status: 'inactive',
       quiz_count_month: 0,
-      quiz_count_month_reset_at: new Date().toISOString(),
-      last_reset_date: new Date().toISOString(),
+      quiz_count_month_reset_at: today,
+      last_reset_date: today,
       daily_reward_date: null,
     };
     await db.collection('users').insertOne(user);
@@ -91,11 +91,11 @@ async function requireUser(req) {
     const max = PLAN_CREDITS[plan] || PLAN_CREDITS.free;
     await db.collection('users').updateOne(
       { id: user.id },
-      { $set: { credits: max, credits_reset_at: now.toISOString(), last_reset_date: now.toISOString() } }
+      { $set: { credits: max, credits_reset_at: now.toISOString(), last_reset_date: today } }
     );
     user.credits = max;
     user.credits_reset_at = now.toISOString();
-    user.last_reset_date = now.toISOString();
+    user.last_reset_date = today;
   }
 
   // Daily login reward (+5 credits), capped to monthly plan max

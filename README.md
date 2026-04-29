@@ -114,7 +114,7 @@ app/
 └── page.js                    # Landing page
 lib/
 ├── auth.js                    # JWT + bcrypt helpers
-├── mongo.js                   # Supabase adapter (kept same import path)
+├── db.js                      # Supabase adapter
 └── plans.js                   # Plan / credit / tier config
 ```
 
