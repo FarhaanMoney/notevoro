@@ -34,21 +34,9 @@ export default function CampaignPage() {
 
   async function startLevel(level) {
     if (!token || !level.unlocked) return;
-    setLoading(true);
-    try {
-      const r = await fetch('/api/campaign/start', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ level_number: level.level_number }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Could not start');
-      toast.success(`Started level ${level.level_number}`);
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setLoading(false);
-    }
+    // For now, the full interactive flow lives in /dashboard (Campaign tab).
+    // Route users there so they can actually play the level.
+    router.push('/dashboard');
   }
 
   if (!data) return <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-purple-400" /></div>;

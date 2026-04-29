@@ -252,6 +252,56 @@ function campaignLevelMeta(level) {
   };
 }
 
+function extractFirstJsonObject(text) {
+  if (!text) return null;
+  const s = String(text);
+  const start = s.indexOf('{');
+  const end = s.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+  return s.slice(start, end + 1);
+}
+
+function safeParseJson(text) {
+  try { return JSON.parse(text); } catch {}
+  const extracted = extractFirstJsonObject(text);
+  if (!extracted) return null;
+  try { return JSON.parse(extracted); } catch {}
+  return null;
+}
+
+function normalizeQuizQuestions(raw) {
+  const src = Array.isArray(raw) ? raw : [];
+  const out = [];
+  for (const q of src) {
+    if (!q) continue;
+    const question = String(q.question || q.q || '').trim();
+    const options = Array.isArray(q.options) ? q.options.map((x) => String(x)) : [];
+    const answerIndex = Number.isFinite(q.answer_index) ? q.answer_index : Number.isFinite(q.answerIndex) ? q.answerIndex : Number(q.correct_index);
+    const explanation = q.explanation != null ? String(q.explanation) : '';
+    if (!question || options.length < 4) continue;
+    const opts4 = options.slice(0, 4);
+    const ai = Number(answerIndex);
+    if (!Number.isFinite(ai) || ai < 0 || ai > 3) continue;
+    out.push({ question, options: opts4, answer_index: ai, explanation });
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
+function normalizeFlashcards(raw) {
+  const src = Array.isArray(raw) ? raw : [];
+  const out = [];
+  for (const c of src) {
+    if (!c) continue;
+    const front = String(c.front || c.question || c.q || '').trim();
+    const back = String(c.back || c.answer || c.a || '').trim();
+    if (!front || !back) continue;
+    out.push({ front, back });
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
 // =========================================================
 async function handler(req, { params }) {
   const path = (params?.path || []).join('/');
@@ -639,8 +689,8 @@ async function handler(req, { params }) {
       const nextAllowed = maxCompleted + 1;
       if (levelNumber > nextAllowed) return err('Level is locked. Complete previous levels first.', 403);
 
-      const existing = await db.collection('campaign_progress').findOne({ user_id: user.id, level_number: levelNumber });
-      if (!existing) {
+      const meta = campaignLevelMeta(levelNumber);
+      try {
         await deductCredits({
           userId: user.id,
           cost: FEATURE_COSTS.campaign,
@@ -648,17 +698,51 @@ async function handler(req, { params }) {
           reason: `campaign level ${levelNumber} start`,
           idem: idempotencyKey(req, `campaign:start:${user.id}:${levelNumber}`),
         });
+      } catch (e) {
+        const msg = String(e?.message || '');
+        if (msg.toUpperCase().includes('INSUFFICIENT_CREDITS')) {
+          return err('Out of credits. Upgrade to continue.', 402, { upgrade: true, cost: FEATURE_COSTS.campaign });
+        }
+        throw e;
       }
 
-      const meta = campaignLevelMeta(levelNumber);
-      return json({
-        level: meta,
-        prompt: meta.type === 'quiz'
-          ? `Answer quiz questions for ${meta.difficulty} difficulty.`
-          : meta.type === 'flashcards'
-            ? `Review flashcards and summarize key points.`
-            : `Complete a mixed challenge: 3 quick answers + 1 reflection.`,
-      });
+      const cli = openai();
+      const kind = meta.type === 'mixed' ? 'quiz' : meta.type;
+
+      if (kind === 'flashcards') {
+        let cards = [];
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const resp = await cli.chat.completions.create({
+            model: modelFor(user),
+            messages: [
+              { role: 'system', content: 'Return ONLY valid JSON. No markdown, no code fences.' },
+              { role: 'user', content: `Create exactly 10 flashcards at ${meta.difficulty} difficulty.\nReturn ONLY JSON: {"cards":[{"front":"question/prompt","back":"answer/explanation"}]}\nMake them broadly useful for students (mix of science, math, history, and learning skills).` },
+            ],
+          });
+          const parsed = safeParseJson(resp.choices?.[0]?.message?.content || '');
+          cards = normalizeFlashcards(parsed?.cards || parsed?.flashcards || []);
+          if (cards.length === 10) break;
+        }
+        if (cards.length !== 10) return err('AI did not generate flashcards. Please retry.', 500);
+        return json({ level: meta, kind: 'flashcards', cards, ai: true });
+      }
+
+      // Quiz (also used for "mixed" until a dedicated mixed view exists)
+      let questions = [];
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const resp = await cli.chat.completions.create({
+          model: modelFor(user),
+          messages: [
+            { role: 'system', content: 'Return ONLY valid JSON. No markdown, no code fences.' },
+            { role: 'user', content: `Create a multiple-choice quiz of exactly 10 questions at ${meta.difficulty} difficulty.\nRules:\n- 4 options per question\n- include answer_index (0-3)\nReturn ONLY JSON: {"questions":[{"question":"...","options":["A","B","C","D"],"answer_index":0,"explanation":"..."}]}\nQuestions should be broadly useful for students (mix of science, math, history, and reasoning).` },
+          ],
+        });
+        const parsed = safeParseJson(resp.choices?.[0]?.message?.content || '');
+        questions = normalizeQuizQuestions(parsed?.questions || parsed?.items || []);
+        if (questions.length === 10) break;
+      }
+      if (questions.length !== 10) return err('AI did not generate quiz questions. Please retry.', 500);
+      return json({ level: meta, kind: 'quiz', questions, ai: true });
     }
 
     if (path === 'campaign/complete' && method === 'POST') {
@@ -667,6 +751,15 @@ async function handler(req, { params }) {
       const levelNumber = Math.max(1, Number(level_number) || 1);
       const levelScore = Math.max(0, Math.min(100, Number(score) || 0));
       const db = await getDb();
+
+      const completed = await db.collection('campaign_progress')
+        .find({ user_id: user.id, completed: true }, { projection: { _id: 0, level_number: 1 } })
+        .sort({ level_number: -1 })
+        .limit(1)
+        .toArray();
+      const maxCompleted = completed[0]?.level_number || 0;
+      const nextAllowed = maxCompleted + 1;
+      if (levelNumber > nextAllowed) return err('Level is locked. Complete previous levels first.', 403);
 
       const existing = await db.collection('campaign_progress').findOne({ user_id: user.id, level_number: levelNumber });
       if (existing) {
@@ -691,8 +784,8 @@ async function handler(req, { params }) {
         .sort({ level_number: -1 })
         .limit(1)
         .toArray();
-      const maxCompleted = refreshed[0]?.level_number || 0;
-      return json({ ok: true, unlocked_level: maxCompleted + 1, score: levelScore });
+      const maxCompleted2 = refreshed[0]?.level_number || 0;
+      return json({ ok: true, unlocked_level: maxCompleted2 + 1, score: levelScore });
     }
 
     /* ============ MOCK TEST (Premium) ============ */

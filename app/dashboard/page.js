@@ -900,6 +900,15 @@ function CampaignView({ token, refreshUser }) {
   const auth = { Authorization: `Bearer ${token}` };
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState('map'); // map | generating | quiz | flashcards | result
+  const [level, setLevel] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [cards, setCards] = useState([]);
+  const [qIdx, setQIdx] = useState(0);
+  const [answers, setAnswers] = useState([]);
+  const [cardIdx, setCardIdx] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [result, setResult] = useState(null);
 
   async function load() {
     const r = await fetch('/api/campaign', { headers: auth });
@@ -909,26 +918,53 @@ function CampaignView({ token, refreshUser }) {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
-  async function startLevel(level) {
-    if (!level.unlocked) return toast.error('Complete previous levels first');
+  async function startLevel(lvl) {
+    if (!lvl.unlocked) return toast.error('Complete previous levels first');
+    setMode('generating');
     setLoading(true);
+    setLevel(lvl);
+    setQuestions([]); setCards([]); setQIdx(0); setAnswers([]); setCardIdx(0); setFlipped(false); setResult(null);
     try {
       const r = await fetch('/api/campaign/start', {
         method: 'POST',
-        headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ level_number: level.level_number }),
+        headers: { ...auth, 'Content-Type': 'application/json', 'x-idempotency-key': `campaign:start:${lvl.level_number}` },
+        body: JSON.stringify({ level_number: lvl.level_number }),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Failed to start level');
-      // Demo completion flow: mark done with a synthetic score
-      const done = await fetch('/api/campaign/complete', {
+      if (!r.ok) {
+        if (d.upgrade) throw new Error(d.error || 'Out of credits');
+        throw new Error(d.error || 'Failed to generate level');
+      }
+      setLevel(d.level);
+      if (d.kind === 'quiz') {
+        setQuestions(d.questions || []);
+        setMode('quiz');
+      } else {
+        setCards(d.cards || []);
+        setMode('flashcards');
+      }
+      refreshUser();
+    } catch (e) {
+      toast.error(e.message);
+      setMode('map');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function completeLevel(finalScore) {
+    if (!level?.level_number) return;
+    setLoading(true);
+    try {
+      const r = await fetch('/api/campaign/complete', {
         method: 'POST',
         headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ level_number: level.level_number, score: 80 + Math.floor(Math.random() * 20) }),
+        body: JSON.stringify({ level_number: level.level_number, score: finalScore ?? 0 }),
       });
-      const dd = await done.json();
-      if (!done.ok) throw new Error(dd.error || 'Failed to complete level');
-      toast.success(`Level ${level.level_number} completed!`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed to save progress');
+      setResult({ score: finalScore ?? null });
+      setMode('result');
       await load();
       refreshUser();
     } catch (e) {
@@ -938,7 +974,78 @@ function CampaignView({ token, refreshUser }) {
     }
   }
 
+  function resetToMap() {
+    setMode('map');
+    setLevel(null);
+    setQuestions([]); setCards([]); setQIdx(0); setAnswers([]); setCardIdx(0); setFlipped(false); setResult(null);
+  }
+
   if (!data) return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-purple-400" /></div>;
+
+  if (mode === 'generating') {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Card className="p-6 bg-white/[0.02] border-white/10 text-center max-w-md w-full">
+          <Loader2 className="h-6 w-6 animate-spin text-purple-400 mx-auto mb-3" />
+          <div className="font-semibold">Generating your level…</div>
+          <div className="text-sm text-zinc-400 mt-1">This takes a few seconds.</div>
+          <Button onClick={resetToMap} disabled={loading} variant="outline" className="mt-4 h-12 bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 hover:text-white">
+            Back
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (mode === 'quiz') {
+    return (
+      <CampaignLevelQuizView
+        level={level}
+        questions={questions}
+        qIdx={qIdx}
+        setQIdx={setQIdx}
+        answers={answers}
+        setAnswers={setAnswers}
+        onBack={resetToMap}
+        onComplete={completeLevel}
+        loading={loading}
+      />
+    );
+  }
+
+  if (mode === 'flashcards') {
+    return (
+      <CampaignLevelFlashcardView
+        level={level}
+        cards={cards}
+        idx={cardIdx}
+        setIdx={setCardIdx}
+        flipped={flipped}
+        setFlipped={setFlipped}
+        onBack={resetToMap}
+        onComplete={() => completeLevel(0)}
+        loading={loading}
+      />
+    );
+  }
+
+  if (mode === 'result') {
+    return (
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-lg mx-auto">
+          <Card className="p-6 bg-white/[0.02] border-white/10 text-center">
+            <div className="text-xl font-semibold">Level complete</div>
+            {result?.score !== null && level?.type === 'quiz' && (
+              <div className="text-sm text-zinc-400 mt-2">Score: <span className="text-white font-semibold">{result.score}%</span></div>
+            )}
+            <div className="mt-5 space-y-2">
+              <Button onClick={resetToMap} className="w-full h-12 bg-white text-black hover:bg-zinc-200">Back to Campaign</Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6">
@@ -995,6 +1102,145 @@ function CampaignView({ token, refreshUser }) {
               </Button>
             </Card>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CampaignLevelQuizView({ level, questions, qIdx, setQIdx, answers, setAnswers, onBack, onComplete, loading }) {
+  const total = questions?.length || 0;
+  const q = questions?.[qIdx];
+  if (!q || total === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Card className="p-6 bg-white/[0.02] border-white/10 text-center max-w-md w-full">
+          <div className="font-semibold">No questions generated</div>
+          <div className="text-sm text-zinc-400 mt-1">Please go back and retry.</div>
+          <Button onClick={onBack} className="mt-4 h-12 w-full bg-white text-black hover:bg-zinc-200">Back</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  function selectAnswer(idx) {
+    const nextAnswers = [...answers];
+    nextAnswers[qIdx] = idx;
+    setAnswers(nextAnswers);
+    if (qIdx < total - 1) setQIdx(qIdx + 1);
+  }
+
+  async function finish() {
+    let correct = 0;
+    for (let i = 0; i < total; i++) {
+      if (answers[i] === questions[i]?.answer_index) correct++;
+    }
+    const score = Math.round((correct / Math.max(total, 1)) * 100);
+    await onComplete(score);
+  }
+
+  const answered = answers[qIdx] !== undefined;
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div className="max-w-2xl mx-auto space-y-4">
+        <Card className="p-5 bg-white/[0.02] border-white/10">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Campaign · Level {level?.level_number}</div>
+            <Badge className="bg-white/5 text-zinc-300 border-white/10 capitalize">{level?.difficulty}</Badge>
+          </div>
+          <div className="text-sm text-zinc-400 mt-1">Question {qIdx + 1}/{total}</div>
+        </Card>
+
+        <Card className="p-6 bg-white/[0.02] border-white/10">
+          <div className="text-lg font-medium">{q.question}</div>
+          <div className="mt-4 space-y-2">
+            {(q.options || []).slice(0, 4).map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => selectAnswer(i)}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition ${
+                  answers[qIdx] === i ? 'border-purple-400 bg-purple-500/10' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05]'
+                }`}
+              >
+                <span className="text-zinc-400 mr-3">{String.fromCharCode(65 + i)}.</span>{opt}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <div className="flex gap-3">
+          <Button onClick={onBack} variant="outline" className="flex-1 h-12 bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 hover:text-white">
+            Back
+          </Button>
+          {qIdx === total - 1 ? (
+            <Button onClick={finish} disabled={!answered || loading} className="flex-1 h-12 bg-white text-black hover:bg-zinc-200">
+              Finish
+            </Button>
+          ) : (
+            <Button onClick={() => setQIdx(qIdx + 1)} disabled={!answered} className="flex-1 h-12 bg-white text-black hover:bg-zinc-200">
+              Next
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CampaignLevelFlashcardView({ level, cards, idx, setIdx, flipped, setFlipped, onBack, onComplete, loading }) {
+  const total = cards?.length || 0;
+  const card = cards?.[idx];
+  if (!card || total === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Card className="p-6 bg-white/[0.02] border-white/10 text-center max-w-md w-full">
+          <div className="font-semibold">No flashcards generated</div>
+          <div className="text-sm text-zinc-400 mt-1">Please go back and retry.</div>
+          <Button onClick={onBack} className="mt-4 h-12 w-full bg-white text-black hover:bg-zinc-200">Back</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  async function next() {
+    if (idx < total - 1) {
+      setIdx(idx + 1);
+      setFlipped(false);
+      return;
+    }
+    await onComplete();
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div className="max-w-2xl mx-auto space-y-4">
+        <Card className="p-5 bg-white/[0.02] border-white/10">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Campaign · Level {level?.level_number}</div>
+            <Badge className="bg-white/5 text-zinc-300 border-white/10 capitalize">{level?.difficulty}</Badge>
+          </div>
+          <div className="text-sm text-zinc-400 mt-1">Card {idx + 1}/{total}</div>
+        </Card>
+
+        <Card
+          className="p-6 bg-white/[0.02] border-white/10 cursor-pointer select-none"
+          onClick={() => setFlipped(!flipped)}
+        >
+          <div className="text-xs text-zinc-500 mb-2">{flipped ? 'Answer' : 'Question'}</div>
+          <div className="text-lg font-medium leading-relaxed">
+            {flipped ? card.back : card.front}
+          </div>
+          <div className="text-[11px] text-zinc-500 mt-4">Tap to flip</div>
+        </Card>
+
+        <div className="flex gap-3">
+          <Button onClick={onBack} variant="outline" className="flex-1 h-12 bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 hover:text-white">
+            Back
+          </Button>
+          <Button onClick={next} disabled={loading} className="flex-1 h-12 bg-white text-black hover:bg-zinc-200">
+            {idx < total - 1 ? 'Next' : 'Finish'}
+          </Button>
         </div>
       </div>
     </div>
