@@ -7,7 +7,7 @@ import { getDb } from '@/lib/db';
 import { getUserFromRequest } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendEmail, emailEnabled } from '@/lib/email';
-import { PLAN_CREDITS, FEATURE_COSTS, FEATURE_TIERS, FREE_QUIZ_MONTHLY_LIMIT, getLevel } from '@/lib/plans';
+import { PLAN_CREDITS, FEATURE_COSTS, FEATURE_TIERS, getLevel } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,10 +67,9 @@ async function requireUser(req) {
       created_at: new Date().toISOString(),
       // New SaaS fields (safe even if unused yet)
       subscription_status: 'inactive',
-      quiz_count_month: 0,
-      quiz_count_month_reset_at: today,
       last_reset_date: today,
       daily_reward_date: null,
+      weekly_reward_claimed: false,
     };
     await db.collection('users').insertOne(user);
     // Welcome email (no-op unless RESEND_* configured)
@@ -84,6 +83,7 @@ async function requireUser(req) {
   }
   // Auto-reset credits monthly
   const now = new Date();
+  const today = now.toISOString().slice(0, 10);
   const reset = user.credits_reset_at ? new Date(user.credits_reset_at) : null;
   if (!reset || now - reset > 30 * 86400000) {
     const active = (user.subscription_status || 'inactive') === 'active';
@@ -99,7 +99,6 @@ async function requireUser(req) {
   }
 
   // Daily login reward (+5 credits), capped to monthly plan max
-  const today = now.toISOString().slice(0, 10);
   if ((user.daily_reward_date || '').slice(0, 10) !== today) {
     const active = (user.subscription_status || 'inactive') === 'active';
     const plan = active ? (user.plan || 'free') : 'free';
@@ -107,16 +106,37 @@ async function requireUser(req) {
     const cur = Number(user.credits ?? 0) || 0;
     const next = Math.min(max, cur + 5);
     if (next !== cur) {
-      await db.collection('users').updateOne(
-        { id: user.id },
-        { $set: { credits: next, daily_reward_date: today } }
-      );
+      await rewardCredits({
+        userId: user.id,
+        amount: next - cur,
+        feature: 'daily_reward',
+        reason: 'daily login reward',
+        idem: `daily:${user.id}:${today}`,
+      });
+      await db.collection('users').updateOne({ id: user.id }, { $set: { daily_reward_date: today } });
       user.credits = next;
       user.daily_reward_date = today;
     } else {
       await db.collection('users').updateOne({ id: user.id }, { $set: { daily_reward_date: today } });
       user.daily_reward_date = today;
     }
+  }
+
+  const streak = await updateStreak(db, user);
+  user.streak = streak;
+  if (streak >= 7 && !user.weekly_reward_claimed) {
+    await rewardCredits({
+      userId: user.id,
+      amount: 10,
+      feature: 'weekly_streak',
+      reason: '7-day consistency reward',
+      idem: `weekly:${user.id}`,
+    });
+    await db.collection('users').updateOne({ id: user.id }, { $set: { weekly_reward_claimed: true } });
+    await grantAchievement(db, user.id, 'consistency_7_day', '7 Day Consistency');
+    user.weekly_reward_claimed = true;
+    user._weeklyRewardGranted = true;
+    user.credits = (Number(user.credits ?? 0) || 0) + 10;
   }
   return user;
 }
@@ -131,9 +151,8 @@ function publicUser(u) {
     credits: u.credits ?? PLAN_CREDITS[u.plan || 'free'],
     credits_max: PLAN_CREDITS[u.plan || 'free'],
     credits_reset_at: u.credits_reset_at || null,
-    free_quiz_limit: FREE_QUIZ_MONTHLY_LIMIT,
-    free_quiz_used: u.quiz_count_month || 0,
-    free_quiz_remaining: Math.max(0, FREE_QUIZ_MONTHLY_LIMIT - (u.quiz_count_month || 0)),
+    weekly_reward_claimed: Boolean(u.weekly_reward_claimed),
+    weekly_reward_granted: Boolean(u._weeklyRewardGranted),
     level: lvl,
     quizzes_taken: u.quizzes_taken || 0,
     correct_answers: u.correct_answers || 0,
@@ -161,9 +180,6 @@ function checkAccess(user, feature) {
   if (tiers && !tiers.includes(plan)) {
     return { ok: false, error: `${feature} is locked on the ${plan} plan. Upgrade to unlock.`, status: 403, upgrade: true };
   }
-  if (feature === 'quiz' && plan === 'free') {
-    return { ok: true, cost: 0, free_quiz: true };
-  }
   const cost = FEATURE_COSTS[feature] || 0;
   if ((user.credits ?? 0) < cost) {
     return { ok: false, error: `Out of credits. You need ${cost} but have ${user.credits ?? 0}.`, status: 402, upgrade: true, cost };
@@ -185,6 +201,33 @@ async function deductCredits({ userId, cost, feature, reason, idem }) {
   return data;
 }
 
+async function rewardCredits({ userId, amount, feature, reason, idem }) {
+  if (!amount) return null;
+  const sb = supabaseAdmin();
+  const { data, error } = await sb.rpc('reward_credits', {
+    p_user: userId,
+    p_amount: amount,
+    p_feature: feature || null,
+    p_reason: reason || null,
+    p_idempotency: idem || null,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function grantAchievement(db, userId, key, title) {
+  const existing = await db.collection('achievements').findOne({ user_id: userId, key });
+  if (existing) return false;
+  await db.collection('achievements').insertOne({
+    id: uuidv4(),
+    user_id: userId,
+    key,
+    title,
+    created_at: new Date().toISOString(),
+  });
+  return true;
+}
+
 async function buildPersonalContext(db, user) {
   if (!FEATURE_TIERS.contextual_memory.includes(user.plan || 'free')) return '';
   const recentAttempts = await db.collection('quiz_attempts').find({ user_id: user.id }).sort({ created_at: -1 }).limit(5).toArray();
@@ -193,6 +236,20 @@ async function buildPersonalContext(db, user) {
   const weak = recentAttempts.filter((a) => a.correct / Math.max(a.total, 1) < 0.6).map((a) => a.topic).join(', ') || 'none identified';
   const notesPreview = recentNotes.map((n) => `- ${n.title}`).join('\n') || 'no notes yet';
   return `\n\nUser context (use to personalize):\n- Recent quiz topics: ${topics}\n- Weak areas: ${weak}\n- Recent notes:\n${notesPreview}\n`;
+}
+
+function campaignLevelMeta(level) {
+  const n = Math.max(1, Number(level) || 1);
+  const typeCycle = ['quiz', 'flashcards', 'mixed'];
+  const type = typeCycle[(n - 1) % typeCycle.length];
+  const difficulty = n <= 3 ? 'easy' : n <= 7 ? 'medium' : 'hard';
+  return {
+    level_number: n,
+    type,
+    difficulty,
+    reward: 'XP + mastery',
+    title: `Level ${n}`,
+  };
 }
 
 // =========================================================
@@ -326,25 +383,7 @@ async function handler(req, { params }) {
       const { topic, difficulty = 'medium', count = 5 } = await req.json();
       if (!topic) return err('topic required');
 
-      // Free plan special rule: only 5 quizzes/month, no credit usage
-      if (access.free_quiz) {
-        const sb = supabaseAdmin();
-        const idem = idempotencyKey(req, null);
-        const { error } = await sb.rpc('consume_free_quiz', {
-          p_user: user.id,
-          p_monthly_limit: FREE_QUIZ_MONTHLY_LIMIT,
-          p_idempotency: idem,
-        });
-        if (error) {
-          const msg = (error.message || '').toUpperCase();
-          if (msg.includes('QUIZ_LIMIT')) {
-            return err(`Free plan quiz limit reached (${FREE_QUIZ_MONTHLY_LIMIT}/month). Upgrade to continue.`, 403, { upgrade: true });
-          }
-          return err('Failed to consume free quiz quota: ' + error.message, 500);
-        }
-      }
-
-      // Pro/Premium: deduct credits before execution
+      // All plans: deduct quiz credits before execution
       await deductCredits({ userId: user.id, cost: access.cost, feature: 'quiz', reason: 'quiz generate', idem: idempotencyKey(req, null) });
 
       const cli = openai();
@@ -562,6 +601,100 @@ async function handler(req, { params }) {
       return json({ plan: plan || null });
     }
 
+    /* ============ CAMPAIGN ============ */
+    if (path === 'campaign' && method === 'GET') {
+      const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
+      const db = await getDb();
+      const progress = await db.collection('campaign_progress')
+        .find({ user_id: user.id }, { projection: { _id: 0 } })
+        .sort({ level_number: 1 })
+        .toArray();
+      const completedMax = progress.filter((p) => p.completed).reduce((m, p) => Math.max(m, p.level_number || 0), 0);
+      const currentLevel = completedMax + 1;
+      const levels = Array.from({ length: 15 }, (_, i) => {
+        const levelNumber = i + 1;
+        const meta = campaignLevelMeta(levelNumber);
+        const row = progress.find((p) => p.level_number === levelNumber);
+        return {
+          ...meta,
+          completed: Boolean(row?.completed),
+          score: row?.score ?? null,
+          unlocked: levelNumber <= currentLevel,
+        };
+      });
+      return json({ current_level: currentLevel, levels, progress });
+    }
+
+    if (path === 'campaign/start' && method === 'POST') {
+      const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
+      const { level_number } = await req.json();
+      const levelNumber = Math.max(1, Number(level_number) || 1);
+      const db = await getDb();
+      const completed = await db.collection('campaign_progress')
+        .find({ user_id: user.id, completed: true }, { projection: { _id: 0, level_number: 1 } })
+        .sort({ level_number: -1 })
+        .limit(1)
+        .toArray();
+      const maxCompleted = completed[0]?.level_number || 0;
+      const nextAllowed = maxCompleted + 1;
+      if (levelNumber > nextAllowed) return err('Level is locked. Complete previous levels first.', 403);
+
+      const existing = await db.collection('campaign_progress').findOne({ user_id: user.id, level_number: levelNumber });
+      if (!existing) {
+        await deductCredits({
+          userId: user.id,
+          cost: FEATURE_COSTS.campaign,
+          feature: 'campaign',
+          reason: `campaign level ${levelNumber} start`,
+          idem: idempotencyKey(req, `campaign:start:${user.id}:${levelNumber}`),
+        });
+      }
+
+      const meta = campaignLevelMeta(levelNumber);
+      return json({
+        level: meta,
+        prompt: meta.type === 'quiz'
+          ? `Answer quiz questions for ${meta.difficulty} difficulty.`
+          : meta.type === 'flashcards'
+            ? `Review flashcards and summarize key points.`
+            : `Complete a mixed challenge: 3 quick answers + 1 reflection.`,
+      });
+    }
+
+    if (path === 'campaign/complete' && method === 'POST') {
+      const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
+      const { level_number, score = 0 } = await req.json();
+      const levelNumber = Math.max(1, Number(level_number) || 1);
+      const levelScore = Math.max(0, Math.min(100, Number(score) || 0));
+      const db = await getDb();
+
+      const existing = await db.collection('campaign_progress').findOne({ user_id: user.id, level_number: levelNumber });
+      if (existing) {
+        await db.collection('campaign_progress').updateOne(
+          { user_id: user.id, level_number: levelNumber },
+          { $set: { completed: true, score: levelScore } }
+        );
+      } else {
+        await db.collection('campaign_progress').insertOne({
+          id: uuidv4(),
+          user_id: user.id,
+          level_number: levelNumber,
+          completed: true,
+          score: levelScore,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      await db.collection('users').updateOne({ id: user.id }, { $inc: { xp: 8 }, $set: { last_active: new Date().toISOString() } });
+      const refreshed = await db.collection('campaign_progress')
+        .find({ user_id: user.id, completed: true }, { projection: { _id: 0, level_number: 1 } })
+        .sort({ level_number: -1 })
+        .limit(1)
+        .toArray();
+      const maxCompleted = refreshed[0]?.level_number || 0;
+      return json({ ok: true, unlocked_level: maxCompleted + 1, score: levelScore });
+    }
+
     /* ============ MOCK TEST (Premium) ============ */
     if (path === 'mock-test/generate' && method === 'POST') {
       const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
@@ -708,163 +841,17 @@ async function handler(req, { params }) {
       });
     }
 
-    /* ============ PAYMENTS ============ */
-    if (path === 'billing/create-subscription' && method === 'POST') {
+    if (path === 'achievements' && method === 'GET') {
       const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
-      const { plan } = await req.json();
-      if (!['pro', 'premium'].includes(plan)) return err('Invalid plan');
-
-      const planId = plan === 'pro' ? process.env.RAZORPAY_PLAN_ID_PRO : process.env.RAZORPAY_PLAN_ID_PREMIUM;
-      if (!planId) return err('Razorpay plan id not configured', 500);
-
-      const rp = razorpayClient();
-      let customerId = user.razorpay_customer_id || null;
-      if (!customerId) {
-        const customer = await rp.customers.create({
-          name: user.name || 'User',
-          email: user.email || undefined,
-          notes: { user_id: user.id },
-        });
-        customerId = customer.id;
-      }
-
-      const subscription = await rp.subscriptions.create({
-        plan_id: planId,
-        customer_notify: 1,
-        total_count: 120,
-        notes: { user_id: user.id, plan },
-      });
-
       const db = await getDb();
-      await db.collection('users').updateOne(
-        { id: user.id },
-        { $set: { razorpay_customer_id: customerId, razorpay_subscription_id: subscription.id, subscription_status: 'inactive' } }
-      );
-
-      return json({
-        subscription_id: subscription.id,
-        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
-      });
+      const achievements = await db.collection('achievements')
+        .find({ user_id: user.id }, { projection: { _id: 0 } })
+        .sort({ created_at: -1 })
+        .toArray();
+      return json({ achievements });
     }
 
-    if (path === 'webhooks/razorpay' && method === 'POST') {
-      const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-      if (!secret) return err('Webhook secret not configured', 500);
-      const sig = req.headers.get('x-razorpay-signature') || '';
-      const body = await req.text();
-      const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
-      if (expected !== sig) return err('Invalid signature', 400);
-
-      let payload;
-      try { payload = JSON.parse(body); } catch { return err('Invalid JSON', 400); }
-      const eventId = payload?.id || null;
-      const event = payload?.event || '';
-      if (!eventId) return err('Missing webhook id', 400);
-
-      // Idempotency: store event id once
-      const sb = supabaseAdmin();
-      const ins = await sb.from('razorpay_events').insert({ event_id: eventId }).select('event_id').limit(1);
-      if (ins.error) {
-        // duplicate insert => already processed
-        return json({ ok: true, deduped: true });
-      }
-
-      const sub = payload?.payload?.subscription?.entity || null;
-      const payment = payload?.payload?.payment?.entity || null;
-      const subId = sub?.id || null;
-      const userId = sub?.notes?.user_id || payload?.payload?.subscription?.entity?.notes?.user_id || null;
-      const plan = sub?.notes?.plan || null;
-
-      if (!userId) return json({ ok: true, ignored: true });
-
-      const db = await getDb();
-      const nowIso = new Date().toISOString();
-      const nextBilling = sub?.current_end ? new Date(sub.current_end * 1000).toISOString() : null;
-      const paidAt = payment?.created_at ? new Date(payment.created_at * 1000).toISOString() : nowIso;
-
-      if (event === 'subscription.charged') {
-        const newPlan = plan === 'premium' ? 'premium' : 'pro';
-        const credits = PLAN_CREDITS[newPlan] || PLAN_CREDITS.free;
-        await db.collection('users').updateOne(
-          { id: userId },
-          { $set: {
-              plan: newPlan,
-              subscription_status: 'active',
-              razorpay_subscription_id: subId,
-              next_billing_date: nextBilling,
-              last_payment_date: paidAt,
-            } }
-        );
-        await sb.rpc('reset_credits', {
-          p_user: userId,
-          p_new_credits: credits,
-          p_reason: 'subscription charged',
-          p_idempotency: `rzp:${eventId}`,
-        });
-        if (emailEnabled()) {
-          const urow = await db.collection('users').findOne({ id: userId });
-          if (urow?.email) {
-            sendEmail({
-              to: urow.email,
-              subject: 'Subscription payment successful',
-              html: `<p>Your ${newPlan.toUpperCase()} subscription payment was successful.</p><p>Credits have been reset to <b>${credits}</b>.</p>`,
-            }).catch(() => {});
-          }
-        }
-        return json({ ok: true });
-      }
-
-      if (event === 'subscription.payment_failed') {
-        await db.collection('users').updateOne(
-          { id: userId },
-          { $set: { plan: 'free', subscription_status: 'past_due', razorpay_subscription_id: subId } }
-        );
-        await sb.rpc('reset_credits', {
-          p_user: userId,
-          p_new_credits: PLAN_CREDITS.free,
-          p_reason: 'subscription payment failed',
-          p_idempotency: `rzp:${eventId}`,
-        });
-        if (emailEnabled()) {
-          const urow = await db.collection('users').findOne({ id: userId });
-          if (urow?.email) {
-            sendEmail({
-              to: urow.email,
-              subject: 'Payment failed — action required',
-              html: `<p>Your subscription payment failed.</p><p>Your plan has been reset to <b>Free</b> and credits reset to <b>${PLAN_CREDITS.free}</b>. Update your payment method to restore Pro/Premium.</p>`,
-            }).catch(() => {});
-          }
-        }
-        return json({ ok: true });
-      }
-
-      if (event === 'subscription.cancelled') {
-        await db.collection('users').updateOne(
-          { id: userId },
-          { $set: { plan: 'free', subscription_status: 'cancelled', razorpay_subscription_id: subId } }
-        );
-        await sb.rpc('reset_credits', {
-          p_user: userId,
-          p_new_credits: PLAN_CREDITS.free,
-          p_reason: 'subscription cancelled',
-          p_idempotency: `rzp:${eventId}`,
-        });
-        if (emailEnabled()) {
-          const urow = await db.collection('users').findOne({ id: userId });
-          if (urow?.email) {
-            sendEmail({
-              to: urow.email,
-              subject: 'Subscription cancelled',
-              html: `<p>Your subscription was cancelled.</p><p>You’re now on the <b>Free</b> plan.</p>`,
-            }).catch(() => {});
-          }
-        }
-        return json({ ok: true });
-      }
-
-      return json({ ok: true, ignored: true });
-    }
-
+    /* ============ PAYMENTS ============ */
     if (path === 'create-order' && method === 'POST') {
       const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
       const { plan } = await req.json();
@@ -893,17 +880,25 @@ async function handler(req, { params }) {
         { id: razorpay_order_id },
         { $set: { status: 'paid', payment_id: razorpay_payment_id, paid_at: new Date().toISOString() } }
       );
+      const credits = PLAN_CREDITS[plan] || PLAN_CREDITS.free;
       await db.collection('users').updateOne(
         { id: user.id },
-        { $set: { plan, credits: PLAN_CREDITS[plan] || PLAN_CREDITS.free, credits_reset_at: new Date().toISOString() } }
+        { $set: { plan, subscription_status: 'active', last_payment_date: new Date().toISOString() } }
       );
+      const sb = supabaseAdmin();
+      await sb.rpc('reset_credits', {
+        p_user: user.id,
+        p_new_credits: credits,
+        p_reason: 'razorpay checkout success',
+        p_idempotency: `order:${razorpay_order_id}`,
+      });
       const u = await db.collection('users').findOne({ id: user.id });
       return json({ ok: true, user: publicUser(u) });
     }
 
     /* ============ CONFIG ============ */
     if (path === 'config/plans' && method === 'GET') {
-      return json({ credits: PLAN_CREDITS, costs: FEATURE_COSTS, tiers: FEATURE_TIERS, free_quiz_monthly_limit: FREE_QUIZ_MONTHLY_LIMIT });
+      return json({ credits: PLAN_CREDITS, costs: FEATURE_COSTS, tiers: FEATURE_TIERS });
     }
 
     /* ============ CRON ============ */

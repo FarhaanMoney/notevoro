@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import {
   MessageSquare, Plus, Send, Trash2, Pencil, LogOut, Search, Zap, BookOpen, FileText, Calendar,
   LayoutDashboard, Trophy, Flame, Target, Sparkles, ChevronLeft, ChevronRight, Crown, Loader2, Menu,
-  Coins, Lock, NotebookPen, Share2, Copy, Upload, ClipboardList, AlarmClock, X
+  Coins, Lock, NotebookPen, Share2, Copy, Upload, ClipboardList, AlarmClock, X, Route
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { PLAN_CREDITS, FEATURE_COSTS, FEATURE_TIERS, getLevel } from '@/lib/plans';
@@ -43,6 +43,7 @@ function App() {
         if (!t) { router.replace('/'); return; }
         setToken(t);
         refreshUser(t).then((u) => {
+          if (u?.weekly_reward_granted) toast.success('🔥 7-Day Streak! You earned +10 credits');
           if (u) { setUser(u); setLoading(false); }
           else { router.replace('/'); }
         });
@@ -53,6 +54,9 @@ function App() {
       const t = session?.access_token || null;
       if (!t) { setToken(null); setUser(null); router.replace('/'); return; }
       setToken(t);
+      refreshUser(t).then((u) => {
+        if (u?.weekly_reward_granted) toast.success('🔥 7-Day Streak! You earned +10 credits');
+      });
     }).data?.subscription;
 
     return () => unsub?.unsubscribe?.();
@@ -85,9 +89,9 @@ function App() {
   return (
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
-      <div className="h-screen flex bg-[#0a0a0f] text-zinc-100 overflow-hidden">
+      <div className="h-screen flex bg-[#0a0a0f] text-zinc-100 overflow-hidden pb-16 md:pb-0">
         {/* Left rail */}
-        <aside className="w-16 border-r border-white/5 flex flex-col items-center py-4 gap-2 bg-[#08080d] shrink-0">
+        <aside className="hidden md:flex w-16 border-r border-white/5 flex-col items-center py-4 gap-2 bg-[#08080d] shrink-0">
           <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mb-2 shadow-lg shadow-purple-500/30">
             <BookOpen className="h-5 w-5 text-white" />
           </div>
@@ -96,6 +100,7 @@ function App() {
           <RailBtn active={view==='flashcards'} onClick={()=>setView('flashcards')} icon={BookOpen} label="Cards" locked={!isPro} />
           <RailBtn active={view==='notes'} onClick={()=>setView('notes')} icon={NotebookPen} label="Notes" locked={!isPro} />
           <RailBtn active={view==='plan'} onClick={()=>setView('plan')} icon={Calendar} label="Plan" locked={!isPro} />
+          <RailBtn active={view==='campaign'} onClick={()=>setView('campaign')} icon={Route} label="Campaign" locked={false} />
           <RailBtn active={view==='mock'} onClick={()=>setView('mock')} icon={ClipboardList} label="Mock" locked={!isPremium} />
           <RailBtn active={view==='file'} onClick={()=>setView('file')} icon={Upload} label="Files" locked={!isPremium} />
           <RailBtn active={view==='dashboard'} onClick={()=>setView('dashboard')} icon={LayoutDashboard} label="Stats" />
@@ -113,11 +118,32 @@ function App() {
             {view === 'flashcards' && (isPro ? <FlashcardsView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="Flashcards" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
             {view === 'notes' && (isPro ? <NotesView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="AI Notes" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
             {view === 'plan' && (isPro ? <StudyPlanView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} setView={setView} /> : <LockedView feature="Smart Study Plan" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
+            {view === 'campaign' && <CampaignView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} />}
             {view === 'mock' && (isPremium ? <MockTestView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="Mock Tests" need="Premium" onUpgrade={()=>setShowPlans(true)} />)}
             {view === 'file' && (isPremium ? <FileView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="File Analysis" need="Premium" onUpgrade={()=>setShowPlans(true)} />)}
             {view === 'dashboard' && <DashboardView token={token} user={user} refreshUser={refreshUser} setView={setView} setShowPlans={setShowPlans} />}
           </div>
         </main>
+      </div>
+      <div className="md:hidden fixed bottom-0 inset-x-0 border-t border-white/10 bg-[#0a0a0f]/95 backdrop-blur z-50">
+        <div className="grid grid-cols-5 gap-1 p-2">
+          {[
+            { id: 'chat', icon: MessageSquare, label: 'Chat' },
+            { id: 'quiz', icon: Zap, label: 'Quiz' },
+            { id: 'campaign', icon: Route, label: 'Road' },
+            { id: 'notes', icon: NotebookPen, label: 'Notes' },
+            { id: 'dashboard', icon: LayoutDashboard, label: 'Stats' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setView(item.id)}
+              className={`h-12 rounded-xl flex flex-col items-center justify-center text-[10px] gap-1 ${view === item.id ? 'bg-white/10 text-white' : 'text-zinc-400'}`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <PlansModal open={showPlans} onOpenChange={setShowPlans} user={user} token={token} refreshUser={refreshUser} />
@@ -869,6 +895,112 @@ function TaskIcon({ type }) {
   return <I className="h-3.5 w-3.5 text-purple-300 shrink-0" />;
 }
 
+/* ============ CAMPAIGN ============ */
+function CampaignView({ token, refreshUser }) {
+  const auth = { Authorization: `Bearer ${token}` };
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function load() {
+    const r = await fetch('/api/campaign', { headers: auth });
+    const d = await r.json();
+    setData(d);
+  }
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+
+  async function startLevel(level) {
+    if (!level.unlocked) return toast.error('Complete previous levels first');
+    setLoading(true);
+    try {
+      const r = await fetch('/api/campaign/start', {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level_number: level.level_number }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed to start level');
+      // Demo completion flow: mark done with a synthetic score
+      const done = await fetch('/api/campaign/complete', {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level_number: level.level_number, score: 80 + Math.floor(Math.random() * 20) }),
+      });
+      const dd = await done.json();
+      if (!done.ok) throw new Error(dd.error || 'Failed to complete level');
+      toast.success(`Level ${level.level_number} completed!`);
+      await load();
+      refreshUser();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!data) return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-purple-400" /></div>;
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div className="max-w-4xl mx-auto space-y-4">
+        <Card className="p-5 bg-white/[0.02] border-white/10">
+          <h2 className="text-xl font-semibold">Campaign Roadmap</h2>
+          <p className="text-sm text-zinc-400 mt-1">Each level costs 5 credits. Complete levels in sequence.</p>
+        </Card>
+
+        <div className="overflow-x-auto pb-2">
+          <div className="min-w-[860px] px-2 py-4">
+            <div className="relative">
+              <svg className="absolute inset-0 w-full h-32" viewBox="0 0 1000 130" preserveAspectRatio="none" aria-hidden>
+                <path d="M20,65 C120,5 220,125 320,65 C420,5 520,125 620,65 C720,5 820,125 980,65" fill="none" stroke="rgba(168,85,247,0.35)" strokeWidth="4" />
+              </svg>
+              <div className="relative flex items-center justify-between gap-4 h-32">
+                {data.levels.map((level) => (
+                  <button
+                    key={level.level_number}
+                    onClick={() => startLevel(level)}
+                    disabled={!level.unlocked || loading}
+                    className={`h-14 w-14 rounded-full border-2 flex items-center justify-center text-xs font-semibold transition ${
+                      level.completed
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
+                        : level.unlocked
+                          ? 'bg-purple-500/20 border-purple-400 text-white hover:scale-105'
+                          : 'bg-zinc-800 border-zinc-600 text-zinc-400'
+                    }`}
+                    title={`Level ${level.level_number} • ${level.type} • ${level.difficulty}`}
+                  >
+                    {level.level_number}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {data.levels.map((level) => (
+            <Card key={level.level_number} className="p-4 bg-white/[0.02] border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="font-medium">Level {level.level_number}</div>
+                <Badge className="bg-white/5 text-zinc-300 border-white/10 capitalize">{level.type}</Badge>
+              </div>
+              <div className="text-xs text-zinc-400 mt-2 capitalize">Difficulty: {level.difficulty}</div>
+              <div className="text-xs text-zinc-400 mt-1">Reward: {level.reward}</div>
+              <Button
+                onClick={() => startLevel(level)}
+                disabled={!level.unlocked || loading}
+                className="w-full h-12 mt-3 bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-700 disabled:text-zinc-400"
+              >
+                {level.completed ? `Score ${level.score ?? 0}` : level.unlocked ? 'Start level (5 credits)' : 'Locked'}
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============ MOCK TEST ============ */
 function MockTestView({ token, refreshUser, setShowPlans }) {
   const auth = { Authorization: `Bearer ${token}` };
@@ -1177,20 +1309,33 @@ function QuickAction({ icon: Icon, label, onClick }) {
 function PlansModal({ open, onOpenChange, user, token, refreshUser }) {
   async function pay(plan) {
     try {
-      const r = await fetch('/api/billing/create-subscription', { method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan }) });
+      const r = await fetch('/api/create-order', { method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan }) });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Subscription failed');
+      if (!r.ok) throw new Error(d.error || 'Order creation failed');
       if (!window.Razorpay) throw new Error('Razorpay SDK still loading');
       if (!d.key_id) throw new Error('Razorpay not configured');
       const opts = {
-        key: d.key_id, subscription_id: d.subscription_id,
+        key: d.key_id,
+        order_id: d.order_id,
         name: 'Notevoro AI', description: `${plan.toUpperCase()} plan`,
-        theme: { color: '#a855f7' }, prefill: { name: user.name, email: user.email },
-        handler: async () => {
-          toast.success('Payment initiated. Finalizing subscription…');
-          // Webhook will apply plan + credits; we just refresh UI.
-          setTimeout(() => { refreshUser(); }, 1500);
-          setTimeout(() => { refreshUser(); }, 4000);
+        theme: { color: '#a855f7' },
+        prefill: { name: user.name, email: user.email },
+        method: { upi: true, card: true, netbanking: true, wallet: true },
+        handler: async (resp) => {
+          const vr = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+              plan,
+            }),
+          });
+          const vd = await vr.json();
+          if (!vr.ok) throw new Error(vd.error || 'Payment verification failed');
+          toast.success('Payment successful. Plan upgraded!');
+          await refreshUser();
           onOpenChange(false);
         },
       };
@@ -1199,7 +1344,7 @@ function PlansModal({ open, onOpenChange, user, token, refreshUser }) {
   }
 
   const plans = [
-    { id:'free', name:'Free', price:'₹0', credits: PLAN_CREDITS.free, features: ['Chat (2 credits/msg)', 'Quizzes (free, 5/month limit)', 'Basic AI'] },
+    { id:'free', name:'Free', price:'₹0', credits: PLAN_CREDITS.free, features: ['Chat (2 credits/msg)', 'Quizzes (5 credits)', 'Basic AI'] },
     { id:'pro', name:'Pro', price:'₹499', credits: PLAN_CREDITS.pro, highlighted: true, features: ['Everything in Free', 'Quizzes (5 credits)', 'Flashcards (5 credits)', 'AI Notes (4 credits)', 'Study planner (3 credits)', 'Chat memory', 'Better AI'] },
     { id:'premium', name:'Premium', price:'₹999', credits: PLAN_CREDITS.premium, features: ['Everything in Pro', 'Mock tests (15 credits)', 'File analysis (8 credits)', 'Advanced AI', 'Faster responses + priority processing'] },
   ];
@@ -1231,7 +1376,7 @@ function PlansModal({ open, onOpenChange, user, token, refreshUser }) {
             </div>
           ))}
         </div>
-        <div className="mt-3 text-[11px] text-zinc-500 text-center">Costs: chat 2c · quiz 5c · flashcards 5c · notes 4c · study plan 3c · mock test 15c · file analysis 8c</div>
+        <div className="mt-3 text-[11px] text-zinc-500 text-center">Costs: chat 2c · quiz 5c · campaign 5c · flashcards 5c · notes 4c · study plan 3c · mock test 15c · file analysis 8c</div>
       </DialogContent>
     </Dialog>
   );

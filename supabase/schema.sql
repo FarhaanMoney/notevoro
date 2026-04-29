@@ -30,6 +30,7 @@ create table if not exists public.users (
 
   -- daily reward (+5 credits) tracking
   daily_reward_date date,
+  weekly_reward_claimed boolean not null default false,
 
   -- subscription (Razorpay)
   razorpay_customer_id text,
@@ -76,7 +77,7 @@ as $$
 begin
   insert into public.users (
     id, email, name, avatar, plan, credits, credits_reset_at, last_reset_date,
-    quiz_count_month, quiz_count_month_reset_at, subscription_status, created_at, updated_at
+    subscription_status, weekly_reward_claimed, created_at, updated_at
   )
   values (
     new.id,
@@ -87,9 +88,8 @@ begin
     50,
     now(),
     current_date,
-    0,
-    current_date,
     'inactive',
+    false,
     now(),
     now()
   )
@@ -186,6 +186,28 @@ create table if not exists public.study_plans (
   created_at timestamptz not null default now()
 );
 create index if not exists idx_study_plans_user_id on public.study_plans(user_id);
+
+create table if not exists public.achievements (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  key text not null,
+  title text not null,
+  created_at timestamptz not null default now(),
+  unique(user_id, key)
+);
+create index if not exists idx_achievements_user_id on public.achievements(user_id);
+
+create table if not exists public.campaign_progress (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  level_number integer not null check (level_number > 0),
+  completed boolean not null default false,
+  score integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique(user_id, level_number)
+);
+create index if not exists idx_campaign_progress_user_id on public.campaign_progress(user_id);
+create index if not exists idx_campaign_progress_level on public.campaign_progress(level_number);
 
 create table if not exists public.mock_tests (
   id uuid primary key default gen_random_uuid(),
@@ -351,19 +373,26 @@ begin
 end;
 $$;
 
-create or replace function public.consume_free_quiz(
+drop function if exists public.consume_free_quiz(uuid, integer, text);
+
+create or replace function public.reward_credits(
   p_user uuid,
-  p_monthly_limit integer,
+  p_amount integer,
+  p_feature text,
+  p_reason text,
   p_idempotency text
 )
 returns integer
 language plpgsql
 as $$
 declare
-  v_count integer;
-  v_reset_at date;
+  v_current integer;
   v_new integer;
 begin
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'INVALID_AMOUNT';
+  end if;
+
   if p_idempotency is not null then
     select resulting_credits into v_new
     from public.credit_transactions
@@ -373,8 +402,7 @@ begin
     end if;
   end if;
 
-  select quiz_count_month, quiz_count_month_reset_at
-    into v_count, v_reset_at
+  select credits into v_current
   from public.users
   where id = p_user
   for update;
@@ -382,23 +410,11 @@ begin
     raise exception 'USER_NOT_FOUND';
   end if;
 
-  if date_trunc('month', v_reset_at::timestamp) <> date_trunc('month', current_date::timestamp) then
-    v_count := 0;
-    v_reset_at := current_date;
-  end if;
-
-  if v_count >= p_monthly_limit then
-    raise exception 'QUIZ_LIMIT';
-  end if;
-
-  v_new := v_count + 1;
-  update public.users
-    set quiz_count_month = v_new,
-        quiz_count_month_reset_at = v_reset_at
-  where id = p_user;
+  v_new := v_current + p_amount;
+  update public.users set credits = v_new where id = p_user;
 
   insert into public.credit_transactions(user_id, amount, kind, feature, reason, idempotency_key, resulting_credits)
-  values (p_user, 0, 'reward', 'quiz', 'free quiz quota consumption', p_idempotency, v_new);
+  values (p_user, p_amount, 'reward', p_feature, p_reason, p_idempotency, v_new);
 
   return v_new;
 end;
@@ -423,6 +439,8 @@ alter table public.quiz_attempts enable row level security;
 alter table public.flashcard_decks enable row level security;
 alter table public.notes enable row level security;
 alter table public.study_plans enable row level security;
+alter table public.achievements enable row level security;
+alter table public.campaign_progress enable row level security;
 alter table public.mock_tests enable row level security;
 alter table public.mock_attempts enable row level security;
 alter table public.file_analyses enable row level security;
@@ -462,6 +480,12 @@ create policy "notes_public_read" on public.notes for select using (is_public = 
 
 drop policy if exists "study_plans_all_own" on public.study_plans;
 create policy "study_plans_all_own" on public.study_plans for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "achievements_select_own" on public.achievements;
+create policy "achievements_select_own" on public.achievements for select using (auth.uid() = user_id);
+
+drop policy if exists "campaign_progress_all_own" on public.campaign_progress;
+create policy "campaign_progress_all_own" on public.campaign_progress for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 drop policy if exists "mock_tests_all_own" on public.mock_tests;
 create policy "mock_tests_all_own" on public.mock_tests for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
