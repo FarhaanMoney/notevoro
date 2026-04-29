@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Brain, MessageSquare, Sparkles, Zap, BookOpen, Trophy, ArrowRight } from 'lucide-react';
+import { MessageSquare, Sparkles, Zap, BookOpen, Trophy, ArrowRight } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 
 function App() {
@@ -83,7 +83,7 @@ function App() {
         <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-5 border-b border-white/5">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
-              <Brain className="h-5 w-5 text-white" />
+              <BookOpen className="h-5 w-5 text-white" />
             </div>
             <span className="font-semibold text-lg tracking-tight">Notevoro <span className="text-purple-400">AI</span></span>
           </div>
@@ -232,7 +232,7 @@ function App() {
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                <Brain className="h-4 w-4 text-white" />
+                <BookOpen className="h-4 w-4 text-white" />
               </div>
               <div>
                 <div className="font-semibold tracking-tight">Notevoro <span className="text-purple-400">AI</span></div>

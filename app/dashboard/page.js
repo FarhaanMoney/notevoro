@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import {
-  Brain, MessageSquare, Plus, Send, Trash2, Pencil, LogOut, Search, Zap, BookOpen, FileText, Calendar,
+  MessageSquare, Plus, Send, Trash2, Pencil, LogOut, Search, Zap, BookOpen, FileText, Calendar,
   LayoutDashboard, Trophy, Flame, Target, Sparkles, ChevronLeft, ChevronRight, Crown, Loader2, Menu,
   Coins, Lock, NotebookPen, Share2, Copy, Upload, ClipboardList, AlarmClock, X
 } from 'lucide-react';
@@ -89,7 +89,7 @@ function App() {
         {/* Left rail */}
         <aside className="w-16 border-r border-white/5 flex flex-col items-center py-4 gap-2 bg-[#08080d] shrink-0">
           <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mb-2 shadow-lg shadow-purple-500/30">
-            <Brain className="h-5 w-5 text-white" />
+            <BookOpen className="h-5 w-5 text-white" />
           </div>
           <RailBtn active={view==='chat'} onClick={()=>setView('chat')} icon={MessageSquare} label="Chat" />
           <RailBtn active={view==='quiz'} onClick={()=>setView('quiz')} icon={Zap} label="Quiz" locked={false} />
@@ -283,22 +283,30 @@ function ChatView({ token, user, refreshUser, setShowPlans, setView, logout }) {
     let fullText = '';
     let displayedLen = 0;
     let streamDone = false;
-    let animDone = false;
-    const tick = () => {
-      if (displayedLen < fullText.length) {
-        const gap = fullText.length - displayedLen;
-        // Catch-up rate: faster when behind, smoother when close. Always ~60fps.
-        const step = streamDone
-          ? Math.max(3, Math.ceil(gap / 6))
-          : gap > 120 ? Math.max(4, Math.ceil(gap / 10)) : Math.max(1, Math.ceil(gap / 18));
-        displayedLen = Math.min(fullText.length, displayedLen + step);
+    let rafId = null;
+    let lastTs = null;
+
+    // Smooth typing animation without blocking the UI thread.
+    const tick = (ts) => {
+      if (!lastTs) lastTs = ts;
+      const dt = ts - lastTs;
+      lastTs = ts;
+
+      const targetLen = fullText.length;
+      if (displayedLen < targetLen) {
+        // Lower chars/sec => slower reveal; requestAnimationFrame => smoother updates.
+        const charsPerSec = streamDone ? 160 : 95;
+        const step = Math.max(1, Math.ceil((charsPerSec * dt) / 1000));
+        displayedLen = Math.min(targetLen, displayedLen + step);
         const visible = fullText.slice(0, displayedLen);
         setMessages((m) => m.map((x) => x.id === aiMsg.id ? { ...x, content: visible } : x));
       }
-      if (streamDone && displayedLen >= fullText.length) { animDone = true; return; }
-      setTimeout(tick, 16);
+
+      if (!streamDone || displayedLen < targetLen) {
+        rafId = requestAnimationFrame(tick);
+      }
     };
-    tick();
+    rafId = requestAnimationFrame(tick);
     try {
       const resp = await fetch('/api/chat', {
         method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
@@ -316,18 +324,26 @@ function ChatView({ token, user, refreshUser, setShowPlans, setView, logout }) {
         if (done) break;
         const delta = dec.decode(value, { stream: true });
         if (delta) {
+          if (fullText.length === 0) setThinking(false); // stop typing dots on first token
           fullText += delta;
-          if (thinking) setThinking(false);
-          setThinking(false);
         }
       }
       streamDone = true;
-      // Wait for the typing animation to finish revealing
-      await new Promise((r) => {
-        const wait = () => animDone ? r() : setTimeout(wait, 30);
-        wait();
-      });
+
+      // Let the user type again immediately after the server finishes streaming.
       loadChats(); refreshUser();
+
+      // Ensure the "thinking" indicator never gets stuck if the animation falls behind.
+      setThinking(false);
+
+      // Force-stop the raf loop once we have caught up (or quickly give up).
+      setTimeout(() => {
+        if (displayedLen < fullText.length) {
+          displayedLen = fullText.length;
+          setMessages((m) => m.map((x) => x.id === aiMsg.id ? { ...x, content: fullText } : x));
+        }
+        if (rafId) cancelAnimationFrame(rafId);
+      }, 2500);
     } catch (e) {
       streamDone = true;
       toast.error(e.message);
@@ -424,7 +440,7 @@ function ChatView({ token, user, refreshUser, setShowPlans, setView, logout }) {
             <div className="h-full flex items-center justify-center">
               <div className="text-center max-w-lg">
                 <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30">
-                  <Brain className="h-7 w-7 text-white" />
+                  <BookOpen className="h-7 w-7 text-white" />
                 </div>
                 <h2 className="text-2xl font-semibold mb-2">How can I help you study today?</h2>
                 <p className="text-sm text-zinc-400 mb-6">Ask me anything — I&apos;ll explain concepts, summarize topics, or quiz you.</p>
@@ -444,7 +460,7 @@ function ChatView({ token, user, refreshUser, setShowPlans, setView, logout }) {
                 <div key={m.id} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {m.role !== 'user' && (
                     <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shrink-0">
-                      <Brain className="h-4 w-4 text-white" />
+                      <BookOpen className="h-4 w-4 text-white" />
                     </div>
                   )}
                   <div className={`rounded-2xl px-4 py-3 max-w-[85%] break-words text-[15px] leading-relaxed ${m.role === 'user' ? 'bg-white text-black whitespace-pre-wrap' : 'bg-white/[0.04] border border-white/10'}`}>

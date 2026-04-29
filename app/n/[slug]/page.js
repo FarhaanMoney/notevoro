@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
-import { Brain, Loader2 } from 'lucide-react';
+import { Loader2, BookOpen } from 'lucide-react';
 
 export default function PublicNote({ params }) {
   const [note, setNote] = useState(null);
@@ -25,7 +25,7 @@ export default function PublicNote({ params }) {
     <div className="min-h-screen bg-[#0a0a0f] text-zinc-100">
       <header className="border-b border-white/5 px-6 py-4">
         <Link href="/" className="flex items-center gap-2 w-fit">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center"><Brain className="h-4 w-4 text-white" /></div>
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center"><BookOpen className="h-4 w-4 text-white" /></div>
           <span className="font-semibold">Notevoro <span className="text-purple-400">AI</span></span>
         </Link>
       </header>
