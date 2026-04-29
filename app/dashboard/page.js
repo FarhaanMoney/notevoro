@@ -26,6 +26,13 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { PLAN_CREDITS, FEATURE_COSTS, FEATURE_TIERS, getLevel } from '@/lib/plans';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 
+// Hide scrollbar while keeping horizontal scroll usable on mobile.
+// (Local helper to avoid needing a global CSS file.)
+const _noScrollbarCss = `
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+`;
+
 function App() {
   const router = useRouter();
   const [token, setToken] = useState(null); // Supabase access_token
@@ -88,6 +95,7 @@ function App() {
 
   return (
     <>
+      <style>{_noScrollbarCss}</style>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <div className="h-screen flex bg-[#0a0a0f] text-zinc-100 overflow-hidden pb-16 md:pb-0">
         {/* Left rail */}
@@ -126,21 +134,27 @@ function App() {
         </main>
       </div>
       <div className="md:hidden fixed bottom-0 inset-x-0 border-t border-white/10 bg-[#0a0a0f]/95 backdrop-blur z-50">
-        <div className="grid grid-cols-5 gap-1 p-2">
+        <div className="flex gap-2 p-2 overflow-x-auto no-scrollbar">
           {[
             { id: 'chat', icon: MessageSquare, label: 'Chat' },
             { id: 'quiz', icon: Zap, label: 'Quiz' },
             { id: 'campaign', icon: Route, label: 'Road' },
+            { id: 'flashcards', icon: BookOpen, label: 'Cards' },
             { id: 'notes', icon: NotebookPen, label: 'Notes' },
+            { id: 'plan', icon: Calendar, label: 'Plan' },
+            { id: 'mock', icon: ClipboardList, label: 'Mock' },
+            { id: 'file', icon: Upload, label: 'Files' },
             { id: 'dashboard', icon: LayoutDashboard, label: 'Stats' },
           ].map((item) => (
             <button
               key={item.id}
               onClick={() => setView(item.id)}
-              className={`h-12 rounded-xl flex flex-col items-center justify-center text-[10px] gap-1 ${view === item.id ? 'bg-white/10 text-white' : 'text-zinc-400'}`}
+              className={`shrink-0 w-[76px] h-12 rounded-xl flex flex-col items-center justify-center text-[10px] gap-1 ${
+                view === item.id ? 'bg-white/10 text-white' : 'text-zinc-400'
+              }`}
             >
               <item.icon className="h-4 w-4" />
-              <span>{item.label}</span>
+              <span className="leading-none">{item.label}</span>
             </button>
           ))}
         </div>

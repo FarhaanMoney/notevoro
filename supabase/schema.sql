@@ -75,6 +75,12 @@ security definer
 set search_path = public
 as $$
 begin
+  -- If an old profile row exists with the same email (e.g. user deleted/recreated),
+  -- remove it to avoid failing auth signup due to unique(email).
+  delete from public.users
+  where email = lower(coalesce(new.email, ''))
+    and id <> new.id;
+
   insert into public.users (
     id, email, name, avatar, plan, credits, credits_reset_at, last_reset_date,
     subscription_status, weekly_reward_claimed, created_at, updated_at
@@ -93,7 +99,11 @@ begin
     now(),
     now()
   )
-  on conflict (id) do nothing;
+  on conflict (id) do update
+    set email = excluded.email,
+        name = excluded.name,
+        avatar = excluded.avatar,
+        updated_at = now();
 
   return new;
 end;

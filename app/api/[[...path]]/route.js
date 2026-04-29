@@ -229,7 +229,7 @@ async function grantAchievement(db, userId, key, title) {
 }
 
 async function buildPersonalContext(db, user) {
-  if (!FEATURE_TIERS.contextual_memory.includes(user.plan || 'free')) return '';
+  // Personalization should work for all plans (keep it short and safe).
   const recentAttempts = await db.collection('quiz_attempts').find({ user_id: user.id }).sort({ created_at: -1 }).limit(5).toArray();
   const recentNotes = await db.collection('notes').find({ user_id: user.id }).sort({ created_at: -1 }).limit(3).toArray();
   const topics = recentAttempts.map((a) => `${a.topic} (${a.correct}/${a.total})`).join(', ') || 'none yet';
