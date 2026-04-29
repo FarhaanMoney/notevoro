@@ -108,7 +108,7 @@ function App() {
         <main className="flex-1 min-w-0 flex flex-col">
           <Topbar user={user} onUpgrade={()=>setShowPlans(true)} />
           <div className="flex-1 min-h-0 flex flex-col">
-            {view === 'chat' && <ChatView token={token} user={user} refreshUser={refreshUser} setShowPlans={setShowPlans} setView={setView} />}
+            {view === 'chat' && <ChatView token={token} user={user} refreshUser={refreshUser} setShowPlans={setShowPlans} setView={setView} logout={logout} />}
             {view === 'quiz' && <QuizView token={token} user={user} refreshUser={refreshUser} setShowPlans={setShowPlans} />}
             {view === 'flashcards' && (isPro ? <FlashcardsView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="Flashcards" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
             {view === 'notes' && (isPro ? <NotesView token={token} refreshUser={refreshUser} setShowPlans={setShowPlans} /> : <LockedView feature="AI Notes" need="Pro" onUpgrade={()=>setShowPlans(true)} />)}
@@ -216,7 +216,7 @@ function MD({ children }) {
 }
 
 /* ============ CHAT ============ */
-function ChatView({ token, user, refreshUser, setShowPlans, setView }) {
+function ChatView({ token, user, refreshUser, setShowPlans, setView, logout }) {
   const [chats, setChats] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
