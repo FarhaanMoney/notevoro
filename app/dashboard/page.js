@@ -228,7 +228,7 @@ function App() {
         </div>
       </div>
 
-      <PlansModal open={showPlans} onOpenChange={setShowPlans} user={user} token={token} refreshUser={refreshUser} router={router} />
+      <PlansModal open={showPlans} onOpenChange={setShowPlans} user={user} token={token} refreshUser={refreshUser} router={router} trialLoading={trialLoading} setTrialLoading={setTrialLoading} />
       <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} router={router} />
     </>
   );
@@ -1908,7 +1908,7 @@ function QuickAction({ icon: Icon, label, onClick }) {
 }
 
 /* ============ PLANS MODAL ============ */
-function PlansModal({ open, onOpenChange, user, token, refreshUser, router }) {
+function PlansModal({ open, onOpenChange, user, token, refreshUser, router, trialLoading, setTrialLoading }) {
   function redirectToPremium(plan) {
     onOpenChange(false);
     router.push('/premium');
