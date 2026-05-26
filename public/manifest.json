@@ -1,0 +1,16 @@
+{
+  "name": "Notevoro AI",
+  "short_name": "Notevoro",
+  "description": "AI-powered study companion for students.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0b0f",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
