@@ -1,8 +1,8 @@
 -- Add AI Energy persistence fields and ledger support
 
 alter table if exists public.users
-  add column if not exists ai_energy integer not null default 15,
-  add column if not exists ai_energy_max integer not null default 15,
+  add column if not exists ai_energy integer not null default 20,
+  add column if not exists ai_energy_max integer not null default 20,
   add column if not exists last_energy_regeneration timestamptz not null default now();
 
 update public.users
@@ -211,7 +211,7 @@ begin
   if v_last_regeneration is null or v_last_regeneration < now() - interval '24 hours' then
     perform public.reset_energy(
       p_user,
-      coalesce(v_max_energy, case when v_plan = 'pro' then 250 else 15 end),
+      coalesce(v_max_energy, case when v_plan in ('pro', 'trial') then 250 else 20 end),
       'Daily energy reset',
       case when p_idempotency is null then null else p_idempotency || '_reset' end
     );

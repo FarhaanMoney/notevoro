@@ -23,14 +23,15 @@ create table if not exists public.users (
   -- plan + credits
   plan text not null default 'free' check (plan in ('free','pro','premium')),
   credits integer not null default 50,
-  ai_energy integer not null default 15,
-  ai_energy_max integer not null default 15,
+  ai_energy integer not null default 20,
+  ai_energy_max integer not null default 20,
   last_energy_regeneration timestamptz not null default now(),
   credits_reset_at timestamptz,
   last_reset_date date not null default current_date,
 
   -- trial system
   trial_start timestamptz,
+  trial_used boolean not null default false,
   is_trial_active boolean not null default false,
 
   -- free quiz quota
@@ -570,7 +571,7 @@ begin
   end if;
 
   if v_last_regeneration is null or v_last_regeneration < now() - interval '24 hours' then
-    perform public.reset_energy(p_user, coalesce(v_max_energy, case when v_plan = 'pro' then 250 else 15 end), 'Daily energy reset', p_idempotency || '_reset');
+    perform public.reset_energy(p_user, coalesce(v_max_energy, case when v_plan in ('pro', 'trial') then 250 else 20 end), 'Daily energy reset', p_idempotency || '_reset');
     select ai_energy into v_current_energy from public.users where id = p_user;
   end if;
 

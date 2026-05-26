@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import {
   MessageSquare, Plus, Send, Trash2, Pencil, LogOut, Search, Zap, BookOpen, FileText, Calendar,
   LayoutDashboard, Trophy, Flame, Target, Sparkles, ChevronLeft, ChevronRight, Crown, Loader2, Menu,
-  Coins, Lock, NotebookPen, Share2, Copy, Upload, ClipboardList, AlarmClock, X, Route, Phone, Check
+  Coins, Lock, NotebookPen, Share2, Copy, Upload, ClipboardList, AlarmClock, X, Route, Phone, Check, ExternalLink
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -46,6 +46,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showPlans, setShowPlans] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
 
   useEffect(() => {
     const sb = supabaseBrowser();
@@ -164,7 +165,7 @@ function App() {
           <RailBtn active={view==='notes'} onClick={()=>setView('notes')} icon={NotebookPen} label="Notes" locked={!isPro} />
           <RailBtn active={view==='plan'} onClick={()=>setView('plan')} icon={Calendar} label="Plan" locked={!isPro} />
           <RailBtn active={view==='campaign'} onClick={()=>setView('campaign')} icon={Route} label="Campaign" locked={false} />
-          <RailBtn active={false} onClick={()=>router.push('/dashboard/whatsapp')} icon={Phone} label="WhatsApp" locked={!canUseWhatsApp(user)} />
+          <RailBtn active={false} onClick={()=>canUseWhatsApp(user) && router.push('/dashboard/whatsapp')} icon={Phone} label="WhatsApp" locked={!canUseWhatsApp(user)} />
           <RailBtn active={view==='mock'} onClick={()=>setView('mock')} icon={ClipboardList} label="Mock" locked={!isPro} />
           <RailBtn active={view==='file'} onClick={()=>setView('file')} icon={Upload} label="Files" locked={!isPro} />
           <RailBtn active={view==='dashboard'} onClick={()=>setView('dashboard')} icon={LayoutDashboard} label="Stats" />
@@ -202,18 +203,28 @@ function App() {
             { id: 'file', icon: Upload, label: 'Files' },
             { id: 'whatsapp', icon: Phone, label: 'WhatsApp' },
             { id: 'dashboard', icon: LayoutDashboard, label: 'Stats' },
-          ].map((item) => (
+          ].map((item) => {
+            const isWhatsAppLocked = item.id === 'whatsapp' && !canUseWhatsApp(user);
+            return (
             <button
               key={item.id}
-              onClick={() => item.id === 'whatsapp' ? router.push('/dashboard/whatsapp') : setView(item.id)}
-              className={`shrink-0 w-[70px] h-11 rounded-lg flex flex-col items-center justify-center text-[9px] gap-0.5 transition-all duration-200 ${
+              onClick={() => {
+                if (item.id === 'whatsapp' && canUseWhatsApp(user)) {
+                  router.push('/dashboard/whatsapp');
+                } else if (item.id !== 'whatsapp') {
+                  setView(item.id);
+                }
+              }}
+              disabled={isWhatsAppLocked}
+              className={`shrink-0 w-[70px] h-11 rounded-lg flex flex-col items-center justify-center text-[9px] gap-0.5 transition-all duration-200 ${isWhatsAppLocked ? 'opacity-50 cursor-not-allowed' : ''} ${
                 view === item.id ? 'bg-[#17181c] text-white shadow-lg' : 'text-[#71717a] hover:bg-[#1a1a1d] hover:text-white'
               }`}
             >
               <item.icon className="h-3.5 w-3.5" />
               <span className="leading-none font-medium">{item.label}</span>
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -293,8 +304,12 @@ function Topbar({ user, onUpgrade, router }) {
 
 function RailBtn({ active, onClick, icon: Icon, label, locked }) {
   return (
-    <button onClick={onClick} title={label + (locked ? ' (locked)' : '')}
-        className={`relative h-10 w-10 rounded-lg flex items-center justify-center transition ${active ? 'bg-[#17181c] text-white' : 'text-white/60 hover:text-white hover:bg-[#121317]'}`}>
+    <button 
+      onClick={() => !locked && onClick()}
+      disabled={locked}
+      title={label + (locked ? ' (locked)' : '')}
+      className={`relative h-10 w-10 rounded-lg flex items-center justify-center transition ${locked ? 'opacity-50 cursor-not-allowed' : ''} ${active ? 'bg-[#17181c] text-white' : 'text-white/60 hover:text-white hover:bg-[#121317]'}`}
+    >
       <Icon className="h-4 w-4" />
       {locked && <Lock className="h-2.5 w-2.5 absolute top-1 right-1 text-zinc-500" />}
     </button>
@@ -967,6 +982,16 @@ function NotesView({ token, refreshUser, setShowPlans }) {
     load(); if (active?.id === note.id) setActive({ ...note, public_slug: d.slug, is_public: true });
   }
 
+  function copyShareLink(note) {
+    if (!note.public_slug) return;
+    const url = `${window.location.origin}/n/${note.public_slug}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Link copied to clipboard!');
+    }).catch(() => {
+      toast.error('Failed to copy link');
+    });
+  }
+
   if (active) return (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-3xl mx-auto">
@@ -978,10 +1003,31 @@ function NotesView({ token, refreshUser, setShowPlans }) {
           </div>
         </div>
         <Card className="p-6 bg-black/80 border-white/10">
-          <h1 className="text-2xl font-bold">{active.title}</h1>
+          <h1 className="text-2xl font-bold mb-4">{active.title}</h1>
           {active.is_public && active.public_slug && (
-            <div className="text-xs mb-4 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2">
-              <Share2 className="h-3.5 w-3.5" /> Public link: <code className="text-emerald-200">{`/n/${active.public_slug}`}</code>
+            <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Share2 className="h-4 w-4 text-emerald-400" />
+                <span className="text-sm font-medium text-emerald-300">Public Link</span>
+              </div>
+              <div className="flex items-center gap-2 bg-black/40 rounded p-3 border border-emerald-500/20">
+                <a 
+                  href={`/n/${active.public_slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 text-emerald-200 hover:text-emerald-100 text-sm break-all hover:underline transition"
+                >
+                  {`${window.location.origin}/n/${active.public_slug}`}
+                </a>
+                <ExternalLink className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+              </div>
+              <button
+                onClick={() => copyShareLink(active)}
+                className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded transition"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Link
+              </button>
             </div>
           )}
           <MD>{active.content}</MD>
@@ -2045,30 +2091,53 @@ function UpgradeModal({ open, onOpenChange, router }) {
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
           <Button
             variant="secondary"
+            disabled={trialLoading}
             onClick={async () => {
+              if (trialLoading) return;
+              setTrialLoading(true);
               try {
                 const sb = supabaseBrowser();
                 const { data: { session } } = await sb.auth.getSession();
-                if (!session?.access_token) { toast.error('Please log in to start the trial'); router.push('/auth'); return; }
-                const r = await fetch('/api/subscription/start-trial', {
+                if (!session?.access_token) {
+                  toast.error('Please log in to start the trial');
+                  router.push('/auth');
+                  return;
+                }
+
+                const response = await fetch('/api/subscription/start-trial', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
                   body: JSON.stringify({ trial_days: 7 })
                 });
-                const d = await r.json();
-                if (!r.ok) throw new Error(d.error || 'Failed to start trial');
-                toast.success('Trial started - enjoy Pro features for 7 days');
+                const payload = await response.json();
+
+                if (!response.ok) {
+                  console.error('Trial start failed:', payload);
+                  throw new Error(payload.error || 'Failed to start trial');
+                }
+
+                toast.success('Trial started — enjoy Pro features for 7 days');
+                await refreshUser();
                 onOpenChange(false);
-                location.reload();
               } catch (e) {
                 console.error('Trial start (modal) error:', e);
                 toast.error(e.message || 'Failed to start trial');
+              } finally {
+                setTrialLoading(false);
               }
             }}
             className="flex-1 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
           >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Start free 7-day Pro trial
+            {trialLoading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Starting...
+              </span>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Start free 7-day Pro trial
+              </>
+            )}
           </Button>
 
           <Button 
