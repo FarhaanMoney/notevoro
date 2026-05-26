@@ -26,6 +26,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 });
     }
 
+    // Log minimal context to help debug missing DB rows
+    try {
+      console.log('Start-trial: resolved userId for trial start', userId, { userProfileExists: Boolean(userProfile?.id) });
+    } catch (e) {
+      // ignore logging errors
+    }
+
     const result = await startProTrialDb(userId);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

@@ -31,8 +31,6 @@ import {
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import soundEffects from '@/lib/sounds';
-import WhatsAppModal from '@/components/onboarding/WhatsAppModal';
-
 // Hide scrollbar while keeping horizontal scroll usable on mobile.
 // (Local helper to avoid needing a global CSS file.)
 const _noScrollbarCss = `
@@ -48,7 +46,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showPlans, setShowPlans] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showWaModal, setShowWaModal] = useState(false);
 
   useEffect(() => {
     const sb = supabaseBrowser();
@@ -104,21 +101,6 @@ function App() {
     }
   }, [user, showUpgradeModal]);
 
-  useEffect(() => {
-    // Show WhatsApp modal only once forever (tracked via localStorage)
-    if (!user) return;
-    const alreadyShown = localStorage.getItem('whatsapp_popup_shown') === 'true';
-    if (alreadyShown) return;
-    
-    const isOnboardingComplete = user.personalization?.onboarding_completed || user.onboardingStep === 'completed' || Boolean(user.onboardingCompletedAt);
-    if (!user.whatsappVerified && isOnboardingComplete) {
-      const t = setTimeout(() => {
-        setShowWaModal(true);
-        localStorage.setItem('whatsapp_popup_shown', 'true');
-      }, 3000);
-      return () => clearTimeout(t);
-    }
-  }, [user]);
 
   async function refreshUser(t = token) {
     try {
@@ -237,16 +219,6 @@ function App() {
 
       <PlansModal open={showPlans} onOpenChange={setShowPlans} user={user} token={token} refreshUser={refreshUser} router={router} />
       <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} router={router} />
-          <WhatsAppModal open={showWaModal} onClose={() => setShowWaModal(false)} onConnect={async () => {
-            // Redirect user to the dedicated WhatsApp dashboard page instead of opening WA link
-            try {
-              setShowWaModal(false);
-              router.push('/dashboard/whatsapp');
-            } catch (e) {
-              console.error('WhatsApp redirect failed:', e);
-              toast.error('Failed to open WhatsApp page');
-            }
-          }} />
     </>
   );
 }
