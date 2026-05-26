@@ -1871,6 +1871,7 @@ function PlansModal({ open, onOpenChange, user, token, refreshUser, router }) {
   const plans = [
     { id:'free', name:'Free', price:'₹0/month', aiEnergy: PLAN_ENERGY.free, features: ['20 AI Energy/day', 'All major features', 'Chat, Quizzes, Flashcards, Mock Tests, Study Tools', 'File Analysis'] },
     { id:'pro', name:'Pro', price:'₹299/month', aiEnergy: PLAN_ENERGY.pro, highlighted: true, features: ['250 AI Energy/day', 'Everything in Free', 'Faster generations', 'Priority queue', 'Advanced analytics', 'AI Notes, Study Plans'] },
+    { id:'premium', name:'Premium', price:'₹499/month', aiEnergy: PLAN_ENERGY.premium, highlighted: false, features: ['Unlimited AI Energy', 'Everything in Pro', 'Fastest generation speed', 'Premium AI models', 'Priority support', 'Early access to features'], badge: 'Best value' },
   ];
 
   return (
@@ -1883,7 +1884,11 @@ function PlansModal({ open, onOpenChange, user, token, refreshUser, router }) {
         <div className="grid md:grid-cols-3 gap-3">
           {plans.map((p) => (
             <div key={p.id} className={`rounded-xl border p-5 flex flex-col ${p.highlighted ? 'border-purple-500/50 bg-purple-500/5 relative' : 'border-white/10 bg-white/[0.02]'}`}>
-              {p.highlighted && <Badge className="absolute -top-2 right-3 bg-purple-500 text-white border-purple-400">Most popular</Badge>}
+              {(p.highlighted || p.badge) && (
+                <Badge className={`absolute -top-2 right-3 text-[10px] border-0 ${p.highlighted ? 'bg-purple-500 text-white border-purple-400' : 'bg-emerald-500/10 text-emerald-300 border-emerald-400/20'}`}>
+                  {p.highlighted ? 'Most popular' : p.badge}
+                </Badge>
+              )}
               <div className="font-semibold">{p.name}</div>
               <div className="text-2xl font-bold mt-1">{p.price}<span className="text-sm font-normal text-zinc-400">/mo</span></div>
               <div className="mt-2 flex items-center gap-1.5 text-yellow-300 text-sm font-medium"><Zap className="h-4 w-4" />{p.aiEnergy} AI Energy/day</div>
