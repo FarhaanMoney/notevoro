@@ -63,7 +63,16 @@ export async function ensureWhatsAppConnection(userId: string, mode: WhatsAppCon
     .select()
     .single();
 
-  if (insert.error) throw mapSupabaseError(insert.error);
+  if (insert.error) {
+    const mapped = mapSupabaseError(insert.error);
+    if (mapped.code === 'DUPLICATE') {
+      const fallback = await sb.from('whatsapp_connections').select('*').eq('user_id', userId).maybeSingle();
+      if (fallback.error) throw mapSupabaseError(fallback.error);
+      if (!fallback.data) throw mapped;
+      return whatsappConnectionSchema.parse(fallback.data);
+    }
+    throw mapped;
+  }
 
   await ensureUserSettings(userId);
   return whatsappConnectionSchema.parse(insert.data);
