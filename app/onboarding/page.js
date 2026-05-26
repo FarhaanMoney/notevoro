@@ -112,29 +112,28 @@ export default function OnboardingPage() {
 
   return (
     <OnboardingShell 
-      title={isTrialQuestion ? "Start Your Pro Trial" : "Welcome to Notevoro"} 
-      subtitle={isTrialQuestion ? "Unlock all features for 7 days free" : "A smarter way to learn and stay focused"} 
+      title={isTrialQuestion ? "Unlock Pro for 7 days" : "Welcome to Notevoro"} 
+      subtitle={isTrialQuestion ? "Start your premium trial and access every Pro feature instantly." : "A smarter way to learn with AI-powered study tools."} 
       step={step} 
       total={QUESTIONS.length} 
       onBack={() => step>1 && setStep(step-1)}
     >
       {isTrialQuestion ? (
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-3">7-Day Pro Trial</h3>
+          <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-transparent to-blue-500/10 p-6 shadow-[0_40px_120px_-80px_rgba(124,58,237,0.7)]">
+            <h3 className="text-xl font-semibold text-white mb-3">7-Day Pro Trial</h3>
             <ul className="space-y-2 text-sm text-zinc-300 mb-4">
-              <li>✨ 250 AI Energy per day (vs 20 for Free)</li>
-              <li>🚀 Unlimited AI-powered study help</li>
-              <li>📊 Advanced study analytics</li>
-              <li>🎁 Premium features unlocked</li>
-              <li>⏰ Cancel anytime, no credit card required</li>
+              <li>✨ 250 AI Energy every day</li>
+              <li>🚀 Unlock WhatsApp, Notes, Mock Tests, and Study Plans</li>
+              <li>📈 Faster priorities, advanced analytics, premium tools</li>
+              <li>🔒 No credit card required to begin</li>
             </ul>
-            <p className="text-xs text-zinc-400">After 7 days, you'll revert to the Free plan unless you upgrade.</p>
+            <p className="text-xs text-zinc-400">The trial lasts 7 days, then you return to Free unless you upgrade.</p>
           </div>
           <QuestionCard question={q.question} options={q.options} selected={answers[q.id]} onSelect={(v)=>handleSelect(q.id,v)} />
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row justify-end">
             <Button variant="ghost" onClick={() => setStep(step-1)} disabled={loading}>Back</Button>
-            <Button onClick={handleNext} disabled={loading || !answers[q.id]}>Continue</Button>
+            <Button onClick={handleNext} disabled={loading || !answers[q.id]}>{step < QUESTIONS.length ? 'Continue' : 'Start trial'}</Button>
           </div>
         </div>
       ) : (

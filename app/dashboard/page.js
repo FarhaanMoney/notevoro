@@ -165,7 +165,7 @@ function App() {
           <RailBtn active={view==='notes'} onClick={()=>setView('notes')} icon={NotebookPen} label="Notes" locked={!isPro} />
           <RailBtn active={view==='plan'} onClick={()=>setView('plan')} icon={Calendar} label="Plan" locked={!isPro} />
           <RailBtn active={view==='campaign'} onClick={()=>setView('campaign')} icon={Route} label="Campaign" locked={false} />
-          <RailBtn active={false} onClick={()=>canUseWhatsApp(user) && router.push('/dashboard/whatsapp')} icon={Phone} label="WhatsApp" locked={!canUseWhatsApp(user)} />
+          <RailBtn active={false} onClick={()=>router.push('/dashboard/whatsapp')} icon={Phone} label="WhatsApp" locked={!canUseWhatsApp(user)} />
           <RailBtn active={view==='mock'} onClick={()=>setView('mock')} icon={ClipboardList} label="Mock" locked={!isPro} />
           <RailBtn active={view==='file'} onClick={()=>setView('file')} icon={Upload} label="Files" locked={!isPro} />
           <RailBtn active={view==='dashboard'} onClick={()=>setView('dashboard')} icon={LayoutDashboard} label="Stats" />
@@ -203,28 +203,24 @@ function App() {
             { id: 'file', icon: Upload, label: 'Files' },
             { id: 'whatsapp', icon: Phone, label: 'WhatsApp' },
             { id: 'dashboard', icon: LayoutDashboard, label: 'Stats' },
-          ].map((item) => {
-            const isWhatsAppLocked = item.id === 'whatsapp' && !canUseWhatsApp(user);
-            return (
+          ].map((item) => (
             <button
               key={item.id}
               onClick={() => {
-                if (item.id === 'whatsapp' && canUseWhatsApp(user)) {
+                if (item.id === 'whatsapp') {
                   router.push('/dashboard/whatsapp');
-                } else if (item.id !== 'whatsapp') {
+                } else {
                   setView(item.id);
                 }
               }}
-              disabled={isWhatsAppLocked}
-              className={`shrink-0 w-[70px] h-11 rounded-lg flex flex-col items-center justify-center text-[9px] gap-0.5 transition-all duration-200 ${isWhatsAppLocked ? 'opacity-50 cursor-not-allowed' : ''} ${
+              className={`shrink-0 w-[70px] h-11 rounded-lg flex flex-col items-center justify-center text-[9px] gap-0.5 transition-all duration-200 ${
                 view === item.id ? 'bg-[#17181c] text-white shadow-lg' : 'text-[#71717a] hover:bg-[#1a1a1d] hover:text-white'
               }`}
             >
               <item.icon className="h-3.5 w-3.5" />
               <span className="leading-none font-medium">{item.label}</span>
             </button>
-            );
-          })}
+          ))}
         </div>
       </div>
 
@@ -304,11 +300,10 @@ function Topbar({ user, onUpgrade, router }) {
 
 function RailBtn({ active, onClick, icon: Icon, label, locked }) {
   return (
-    <button 
-      onClick={() => !locked && onClick()}
-      disabled={locked}
-      title={label + (locked ? ' (locked)' : '')}
-      className={`relative h-10 w-10 rounded-lg flex items-center justify-center transition ${locked ? 'opacity-50 cursor-not-allowed' : ''} ${active ? 'bg-[#17181c] text-white' : 'text-white/60 hover:text-white hover:bg-[#121317]'}`}
+    <button
+      onClick={onClick}
+      title={label + (locked ? ' (upgrade required)' : '')}
+      className={`relative h-10 w-10 rounded-lg flex items-center justify-center transition ${locked ? 'bg-white/5 text-white/70 hover:bg-white/10' : ''} ${active ? 'bg-[#17181c] text-white' : 'text-white/60 hover:text-white hover:bg-[#121317]'}`}
     >
       <Icon className="h-4 w-4" />
       {locked && <Lock className="h-2.5 w-2.5 absolute top-1 right-1 text-zinc-500" />}
@@ -318,28 +313,36 @@ function RailBtn({ active, onClick, icon: Icon, label, locked }) {
 
 function LockedView({ feature, need, onUpgrade, router }) {
   return (
-    <div className="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-[380px] w-[700px] rounded-full bg-purple-500/15 blur-[120px]" />
-        <div className="absolute bottom-[-15%] right-[-10%] h-[320px] w-[320px] rounded-full bg-blue-500/10 blur-[110px]" />
-      </div>
-      <Card className="max-w-md w-full p-8 bg-white/[0.03] border-white/10 text-center backdrop-blur relative">
-        <div className="h-14 w-14 rounded-2xl bg-black/80 flex items-center justify-center mx-auto mb-4">
-          <Lock className="h-6 w-6 text-purple-200" />
-        </div>
-        <h2 className="text-xl font-semibold mb-2">{feature} is locked</h2>
-        <p className="text-sm text-zinc-400 mb-6">
-          Upgrade to <span className="text-purple-300 font-medium">{need}</span> to unlock {feature.toLowerCase()} and more.
-        </p>
-        <div className="grid gap-2">
-          <Button onClick={() => router.push('/premium')} className="h-12 bg-black text-white hover:bg-zinc-200">
-            <Crown className="h-4 w-4 mr-2" />Upgrade now
-          </Button>
-          <div className="text-[11px] text-zinc-500">
-            Tip: You can still use Chat, Quiz, and Campaign on Free.
+    <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-[#05060b] via-[#0a0c16] to-[#080a13]">
+      <div className="relative w-full max-w-3xl rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl shadow-black/40 bg-[#07090f]/90">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-blue-500/5" />
+        <div className="relative p-8 md:p-12">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-3xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-xl shadow-purple-500/20">
+              <Lock className="h-7 w-7 text-white" />
+            </div>
+            <h1 className="text-3xl font-semibold text-white mb-3">{feature} is premium</h1>
+            <p className="max-w-xl mx-auto text-sm leading-6 text-zinc-400">
+              Upgrade to {need} to unlock {feature.toLowerCase()}, WhatsApp, AI Notes, mock tests and every advanced study tool.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[1fr_auto] items-center">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left">
+              <h2 className="text-lg font-semibold text-white mb-3">Upgrade for full access</h2>
+              <ul className="space-y-2 text-sm text-zinc-300">
+                <li>• 250 AI Energy/day with Pro trial</li>
+                <li>• WhatsApp companion & advanced AI tools</li>
+                <li>• Mock tests, file analysis, and study plans</li>
+                <li>• Priority generation and premium features</li>
+              </ul>
+            </div>
+            <Button onClick={() => (onUpgrade ? onUpgrade() : router.push('/premium'))} className="h-14 rounded-3xl bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-xl shadow-purple-500/20 hover:opacity-95">
+              Upgrade to {need}
+            </Button>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
