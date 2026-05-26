@@ -229,7 +229,7 @@ function App() {
       </div>
 
       <PlansModal open={showPlans} onOpenChange={setShowPlans} user={user} token={token} refreshUser={refreshUser} router={router} trialLoading={trialLoading} setTrialLoading={setTrialLoading} />
-      <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} router={router} />
+      <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} router={router} trialLoading={trialLoading} setTrialLoading={setTrialLoading} />
     </>
   );
 }
@@ -1958,7 +1958,7 @@ function PlansModal({ open, onOpenChange, user, token, refreshUser, router, tria
 }
 
 /* ============ UPGRADE MODAL (when credits = 0) ============ */
-function UpgradeModal({ open, onOpenChange, router }) {
+function UpgradeModal({ open, onOpenChange, router, trialLoading, setTrialLoading }) {
   const plans = [
     {
       id: 'free',
