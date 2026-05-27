@@ -191,15 +191,41 @@ export function useWhatsAppDashboard() {
         const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
         try {
           if (isMobile) {
-            // On mobile, use location assign to open the WhatsApp app reliably
+            // On mobile, navigate directly to the link to open WhatsApp reliably
             window.location.href = data.connectUrl;
+            toast.success('WhatsApp opened. Send the verification token to connect.');
           } else {
-            window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
+            const newWin = window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
+            if (newWin) {
+              try {
+                newWin.focus();
+              } catch {}
+              toast.success('WhatsApp opened in a new window. Send the verification token to connect.');
+            } else {
+              // Popup was likely blocked — fall back to copying the link and advising the user
+              try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  await navigator.clipboard.writeText(data.connectUrl);
+                }
+              } catch (copyErr) {
+                // ignore copy errors
+              }
+              toast.error('Popup blocked. The WhatsApp link was copied to your clipboard — please allow popups or paste the link into your browser.');
+            }
           }
-          toast.success('WhatsApp opened. Send the verification token to connect.');
         } catch (e) {
-          console.warn('Failed to open WhatsApp link in new window, falling back to navigation', e);
-          window.location.href = data.connectUrl;
+          console.warn('Failed to open WhatsApp link, falling back to copy/navigation', e);
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(data.connectUrl);
+              toast.error('Unable to open link automatically. The WhatsApp link was copied to your clipboard.');
+            } else {
+              // Last resort: navigate
+              window.location.href = data.connectUrl;
+            }
+          } catch {
+            window.location.href = data.connectUrl;
+          }
         }
       } else {
         throw new Error('Failed to generate WhatsApp connection link');
