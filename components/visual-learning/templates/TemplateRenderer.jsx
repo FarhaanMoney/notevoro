@@ -44,6 +44,16 @@ export default function TemplateRenderer({ lessonState, status }) {
   const key = `${typeKey}.${templateKey}`;
   const TemplateComponent = TEMPLATE_MAP[key] || TEMPLATE_MAP[templateKey] || DefaultLessonShell;
 
+  const safeStep = lessonState.steps?.[lessonState.currentStepIndex] || {
+    id: 'fallback_step_1',
+    title: lessonState.title || 'Visual lesson',
+    description: lessonState.description || lessonState.subtitle || 'Starting the lesson.',
+    narration: lessonState.description || lessonState.subtitle || 'Starting the lesson.',
+    visualCues: [],
+    actions: [],
+    meta: { visualType: 'diagram', visualPrompt: '' },
+  };
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[2rem] bg-[#030519] text-white shadow-2xl shadow-black/50">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.16),transparent_28%)] pointer-events-none" />
@@ -55,7 +65,7 @@ export default function TemplateRenderer({ lessonState, status }) {
         </div>
       </div>
 
-      <TemplateComponent lesson={lessonState} step={lessonState.steps?.[lessonState.currentStepIndex]} currentStepIndex={lessonState.currentStepIndex} />
+      <TemplateComponent lesson={lessonState} step={safeStep} currentStepIndex={lessonState.currentStepIndex} />
     </div>
   );
 }

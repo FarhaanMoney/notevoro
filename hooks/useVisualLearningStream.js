@@ -229,7 +229,9 @@ export function useVisualLearningStream() {
 
             console.error('[visual] start - invalid final lesson JSON', finalText);
             setError('AI response was malformed. Showing a fallback lesson.');
-            setVisualState(sanitizeLessonInput(createFallbackLessonData()));
+            const fallbackState = sanitizeLessonInput(createFallbackLessonData());
+            setVisualState(fallbackState);
+            setSteps(fallbackState.steps || []);
             setStatus((prev) => (prev === 'error' ? prev : 'completed'));
             setIsStreaming(false);
             return;
@@ -257,7 +259,9 @@ export function useVisualLearningStream() {
         } else {
           console.error('Visual learning stream failed', streamError);
           setError(streamError.message || 'Streaming failed');
-          setVisualState(sanitizeLessonInput(createFallbackLessonData()));
+          const fallbackState = sanitizeLessonInput(createFallbackLessonData());
+          setVisualState(fallbackState);
+          setSteps(fallbackState.steps || []);
           setStatus('error');
         }
         setIsStreaming(false);
