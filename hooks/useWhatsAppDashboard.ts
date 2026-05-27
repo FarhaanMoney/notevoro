@@ -188,8 +188,19 @@ export function useWhatsAppDashboard() {
       }
 
       if (data.connectUrl) {
-        window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
-        toast.success('WhatsApp opened. Send the verification token to connect.');
+        const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+        try {
+          if (isMobile) {
+            // On mobile, use location assign to open the WhatsApp app reliably
+            window.location.href = data.connectUrl;
+          } else {
+            window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
+          }
+          toast.success('WhatsApp opened. Send the verification token to connect.');
+        } catch (e) {
+          console.warn('Failed to open WhatsApp link in new window, falling back to navigation', e);
+          window.location.href = data.connectUrl;
+        }
       } else {
         throw new Error('Failed to generate WhatsApp connection link');
       }
