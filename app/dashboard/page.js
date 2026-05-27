@@ -161,6 +161,7 @@ function App() {
           </div>
           <RailBtn active={view==='chat'} onClick={()=>setView('chat')} icon={MessageSquare} label="Chat" />
           <RailBtn active={view==='quiz'} onClick={()=>setView('quiz')} icon={Zap} label="Quiz" locked={false} />
+          <RailBtn active={false} onClick={()=>router.push('/visual-learning')} icon={Sparkles} label="Visual" locked={!canUseVisualExplanation(user)} />
           <RailBtn active={view==='flashcards'} onClick={()=>setView('flashcards')} icon={BookOpen} label="Cards" locked={!isPro} />
           <RailBtn active={view==='notes'} onClick={()=>setView('notes')} icon={NotebookPen} label="Notes" locked={!isPro} />
           <RailBtn active={view==='plan'} onClick={()=>setView('plan')} icon={Calendar} label="Plan" locked={!isPro} />
@@ -194,6 +195,7 @@ function App() {
         <div className="flex gap-1.5 p-1.5 overflow-x-auto no-scrollbar">
           {[
             { id: 'chat', icon: MessageSquare, label: 'Chat' },
+            { id: 'visual', icon: Sparkles, label: 'Visual' },
             { id: 'quiz', icon: Zap, label: 'Quiz' },
             { id: 'campaign', icon: Route, label: 'Road' },
             { id: 'flashcards', icon: BookOpen, label: 'Cards' },
@@ -209,6 +211,8 @@ function App() {
               onClick={() => {
                 if (item.id === 'whatsapp') {
                   router.push('/dashboard/whatsapp');
+                } else if (item.id === 'visual') {
+                  router.push('/visual-learning');
                 } else {
                   setView(item.id);
                 }
