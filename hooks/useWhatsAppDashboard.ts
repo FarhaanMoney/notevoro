@@ -25,9 +25,16 @@ export type WhatsAppDashboardMessage = {
   created_at: string;
 };
 
+type AuthProfile = {
+  id: string;
+  plan?: string;
+  is_trial_active?: boolean;
+  personalization?: Record<string, unknown>;
+};
+
 export function useWhatsAppDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<Record<string, unknown> | null>(null);
+  const [user, setUser] = useState<AuthProfile | null>(null);
   const [status, setStatus] = useState<WhatsAppDashboardStatus | null>(null);
   const [verified, setVerified] = useState(false);
   const [messages, setMessages] = useState<WhatsAppDashboardMessage[]>([]);
