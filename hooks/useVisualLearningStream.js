@@ -31,12 +31,19 @@ function parseSSEBuffer(buffer) {
 }
 
 const initialVisualState = {
-  nodes: [],
-  edges: [],
+  scene: {
+    id: 'intro',
+    title: 'Ready to learn',
+    subtitle: 'Start a live lesson',
+    description: 'The AI tutor will animate concepts step by step.',
+  },
+  objects: [],
+  effects: [],
   highlights: [],
   pulses: [],
   focusTarget: null,
   quiz: null,
+  camera: { zoom: 1, x: 0, y: 0 },
 };
 
 export function useVisualLearningStream() {
@@ -70,38 +77,72 @@ export function useVisualLearningStream() {
   const applyAction = useCallback((action) => {
     setVisualState((prev) => {
       const next = {
-        nodes: [...prev.nodes],
-        edges: [...prev.edges],
+        scene: { ...prev.scene },
+        objects: [...prev.objects],
+        effects: [...prev.effects],
         highlights: [...prev.highlights],
         pulses: [...prev.pulses],
         focusTarget: prev.focusTarget,
         quiz: prev.quiz,
+        camera: { ...prev.camera },
       };
 
       switch (action.op) {
-        case 'reveal_node': {
-          const node = action.node || action.target;
-          if (node && node.id) {
-            const exists = next.nodes.find((n) => n.id === node.id);
-            if (exists) {
-              next.nodes = next.nodes.map((n) => (n.id === node.id ? { ...n, ...node, visible: true } : n));
+        case 'set_scene': {
+          next.scene = {
+            ...next.scene,
+            title: action.title || next.scene.title,
+            subtitle: action.subtitle || next.scene.subtitle,
+            description: action.description || next.scene.description,
+          };
+          break;
+        }
+        case 'reveal_object': {
+          const obj = action.object || action.target;
+          if (obj && obj.id) {
+            const existing = next.objects.find((item) => item.id === obj.id);
+            if (existing) {
+              next.objects = next.objects.map((item) => (item.id === obj.id ? { ...item, ...obj, visible: true } : item));
             } else {
-              next.nodes.push({ ...node, visible: true, highlighted: false });
+              next.objects.push({ ...obj, visible: true });
             }
           }
           break;
         }
-        case 'hide_node': {
-          next.nodes = next.nodes.map((n) => (n.id === action.target ? { ...n, visible: false } : n));
+        case 'hide_object': {
+          next.objects = next.objects.map((item) => (item.id === action.target ? { ...item, visible: false } : item));
           break;
         }
-        case 'draw_edge': {
-          if (action.from && action.to) {
-            const exists = next.edges.find((e) => e.id && action.id ? e.id === action.id : e.from === action.from && e.to === action.to);
-            if (!exists) {
-              next.edges.push({ id: action.id || `edge-${action.from}-${action.to}-${Date.now()}`, from: action.from, to: action.to, label: action.label || '', animated: Boolean(action.animated) });
-            }
+        case 'draw_path': {
+          const path = {
+            id: action.id || `path-${action.from}-${action.to}-${Date.now()}`,
+            type: 'path',
+            from: action.from,
+            to: action.to,
+            shape: action.shape || 'line',
+            label: action.label || '',
+            animated: Boolean(action.animated),
+            visible: true,
+          };
+          const exists = next.effects.find((item) => item.id === path.id);
+          if (exists) {
+            next.effects = next.effects.map((item) => (item.id === path.id ? { ...item, ...path } : item));
+          } else {
+            next.effects.push(path);
           }
+          break;
+        }
+        case 'particle_effect': {
+          const effect = {
+            id: action.id || `particle-${Date.now()}`,
+            type: action.type || 'particles',
+            x: action.x || 0,
+            y: action.y || 0,
+            count: action.count || 16,
+            color: action.color || '#7c3aed',
+            visible: true,
+          };
+          next.effects.push(effect);
           break;
         }
         case 'highlight': {
@@ -125,6 +166,14 @@ export function useVisualLearningStream() {
         }
         case 'zoom_focus': {
           next.focusTarget = action.target || null;
+          break;
+        }
+        case 'show_label': {
+          next.objects = next.objects.map((obj) => (obj.id === action.target ? { ...obj, label: action.text || obj.label } : obj));
+          break;
+        }
+        case 'animate_object': {
+          next.objects = next.objects.map((obj) => (obj.id === action.target ? { ...obj, animation: action.animation || obj.animation } : obj));
           break;
         }
         case 'quiz_popup': {
@@ -163,12 +212,20 @@ export function useVisualLearningStream() {
         setCurrentNarration(packet.narration);
       }
 
-      if (packet.type === 'step') {
-        setSteps((prev) => [...prev, { stepId: packet.stepId || prev.length + 1, narration: packet.narration || '', actions: packet.actions || [] }]);
+      if (packet.type === 'step' || packet.type === 'scene') {
+        setSteps((prev) => [...prev, { stepId: packet.stepId || prev.length + 1, narration: packet.narration || '', actions: packet.actions || [], scene: packet.scene || null }]);
       }
 
       if (Array.isArray(packet.actions)) {
         packet.actions.forEach(applyAction);
+      }
+
+      if (packet.scene && packet.type !== 'scene') {
+        if (Array.isArray(packet.scene)) {
+          packet.scene.forEach((action) => applyAction(action));
+        } else if (typeof packet.scene === 'object') {
+          applyAction({ op: 'set_scene', ...packet.scene });
+        }
       }
     },
     [applyAction]
