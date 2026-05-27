@@ -31,19 +31,17 @@ function parseSSEBuffer(buffer) {
 }
 
 const initialVisualState = {
-  scene: {
-    id: 'intro',
-    title: 'Ready to learn',
-    subtitle: 'Start a live lesson',
-    description: 'The AI tutor will animate concepts step by step.',
-  },
-  objects: [],
-  effects: [],
-  highlights: [],
-  pulses: [],
-  focusTarget: null,
-  quiz: null,
-  camera: { zoom: 1, x: 0, y: 0 },
+  lessonType: 'general',
+  template: 'default',
+  title: 'Ready to learn',
+  subtitle: 'Start a live lesson',
+  description: 'The AI tutor will choose an immersive visual lesson template.',
+  theme: 'cinematic',
+  steps: [],
+  currentStepIndex: 0,
+  currentStep: null,
+  visualCues: [],
+  moduleData: {},
 };
 
 export function useVisualLearningStream() {
@@ -76,113 +74,50 @@ export function useVisualLearningStream() {
 
   const applyAction = useCallback((action) => {
     setVisualState((prev) => {
-      const next = {
-        scene: { ...prev.scene },
-        objects: [...prev.objects],
-        effects: [...prev.effects],
-        highlights: [...prev.highlights],
-        pulses: [...prev.pulses],
-        focusTarget: prev.focusTarget,
-        quiz: prev.quiz,
-        camera: { ...prev.camera },
-      };
+      const next = { ...prev };
 
       switch (action.op) {
+        case 'set_lesson': {
+          next.lessonType = action.lessonType || next.lessonType;
+          next.template = action.template || next.template;
+          next.title = action.title || next.title;
+          next.subtitle = action.subtitle || next.subtitle;
+          next.description = action.description || next.description;
+          next.theme = action.theme || next.theme;
+          next.moduleData = { ...next.moduleData, ...action.moduleData };
+          break;
+        }
         case 'set_scene': {
-          next.scene = {
-            ...next.scene,
-            title: action.title || next.scene.title,
-            subtitle: action.subtitle || next.scene.subtitle,
-            description: action.description || next.scene.description,
+          next.title = action.title || next.title;
+          next.subtitle = action.subtitle || next.subtitle;
+          next.description = action.description || next.description;
+          next.theme = action.theme || next.theme;
+          break;
+        }
+        case 'add_step': {
+          const step = {
+            stepId: action.stepId ?? next.steps.length + 1,
+            title: action.title || `Step ${next.steps.length + 1}`,
+            description: action.description || action.narration || '',
+            visualCues: Array.isArray(action.visualCues) ? action.visualCues : [],
+            actions: Array.isArray(action.actions) ? action.actions : [],
           };
+          next.steps = [...next.steps, step];
+          next.currentStepIndex = next.steps.length - 1;
+          next.currentStep = step;
           break;
         }
-        case 'reveal_object': {
-          const obj = action.object || action.target;
-          if (obj && obj.id) {
-            const existing = next.objects.find((item) => item.id === obj.id);
-            if (existing) {
-              next.objects = next.objects.map((item) => (item.id === obj.id ? { ...item, ...obj, visible: true } : item));
-            } else {
-              next.objects.push({ ...obj, visible: true });
-            }
-          }
+        case 'advance_step': {
+          const nextIndex = typeof action.index === 'number' ? action.index : next.steps.length - 1;
+          next.currentStepIndex = Math.max(0, Math.min(next.steps.length - 1, nextIndex));
+          next.currentStep = next.steps[next.currentStepIndex] || null;
           break;
         }
-        case 'hide_object': {
-          next.objects = next.objects.map((item) => (item.id === action.target ? { ...item, visible: false } : item));
-          break;
-        }
-        case 'draw_path': {
-          const path = {
-            id: action.id || `path-${action.from}-${action.to}-${Date.now()}`,
-            type: 'path',
-            from: action.from,
-            to: action.to,
-            shape: action.shape || 'line',
-            label: action.label || '',
-            animated: Boolean(action.animated),
-            visible: true,
-          };
-          const exists = next.effects.find((item) => item.id === path.id);
-          if (exists) {
-            next.effects = next.effects.map((item) => (item.id === path.id ? { ...item, ...path } : item));
-          } else {
-            next.effects.push(path);
-          }
-          break;
-        }
-        case 'particle_effect': {
-          const effect = {
-            id: action.id || `particle-${Date.now()}`,
-            type: action.type || 'particles',
-            x: action.x || 0,
-            y: action.y || 0,
-            count: action.count || 16,
-            color: action.color || '#7c3aed',
-            visible: true,
-          };
-          next.effects.push(effect);
-          break;
-        }
-        case 'highlight': {
-          if (action.target) {
-            next.highlights = [action.target];
-          }
-          break;
-        }
-        case 'pulse': {
-          if (action.target) {
-            next.pulses = [...new Set([...next.pulses, action.target])];
-            const duration = typeof action.durationMs === 'number' ? action.durationMs : 900;
-            setTimeout(() => {
-              setVisualState((state) => ({
-                ...state,
-                pulses: state.pulses.filter((id) => id !== action.target),
-              }));
-            }, duration);
-          }
-          break;
-        }
-        case 'zoom_focus': {
-          next.focusTarget = action.target || null;
-          break;
-        }
-        case 'show_label': {
-          next.objects = next.objects.map((obj) => (obj.id === action.target ? { ...obj, label: action.text || obj.label } : obj));
-          break;
-        }
-        case 'animate_object': {
-          next.objects = next.objects.map((obj) => (obj.id === action.target ? { ...obj, animation: action.animation || obj.animation } : obj));
-          break;
-        }
-        case 'quiz_popup': {
-          next.quiz = {
-            visible: true,
-            question: action.question || 'Review this concept',
-            choices: Array.isArray(action.choices) ? action.choices : [],
-            correctIndex: typeof action.correctIndex === 'number' ? action.correctIndex : 0,
-          };
+        case 'add_visual_cue': {
+          if (!next.currentStep) break;
+          const updated = { ...next.currentStep, visualCues: [...(next.currentStep.visualCues || []), action.cue] };
+          next.steps = next.steps.map((step, idx) => (idx === next.currentStepIndex ? updated : step));
+          next.currentStep = updated;
           break;
         }
         case 'narration_sync': {
@@ -212,23 +147,50 @@ export function useVisualLearningStream() {
         setCurrentNarration(packet.narration);
       }
 
+      if (packet.lessonType || packet.template || packet.title || packet.subtitle || packet.description) {
+        applyAction({
+          op: 'set_lesson',
+          lessonType: packet.lessonType,
+          template: packet.template,
+          title: packet.title,
+          subtitle: packet.subtitle,
+          description: packet.description,
+          theme: packet.theme,
+          moduleData: packet.moduleData,
+        });
+      }
+
       if (packet.type === 'step' || packet.type === 'scene') {
-        setSteps((prev) => [...prev, { stepId: packet.stepId || prev.length + 1, narration: packet.narration || '', actions: packet.actions || [], scene: packet.scene || null }]);
+        const step = {
+          stepId: packet.stepId || steps.length + 1,
+          title: packet.title || `Step ${steps.length + 1}`,
+          description: packet.description || packet.narration || '',
+          visualCues: Array.isArray(packet.visualCues) ? packet.visualCues : [],
+          actions: Array.isArray(packet.actions) ? packet.actions : [],
+        };
+        setSteps((prev) => {
+          const nextSteps = [...prev, step];
+          setVisualState((prevState) => ({
+            ...prevState,
+            steps: nextSteps,
+            currentStepIndex: nextSteps.length - 1,
+            currentStep: step,
+          }));
+          return nextSteps;
+        });
       }
 
       if (Array.isArray(packet.actions)) {
-        packet.actions.forEach(applyAction);
-      }
-
-      if (packet.scene && packet.type !== 'scene') {
-        if (Array.isArray(packet.scene)) {
-          packet.scene.forEach((action) => applyAction(action));
-        } else if (typeof packet.scene === 'object') {
-          applyAction({ op: 'set_scene', ...packet.scene });
-        }
+        packet.actions.forEach((action) => {
+          if (action.op === 'add_step') {
+            applyAction(action);
+          } else {
+            applyAction(action);
+          }
+        });
       }
     },
-    [applyAction]
+    [applyAction, steps.length]
   );
 
   const processQueue = useCallback(() => {

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Shell from '@/components/visual-learning/Shell';
 import LeftPanel from '@/components/visual-learning/LeftPanel';
-import StreamingWhiteboard from '@/components/visual-learning/StreamingWhiteboard';
+import TemplateRenderer from '@/components/visual-learning/templates/TemplateRenderer';
 import { useVisualLearningStream } from '@/hooks/useVisualLearningStream';
 
 export default function WhiteboardPage() {
@@ -25,7 +25,7 @@ export default function WhiteboardPage() {
         progress={progress}
       />
       <div className="flex-1 p-4">
-        <StreamingWhiteboard visualState={visualState} status={status} error={error} />
+        <TemplateRenderer lessonState={visualState} status={status} error={error} />
       </div>
     </Shell>
   );
