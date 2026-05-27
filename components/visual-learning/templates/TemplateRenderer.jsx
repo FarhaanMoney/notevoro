@@ -15,6 +15,13 @@ const TEMPLATE_MAP = {
   'programming.api_flow': APIFlowVisualizer,
   'math.graphs': GraphAnimator,
   'math.geometry': GraphAnimator,
+  'black_hole': BlackHoleSimulation,
+  'solar_system': BlackHoleSimulation,
+  'photosynthesis': PhotosynthesisSimulation,
+  'gravity': GravityVisualizer,
+  'api_flow': APIFlowVisualizer,
+  'graphs': GraphAnimator,
+  'geometry': GraphAnimator,
 };
 
 function DefaultLessonShell({ lessonState }) {
@@ -32,8 +39,10 @@ function DefaultLessonShell({ lessonState }) {
 }
 
 export default function TemplateRenderer({ lessonState, status }) {
-  const key = `${lessonState.lessonType || 'general'}.${lessonState.template || 'default'}`;
-  const TemplateComponent = TEMPLATE_MAP[key] || TEMPLATE_MAP[lessonState.template] || DefaultLessonShell;
+  const templateKey = (lessonState.template || 'default').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  const typeKey = (lessonState.lessonType || 'general').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  const key = `${typeKey}.${templateKey}`;
+  const TemplateComponent = TEMPLATE_MAP[key] || TEMPLATE_MAP[templateKey] || DefaultLessonShell;
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[2rem] bg-[#030519] text-white shadow-2xl shadow-black/50">

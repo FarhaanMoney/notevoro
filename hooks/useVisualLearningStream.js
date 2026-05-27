@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
+import { normalizeLessonData, createFallbackLessonData, normalizeStep, safeArray, safeObject, safeString } from '@/lib/visual/normalizeLessonData';
 
 function parseSSEBuffer(buffer) {
   const packets = [];
@@ -30,7 +31,7 @@ function parseSSEBuffer(buffer) {
   return { packets, remainder };
 }
 
-const initialVisualState = {
+const initialVisualState = normalizeLessonData({
   lessonType: 'general',
   template: 'default',
   title: 'Ready to learn',
@@ -38,11 +39,8 @@ const initialVisualState = {
   description: 'The AI tutor will choose an immersive visual lesson template.',
   theme: 'cinematic',
   steps: [],
-  currentStepIndex: 0,
-  currentStep: null,
-  visualCues: [],
   moduleData: {},
-};
+});
 
 export function useVisualLearningStream() {
   const [status, setStatus] = useState('idle');
@@ -57,6 +55,8 @@ export function useVisualLearningStream() {
   const runningRef = useRef(false);
   const stalledTimerRef = useRef(null);
   const bufferRef = useRef('');
+  const validLessonPacketRef = useRef(false);
+  const packetCountRef = useRef(0);
 
   const resetStreamState = useCallback(() => {
     setStatus('idle');
@@ -66,6 +66,8 @@ export function useVisualLearningStream() {
     setVisualState(initialVisualState);
     queueRef.current = [];
     bufferRef.current = '';
+    validLessonPacketRef.current = false;
+    packetCountRef.current = 0;
     if (stalledTimerRef.current) {
       clearTimeout(stalledTimerRef.current);
       stalledTimerRef.current = null;
@@ -76,7 +78,7 @@ export function useVisualLearningStream() {
     setVisualState((prev) => {
       const next = { ...prev };
 
-      switch (action.op) {
+      switch (action?.op) {
         case 'set_lesson': {
           next.lessonType = action.lessonType || next.lessonType;
           next.template = action.template || next.template;
@@ -84,7 +86,7 @@ export function useVisualLearningStream() {
           next.subtitle = action.subtitle || next.subtitle;
           next.description = action.description || next.description;
           next.theme = action.theme || next.theme;
-          next.moduleData = { ...next.moduleData, ...action.moduleData };
+          next.moduleData = { ...next.moduleData, ...safeObject(action.moduleData) };
           break;
         }
         case 'set_scene': {
@@ -95,13 +97,7 @@ export function useVisualLearningStream() {
           break;
         }
         case 'add_step': {
-          const step = {
-            stepId: action.stepId ?? next.steps.length + 1,
-            title: action.title || `Step ${next.steps.length + 1}`,
-            description: action.description || action.narration || '',
-            visualCues: Array.isArray(action.visualCues) ? action.visualCues : [],
-            actions: Array.isArray(action.actions) ? action.actions : [],
-          };
+          const step = normalizeStep(action, next.steps.length);
           next.steps = [...next.steps, step];
           next.currentStepIndex = next.steps.length - 1;
           next.currentStep = step;
@@ -115,7 +111,10 @@ export function useVisualLearningStream() {
         }
         case 'add_visual_cue': {
           if (!next.currentStep) break;
-          const updated = { ...next.currentStep, visualCues: [...(next.currentStep.visualCues || []), action.cue] };
+          const updated = {
+            ...next.currentStep,
+            visualCues: [...safeArray(next.currentStep.visualCues), safeString(action.cue, '')].filter(Boolean),
+          };
           next.steps = next.steps.map((step, idx) => (idx === next.currentStepIndex ? updated : step));
           next.currentStep = updated;
           break;
@@ -130,17 +129,22 @@ export function useVisualLearningStream() {
           break;
       }
 
-      return next;
+      return normalizeLessonData(next);
     });
   }, []);
 
   const handlePacket = useCallback(
     (packet) => {
       if (!packet || typeof packet !== 'object') return;
+      packetCountRef.current += 1;
       if (packet.type === 'error') {
         setError(packet.message || 'AI stream error');
         setStatus('error');
         return;
+      }
+
+      if (packet.lessonType || packet.template || packet.title || packet.subtitle || packet.description || packet.type === 'step' || packet.type === 'scene' || Array.isArray(packet.actions)) {
+        validLessonPacketRef.current = true;
       }
 
       if (packet.narration) {
@@ -161,16 +165,10 @@ export function useVisualLearningStream() {
       }
 
       if (packet.type === 'step' || packet.type === 'scene') {
-        const step = {
-          stepId: packet.stepId || steps.length + 1,
-          title: packet.title || `Step ${steps.length + 1}`,
-          description: packet.description || packet.narration || '',
-          visualCues: Array.isArray(packet.visualCues) ? packet.visualCues : [],
-          actions: Array.isArray(packet.actions) ? packet.actions : [],
-        };
         setSteps((prev) => {
+          const step = normalizeStep(packet, prev.length);
           const nextSteps = [...prev, step];
-          setVisualState((prevState) => ({
+          setVisualState((prevState) => normalizeLessonData({
             ...prevState,
             steps: nextSteps,
             currentStepIndex: nextSteps.length - 1,
@@ -190,7 +188,7 @@ export function useVisualLearningStream() {
         });
       }
     },
-    [applyAction, steps.length]
+    [applyAction]
   );
 
   const processQueue = useCallback(() => {
@@ -281,6 +279,10 @@ export function useVisualLearningStream() {
         const readNext = async () => {
           const { done, value } = await reader.read();
           if (done) {
+            if (!validLessonPacketRef.current) {
+              setError('AI response was malformed. Showing a fallback lesson.');
+              setVisualState(createFallbackLessonData());
+            }
             setStatus((prev) => (prev === 'error' ? prev : 'completed'));
             setIsStreaming(false);
             return;
@@ -313,6 +315,9 @@ export function useVisualLearningStream() {
         } else {
           console.error('Visual learning stream failed', streamError);
           setError(streamError.message || 'Streaming failed');
+          if (!validLessonPacketRef.current) {
+            setVisualState(createFallbackLessonData());
+          }
           setStatus('error');
         }
         setIsStreaming(false);
