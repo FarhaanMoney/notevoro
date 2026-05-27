@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
-import { normalizeLessonData, createFallbackLessonData, normalizeStep, safeArray, safeObject, safeString } from '@/lib/visual/normalizeLessonData';
+import { normalizeLessonData, createFallbackLessonData, normalizeStep, safeArray, safeObject, safeString, sanitizeLessonInput } from '@/lib/visual/normalizeLessonData';
+import { validateLessonPacket, schemaToNormalizedLesson, createFallbackLessonSchema } from '@/lib/visual/schemas';
 
 function parseSSEBuffer(buffer) {
   const packets = [];
@@ -22,8 +23,10 @@ function parseSSEBuffer(buffer) {
 
     try {
       const parsed = JSON.parse(dataLines);
+      console.debug('[visual] parseSSEBuffer - parsed packet', parsed);
       packets.push(parsed);
     } catch (error) {
+      console.warn('[visual] parseSSEBuffer - malformed JSON packet', error, dataLines);
       // Ignore a malformed packet and continue parsing later.
     }
   }
@@ -135,12 +138,29 @@ export function useVisualLearningStream() {
 
   const handlePacket = useCallback(
     (packet) => {
+      console.debug('[visual] handlePacket - raw packet', packet);
       if (!packet || typeof packet !== 'object') return;
       packetCountRef.current += 1;
       if (packet.type === 'error') {
         setError(packet.message || 'AI stream error');
         setStatus('error');
         return;
+      }
+
+      // If the AI emits a structured lesson (scenes), validate and map it immediately
+      if (packet.scenes || packet.topic || packet.type === 'lesson') {
+        const validated = validateLessonPacket(packet);
+        console.debug('[visual] handlePacket - validated', validated);
+        if (validated.valid) {
+          const mapped = schemaToNormalizedLesson(validated.data);
+          const sanitized = sanitizeLessonInput(mapped);
+          console.debug('[visual] handlePacket - mapped sanitized lesson', sanitized);
+          setVisualState(sanitized);
+          setSteps(sanitized.steps || []);
+          validLessonPacketRef.current = true;
+          return;
+        }
+        console.warn('[visual] handlePacket - lesson packet failed validation', validated.errors);
       }
 
       if (packet.lessonType || packet.template || packet.title || packet.subtitle || packet.description || packet.type === 'step' || packet.type === 'scene' || Array.isArray(packet.actions)) {
@@ -168,12 +188,12 @@ export function useVisualLearningStream() {
         setSteps((prev) => {
           const step = normalizeStep(packet, prev.length);
           const nextSteps = [...prev, step];
-          setVisualState((prevState) => normalizeLessonData({
+          setVisualState((prevState) => sanitizeLessonInput(normalizeLessonData({
             ...prevState,
             steps: nextSteps,
             currentStepIndex: nextSteps.length - 1,
             currentStep: step,
-          }));
+          })));
           return nextSteps;
         });
       }
@@ -234,6 +254,7 @@ export function useVisualLearningStream() {
       setStatus('connecting');
       setIsStreaming(true);
       setError(null);
+      try { console.debug('[visual] start - topic', topic, 'subject', subject, 'level', level); } catch(e){};
 
       const { data: { session } } = await supabaseBrowser().auth.getSession();
       const token = session?.access_token;
@@ -280,14 +301,16 @@ export function useVisualLearningStream() {
           const { done, value } = await reader.read();
           if (done) {
             if (!validLessonPacketRef.current) {
+              console.error('[visual] stream finished without valid lesson packets - using fallback');
               setError('AI response was malformed. Showing a fallback lesson.');
-              setVisualState(createFallbackLessonData());
+              setVisualState(sanitizeLessonInput(createFallbackLessonData()));
             }
             setStatus((prev) => (prev === 'error' ? prev : 'completed'));
             setIsStreaming(false);
             return;
           }
           buffer += decoder.decode(value, { stream: true });
+          console.debug('[visual] readNext - chunk received, buffer length', buffer.length);
           const { packets, remainder } = parseSSEBuffer(buffer);
           buffer = remainder;
 
@@ -316,7 +339,7 @@ export function useVisualLearningStream() {
           console.error('Visual learning stream failed', streamError);
           setError(streamError.message || 'Streaming failed');
           if (!validLessonPacketRef.current) {
-            setVisualState(createFallbackLessonData());
+            setVisualState(sanitizeLessonInput(createFallbackLessonData()));
           }
           setStatus('error');
         }

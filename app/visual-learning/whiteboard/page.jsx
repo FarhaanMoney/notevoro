@@ -25,7 +25,7 @@ export default function WhiteboardPage() {
         progress={progress}
       />
       <div className="flex-1 p-4">
-        <VisualRenderer lessonState={visualState} status={status} error={error} />
+        <VisualRenderer lessonState={visualState} status={status} error={error} onRetry={start} topic={topic} />
       </div>
     </Shell>
   );
