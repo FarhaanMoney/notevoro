@@ -1,3 +1,4 @@
+// @ts-ignore - Node types may not be installed in this workspace CI/editor
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { requireUser } from '@/lib/auth';
@@ -8,6 +9,9 @@ import { mapSupabaseError, WhatsAppServiceError } from './errors';
 import { whatsappConnectionSchema, type WhatsAppConnection } from './types';
 
 const GRAPH_BASE = 'https://graph.facebook.com';
+
+// Provide minimal ambient names to satisfy TypeScript when `@types/node` is not present
+declare const Buffer: any;
 
 async function bootstrapLegacyUserForLinking(userId: string) {
   try {
@@ -64,14 +68,19 @@ export async function ensureWhatsAppConnection(userId: string, mode: WhatsAppCon
     .single();
 
   if (insert.error) {
-    const mapped = mapSupabaseError(insert.error);
-    if (mapped.code === 'DUPLICATE') {
+    const raw = insert.error || {};
+    const rawMessage = String(raw.message || raw.details || '');
+    const isDuplicate = raw.code === '23505' || /duplicate|unique|already exists|already_exists/i.test(rawMessage);
+    if (isDuplicate) {
       const fallback = await sb.from('whatsapp_connections').select('*').eq('user_id', userId).maybeSingle();
       if (fallback.error) throw mapSupabaseError(fallback.error);
-      if (!fallback.data) throw mapped;
+      if (!fallback.data) {
+        // If fallback not found, map original error and throw
+        throw mapSupabaseError(insert.error);
+      }
       return whatsappConnectionSchema.parse(fallback.data);
     }
-    throw mapped;
+    throw mapSupabaseError(insert.error);
   }
 
   await ensureUserSettings(userId);
