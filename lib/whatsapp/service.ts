@@ -50,41 +50,45 @@ async function ensureUserSettings(userId: string) {
   await sb.from('whatsapp_settings').upsert({ user_id: userId }, { onConflict: 'user_id' });
 }
 
-export async function ensureWhatsAppConnection(userId: string, mode: WhatsAppConnectMode = 'link') {
+export async function getWhatsAppConnection(userId: string) {
+  const sb = supabaseAdmin();
+  const response = await sb.from('whatsapp_connections').select('*').eq('user_id', userId).maybeSingle();
+  if (response.error) throw mapSupabaseError(response.error);
+  return response.data ? whatsappConnectionSchema.parse(response.data) : null;
+}
+
+export async function upsertWhatsAppConnectionPending(userId: string, mode: WhatsAppConnectMode = 'link') {
   assertServiceRoleConfigured();
   const sb = supabaseAdmin();
+  const now = new Date().toISOString();
 
-  const existing = await sb.from('whatsapp_connections').select('*').eq('user_id', userId).maybeSingle();
-  if (existing.error) throw mapSupabaseError(existing.error);
-
-  if (existing.data) {
-    return whatsappConnectionSchema.parse(existing.data);
-  }
-
-  const insert = await sb
+  const upsert = await sb
     .from('whatsapp_connections')
-    .insert({ user_id: userId, status: 'pending', connect_mode: mode })
+    .upsert(
+      {
+        user_id: userId,
+        status: 'pending',
+        connect_mode: mode,
+        last_error: null,
+        connection_status: 'pending',
+        sync_status: 'unknown',
+        realtime_enabled: true,
+        metadata: { pending_started_at: now },
+      },
+      { onConflict: 'user_id' }
+    )
     .select()
     .single();
 
-  if (insert.error) {
-    const raw = insert.error || {};
-    const rawMessage = String(raw.message || raw.details || '');
-    const isDuplicate = raw.code === '23505' || /duplicate|unique|already exists|already_exists/i.test(rawMessage);
-    if (isDuplicate) {
-      const fallback = await sb.from('whatsapp_connections').select('*').eq('user_id', userId).maybeSingle();
-      if (fallback.error) throw mapSupabaseError(fallback.error);
-      if (!fallback.data) {
-        // If fallback not found, map original error and throw
-        throw mapSupabaseError(insert.error);
-      }
-      return whatsappConnectionSchema.parse(fallback.data);
-    }
-    throw mapSupabaseError(insert.error);
-  }
-
+  if (upsert.error) throw mapSupabaseError(upsert.error);
   await ensureUserSettings(userId);
-  return whatsappConnectionSchema.parse(insert.data);
+  return whatsappConnectionSchema.parse(upsert.data);
+}
+
+export async function ensureWhatsAppConnection(userId: string, mode: WhatsAppConnectMode = 'link') {
+  const existing = await getWhatsAppConnection(userId);
+  if (existing) return existing;
+  return upsertWhatsAppConnectionPending(userId, mode);
 }
 
 export async function syncConnectionFromUserProfile(userId: string) {
@@ -105,6 +109,7 @@ export async function syncConnectionFromUserProfile(userId: string) {
     (personalization.whatsapp_phone as string) || (userRow.phone_number as string)
   );
 
+  const now = new Date().toISOString();
   const upsert = await sb
     .from('whatsapp_connections')
     .upsert(
@@ -112,9 +117,13 @@ export async function syncConnectionFromUserProfile(userId: string) {
         user_id: userId,
         status: 'connected',
         phone_number: phone,
-        connected_at: new Date().toISOString(),
-        last_activity: new Date().toISOString(),
+        connected_at: now,
+        last_seen: now,
+        last_activity: now,
         connect_mode: 'link',
+        connection_status: 'connected',
+        sync_status: 'healthy',
+        realtime_enabled: true,
         last_error: null,
       },
       { onConflict: 'user_id' }
@@ -170,21 +179,14 @@ export async function buildWhatsAppOAuthUrl(userId: string, connectionId: string
 export async function startWhatsAppConnect(userId: string, preferredMode: 'oauth' | 'link' | 'auto' = 'auto') {
   const config = getWhatsAppConfig();
 
-  // Check if already connected
-  const existing = await supabaseAdmin()
-    .from('whatsapp_connections')
-    .select('status')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (existing.data?.status === 'connected') {
+  const existing = await getWhatsAppConnection(userId);
+  if (existing?.status === 'connected') {
     return {
       alreadyConnected: true,
       mode: 'link' as const,
     };
   }
 
-  // Default to link mode for simplicity
   if (!config.businessNumber) {
     throw new WhatsAppServiceError(
       'LINK_NOT_CONFIGURED',
@@ -193,13 +195,13 @@ export async function startWhatsAppConnect(userId: string, preferredMode: 'oauth
     );
   }
 
-  // Generate a fresh linking token
   const tokenData = (await generateLinkingToken(userId)) as {
     token: string;
     expiresAt: string;
   };
 
-  // Create the WhatsApp link with token pre-filled in message
+  await upsertWhatsAppConnectionPending(userId, 'link');
+
   const connectUrl = generateWhatsAppLinkURL(tokenData.token, config.businessNumber);
 
   return {
@@ -306,15 +308,14 @@ export async function fetchWhatsAppStatus(req: Request) {
   const user = await requireUser(req);
   if (!user) return null;
 
-  let connection = await ensureWhatsAppConnection(user.id);
   const synced = await syncConnectionFromUserProfile(user.id);
-  if (synced) connection = synced;
+  const connection = synced || (await getWhatsAppConnection(user.id));
 
   const personalization = (user.personalization || {}) as Record<string, unknown>;
   return {
     connection,
-    verified: personalization.whatsapp_verified === true || connection.status === 'connected',
-    phone: connection.phone_number || (personalization.whatsapp_phone as string) || user.phone_number || null,
+    verified: personalization.whatsapp_verified === true || connection?.status === 'connected',
+    phone: connection?.phone_number || (personalization.whatsapp_phone as string) || user.phone_number || null,
   };
 }
 
@@ -330,6 +331,9 @@ export async function disconnectWhatsApp(req: Request) {
     .update({
       status: 'disconnected',
       disconnected_at: now,
+      connection_status: 'disconnected',
+      sync_status: 'stale',
+      realtime_enabled: false,
       oauth_state: null,
       last_error: null,
     })
@@ -394,7 +398,14 @@ export async function recordInboundMessage(params: {
 
   await sb
     .from('whatsapp_connections')
-    .update({ status: 'connected', last_activity: now, last_error: null })
+    .update({
+      status: 'connected',
+      last_seen: now,
+      last_activity: now,
+      connection_status: 'connected',
+      sync_status: 'healthy',
+      last_error: null,
+    })
     .eq('id', connection.id);
 
   return connection;

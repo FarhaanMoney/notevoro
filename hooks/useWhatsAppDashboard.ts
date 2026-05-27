@@ -43,24 +43,47 @@ export function useWhatsAppDashboard() {
     []
   );
 
-  const loadStatus = useCallback(async (accessToken: string) => {
-    const res = await fetch('/api/whatsapp/status', { headers: authHeaders(accessToken) });
-    const data = await res.json();
-    if (!res.ok || !data?.success) {
-      throw new Error(data?.error || 'Unable to load WhatsApp status');
-    }
-    setStatus(data.status);
-    setVerified(Boolean(data.verified));
-    setError(null);
-  }, [authHeaders]);
+  const loadStatus = useCallback(
+    async (accessToken: string) => {
+      const res = await fetch('/api/whatsapp/status', {
+        headers: authHeaders(accessToken),
+      });
+      const data = await res.json();
 
-  const loadMessages = useCallback(async (accessToken: string) => {
-    const res = await fetch('/api/whatsapp/messages', { headers: authHeaders(accessToken) });
-    const data = await res.json();
-    if (res.ok && data?.messages) {
-      setMessages(data.messages);
-    }
-  }, [authHeaders]);
+      if (res.status === 401) {
+        router.replace('/auth');
+        throw new Error('Unauthorized');
+      }
+
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Unable to load WhatsApp status');
+      }
+
+      setStatus(data.status ?? null);
+      setVerified(Boolean(data.verified));
+      setError(null);
+    },
+    [authHeaders, router]
+  );
+
+  const loadMessages = useCallback(
+    async (accessToken: string) => {
+      const res = await fetch('/api/whatsapp/messages', {
+        headers: authHeaders(accessToken),
+      });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        router.replace('/auth');
+        throw new Error('Unauthorized');
+      }
+
+      if (res.ok && data?.messages) {
+        setMessages(data.messages);
+      }
+    },
+    [authHeaders, router]
+  );
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -74,7 +97,7 @@ export function useWhatsAppDashboard() {
     }
   }, [token, loadStatus, loadMessages]);
 
-  useWhatsAppRealtime((user?.id as string) || null, {
+  useWhatsAppRealtime(user?.id ?? null, {
     onConnectionChange: refresh,
     onMessageChange: refresh,
     onStatus: setRealtimeStatus,
@@ -86,7 +109,10 @@ export function useWhatsAppDashboard() {
     async function init() {
       try {
         const sb = supabaseBrowser();
-        const { data: { session } } = await sb.auth.getSession();
+        const {
+          data: { session },
+        } = await sb.auth.getSession();
+
         if (!session?.access_token) {
           router.replace('/auth');
           return;
@@ -99,6 +125,7 @@ export function useWhatsAppDashboard() {
           headers: authHeaders(session.access_token),
         });
         const profileJson = await profileRes.json();
+
         if (!profileJson?.user) {
           router.replace('/auth');
           return;
@@ -113,7 +140,9 @@ export function useWhatsAppDashboard() {
         setError(message);
         toast.error(message);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -127,6 +156,7 @@ export function useWhatsAppDashboard() {
     if (!token) return;
     setConnecting(true);
     setError(null);
+
     try {
       const res = await fetch('/api/whatsapp/connect', {
         method: 'POST',
@@ -134,6 +164,12 @@ export function useWhatsAppDashboard() {
         body: JSON.stringify({ mode: 'auto' }),
       });
       const data = await res.json();
+
+      if (res.status === 401) {
+        router.replace('/auth');
+        throw new Error('Unauthorized');
+      }
+
       if (!res.ok || !data?.success) {
         throw new Error(data?.error || 'Connect failed');
       }
@@ -148,7 +184,7 @@ export function useWhatsAppDashboard() {
         window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
         toast.success('WhatsApp opened. Send the verification token to connect.');
       } else {
-        toast.error('Failed to generate WhatsApp connection link');
+        throw new Error('Failed to generate WhatsApp connection link');
       }
 
       await refresh();
@@ -159,31 +195,38 @@ export function useWhatsAppDashboard() {
     } finally {
       setConnecting(false);
     }
-  }, [token, authHeaders, refresh]);
-    }
-  }, [token, authHeaders, refresh]);
+  }, [token, authHeaders, refresh, router]);
 
   const disconnect = useCallback(async () => {
     if (!token) return;
     setDisconnecting(true);
+
     try {
       const res = await fetch('/api/whatsapp/disconnect', {
         method: 'POST',
         headers: authHeaders(token),
       });
       const data = await res.json();
+
+      if (res.status === 401) {
+        router.replace('/auth');
+        throw new Error('Unauthorized');
+      }
+
       if (!res.ok || !data?.success) {
         throw new Error(data?.error || 'Disconnect failed');
       }
+
       toast.success('WhatsApp disconnected');
       await refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to disconnect';
+      setError(message);
       toast.error(message);
     } finally {
       setDisconnecting(false);
     }
-  }, [token, authHeaders, refresh]);
+  }, [token, authHeaders, refresh, router]);
 
   return {
     user,

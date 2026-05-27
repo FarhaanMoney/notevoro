@@ -11,7 +11,7 @@ type RealtimeHandlers = {
 };
 
 export function useWhatsAppRealtime(userId: string | null, handlers: RealtimeHandlers) {
-  const handlersRef = useRef(handlers);
+  const handlersRef = useRef<RealtimeHandlers>(handlers);
   handlersRef.current = handlers;
 
   const refresh = useCallback(() => {
@@ -23,16 +23,40 @@ export function useWhatsAppRealtime(userId: string | null, handlers: RealtimeHan
     if (!userId) return;
 
     const sb = supabaseBrowser();
-    let connectionChannel: RealtimeChannel | null = null;
-    let messageChannel: RealtimeChannel | null = null;
+    let channel: RealtimeChannel | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
+    let retryCount = 0;
 
-    const subscribe = () => {
+    const cleanupChannel = () => {
+      if (channel) {
+        try {
+          channel.unsubscribe();
+        } catch {
+          // ignore cleanup errors
+        }
+        sb.removeChannel(channel);
+        channel = null;
+      }
+    };
+
+    const scheduleReconnect = () => {
       if (disposed) return;
+      const delay = Math.min(30000, 2000 * Math.pow(2, retryCount));
+      retryCount = Math.min(retryCount + 1, 6);
+      reconnectTimer = setTimeout(() => {
+        if (!disposed) {
+          createChannel();
+        }
+      }, delay);
+    };
 
-      connectionChannel = sb
-        .channel(`wa-connections:${userId}`)
+    const createChannel = () => {
+      if (disposed) return;
+      cleanupChannel();
+
+      channel = sb
+        .channel(`whatsapp:${userId}`)
         .on(
           'postgres_changes',
           {
@@ -45,17 +69,6 @@ export function useWhatsAppRealtime(userId: string | null, handlers: RealtimeHan
             handlersRef.current.onConnectionChange?.();
           }
         )
-        .subscribe((status) => {
-          handlersRef.current.onStatus?.(status);
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            if (!disposed) {
-              reconnectTimer = setTimeout(subscribe, 3000);
-            }
-          }
-        });
-
-      messageChannel = sb
-        .channel(`wa-messages:${userId}`)
         .on(
           'postgres_changes',
           {
@@ -68,16 +81,26 @@ export function useWhatsAppRealtime(userId: string | null, handlers: RealtimeHan
             handlersRef.current.onMessageChange?.();
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          handlersRef.current.onStatus?.(status);
+          if (status === 'SUBSCRIBED') {
+            retryCount = 0;
+          }
+
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            scheduleReconnect();
+          }
+        });
     };
 
-    subscribe();
+    createChannel();
 
     return () => {
       disposed = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (connectionChannel) sb.removeChannel(connectionChannel);
-      if (messageChannel) sb.removeChannel(messageChannel);
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      cleanupChannel();
     };
   }, [userId]);
 
