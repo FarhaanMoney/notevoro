@@ -20,7 +20,29 @@ function FallbackCard({ message }) {
 
 export default function VisualRenderer({ lessonState, status, error, onRetry, topic }) {
   try { console.debug('[visual] VisualRenderer - lessonState', lessonState, 'status', status, 'error', error); } catch(e){}
-  const hasValidLessons = lessonState && typeof lessonState.title === 'string';
+  const safeSteps = Array.isArray(lessonState?.steps)
+    ? lessonState.steps.map((step, index) => {
+        if (step && typeof step === 'object') {
+          return step;
+        }
+
+        return {
+          id: `step_fallback_${index + 1}`,
+          title: `Step ${index + 1}`,
+          description: 'Lesson step details are unavailable.',
+          narration: 'Lesson step details are unavailable.',
+          visualCues: [],
+          actions: [],
+        };
+      })
+    : [];
+
+  const safeLessonState = {
+    ...((lessonState && typeof lessonState === 'object') ? lessonState : {}),
+    steps: safeSteps,
+    currentStepIndex: typeof lessonState?.currentStepIndex === 'number' ? Math.max(0, lessonState.currentStepIndex) : 0,
+  };
+  const hasValidLessons = typeof safeLessonState.title === 'string' && safeLessonState.title.trim();
 
   // Loading / streaming state
   if (status === 'connecting' || status === 'streaming') {
@@ -56,7 +78,7 @@ export default function VisualRenderer({ lessonState, status, error, onRetry, to
   return (
     <Suspense fallback={<div className="flex h-full w-full items-center justify-center text-slate-400">Loading visual experience…</div>}>
       <VisualLearningErrorBoundary onReset={() => onRetry && onRetry(topic)}>
-        <TemplateRenderer lessonState={lessonState} status={status} />
+        <TemplateRenderer lessonState={safeLessonState} status={status} />
       </VisualLearningErrorBoundary>
     </Suspense>
   );
