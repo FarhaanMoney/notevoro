@@ -145,20 +145,10 @@ export function useWhatsAppDashboard() {
       }
 
       if (data.connectUrl) {
-        if (data.mode === 'link' && data.linkToken) {
-          const message = encodeURIComponent(`My connection token: ${data.linkToken}`);
-          const whatsappLink = `https://wa.me/?text=${message}`;
-          window.open(whatsappLink, '_blank', 'noopener,noreferrer');
-          toast.success('Open WhatsApp and send the connection token');
-        } else if (data.mode === 'oauth') {
-          window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
-          toast.success('Complete Meta authorization in the new window');
-        } else {
-          window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
-          toast.success('Complete authorization in the new window');
-        }
+        window.open(data.connectUrl, '_blank', 'noopener,noreferrer');
+        toast.success('WhatsApp opened. Send the verification token to connect.');
       } else {
-        toast.success('Connection started. Check WhatsApp to complete setup.');
+        toast.error('Failed to generate WhatsApp connection link');
       }
 
       await refresh();
@@ -168,6 +158,8 @@ export function useWhatsAppDashboard() {
       toast.error(message);
     } finally {
       setConnecting(false);
+    }
+  }, [token, authHeaders, refresh]);
     }
   }, [token, authHeaders, refresh]);
 

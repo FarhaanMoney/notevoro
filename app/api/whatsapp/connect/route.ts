@@ -35,12 +35,10 @@ export async function POST(req: NextRequest) {
     });
 
     return apiSuccess({
-      connectionId: result.connection.id,
-      status: result.connection.status,
       mode: result.mode,
-      connectUrl: 'connectUrl' in result ? result.connectUrl : null,
-      linkToken: 'linkToken' in result ? result.linkToken : null,
-      expiresAt: 'expiresAt' in result ? result.expiresAt : null,
+      connectUrl: result.connectUrl || null,
+      linkToken: result.linkToken || null,
+      expiresAt: result.expiresAt || null,
       alreadyConnected: result.alreadyConnected,
     });
   } catch (error) {

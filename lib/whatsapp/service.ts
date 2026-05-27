@@ -169,23 +169,22 @@ export async function buildWhatsAppOAuthUrl(userId: string, connectionId: string
 
 export async function startWhatsAppConnect(userId: string, preferredMode: 'oauth' | 'link' | 'auto' = 'auto') {
   const config = getWhatsAppConfig();
-  const connection = await ensureWhatsAppConnection(userId);
 
-  if (connection.status === 'connected') {
+  // Check if already connected
+  const existing = await supabaseAdmin()
+    .from('whatsapp_connections')
+    .select('status')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing.data?.status === 'connected') {
     return {
-      connection,
-      mode: connection.connect_mode || 'link',
       alreadyConnected: true,
-    } as const;
+      mode: 'link' as const,
+    };
   }
 
-  const useOAuth = preferredMode === 'oauth' || (preferredMode === 'auto' && config.oauthEnabled);
-
-  if (useOAuth) {
-    const connectUrl = await buildWhatsAppOAuthUrl(userId, connection.id);
-    return { connection, mode: 'oauth' as const, connectUrl, alreadyConnected: false };
-  }
-
+  // Default to link mode for simplicity
   if (!config.businessNumber) {
     throw new WhatsAppServiceError(
       'LINK_NOT_CONFIGURED',
@@ -194,32 +193,21 @@ export async function startWhatsAppConnect(userId: string, preferredMode: 'oauth
     );
   }
 
-  await bootstrapLegacyUserForLinking(userId);
+  // Generate a fresh linking token
   const tokenData = (await generateLinkingToken(userId)) as {
     token: string;
     expiresAt: string;
   };
-  const connectUrl = generateWhatsAppLinkURL(tokenData.token, config.businessNumber);
-  const sb = supabaseAdmin();
 
-  await sb
-    .from('whatsapp_connections')
-    .update({
-      status: 'pending',
-      connect_mode: 'link',
-      oauth_state: tokenData.token,
-      metadata: { link_token_expires_at: tokenData.expiresAt },
-      last_error: null,
-    })
-    .eq('id', connection.id);
+  // Create the WhatsApp link with token pre-filled in message
+  const connectUrl = generateWhatsAppLinkURL(tokenData.token, config.businessNumber);
 
   return {
-    connection,
+    alreadyConnected: false,
     mode: 'link' as const,
     connectUrl,
     linkToken: tokenData.token,
     expiresAt: tokenData.expiresAt,
-    alreadyConnected: false,
   };
 }
 
