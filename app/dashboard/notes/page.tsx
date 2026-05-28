@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Download, Share2, Trash2, Edit2, Sparkles, FolderOpen } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 interface Note {
   id: string;
@@ -55,8 +54,7 @@ export default function NotesPage() {
   const folders = ['All', 'Biology', 'Languages', 'History', 'Physics'];
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen w-full">
+    <div className="min-h-screen w-full">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-screen overflow-hidden px-6 md:px-12 py-8">
           {/* Left Sidebar - Notes List */}
           <div className="lg:col-span-1 flex flex-col gap-4 overflow-hidden">
@@ -229,6 +227,5 @@ export default function NotesPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
   );
 }

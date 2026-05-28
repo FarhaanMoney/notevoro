@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Award, ArrowRight } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 interface QuizQuestion {
   id: string;
@@ -63,8 +62,7 @@ export default function QuizzesPage() {
 
   if (finished) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen w-full flex flex-col items-center justify-center px-6 md:px-12 py-8">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center px-6 md:px-12 py-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -113,13 +111,11 @@ export default function QuizzesPage() {
             </div>
           </motion.div>
         </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
+    <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -252,6 +248,5 @@ export default function QuizzesPage() {
           )}
         </motion.div>
       </div>
-    </DashboardLayout>
   );
 }

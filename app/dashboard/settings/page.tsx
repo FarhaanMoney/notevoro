@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bell, Shield, Palette, Volume2, Zap, LogOut, Save } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -49,8 +48,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
+    <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -231,6 +229,5 @@ export default function SettingsPage() {
           </motion.button>
         </motion.div>
       </div>
-    </DashboardLayout>
   );
 }

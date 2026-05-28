@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, RotateCw, Plus, Loader } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 interface Flashcard {
   id: string;
@@ -55,8 +54,7 @@ export default function FlashcardsPage() {
   const masteredCount = cards.filter((card) => card.mastered).length;
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
+    <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -215,6 +213,5 @@ export default function FlashcardsPage() {
           </motion.button>
         </motion.div>
       </div>
-    </DashboardLayout>
   );
 }

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Target, Zap, Clock, BarChart3, Calendar } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 export default function ProgressPage() {
   const [timeRange, setTimeRange] = useState('week');
@@ -25,8 +24,7 @@ export default function ProgressPage() {
   ];
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
+    <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -186,6 +184,5 @@ export default function ProgressPage() {
           </div>
         </motion.section>
       </div>
-    </DashboardLayout>
   );
 }

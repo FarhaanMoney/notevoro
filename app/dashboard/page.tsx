@@ -14,7 +14,6 @@ import {
   Clock,
   Target,
 } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 export default function DashboardPage() {
   const [userName] = useState('Farhaan');
@@ -35,8 +34,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen w-full space-y-8 px-6 md:px-12 py-8">
+    <div className="min-h-screen w-full space-y-8 px-6 md:px-12 py-8">
         {/* Welcome Hero Section */}
         <motion.section
           variants={containerVariants}
@@ -287,6 +285,5 @@ export default function DashboardPage() {
           </motion.div>
         </motion.section>
       </div>
-    </DashboardLayout>
   );
 }

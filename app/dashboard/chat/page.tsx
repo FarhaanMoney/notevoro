@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Paperclip, Mic, Loader } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 interface Message {
   id: string;
@@ -66,8 +65,7 @@ Feel free to ask follow-up questions or request clarification on any part!`,
   };
 
   return (
-    <DashboardLayout>
-      <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -162,6 +160,5 @@ Feel free to ask follow-up questions or request clarification on any part!`,
           </motion.div>
         </div>
       </div>
-    </DashboardLayout>
   );
 }

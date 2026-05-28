@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Zap, TrendingUp, Play, BookOpen } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 interface MockTest {
   id: string;
@@ -80,8 +79,7 @@ export default function MockTestsPage() {
 
   if (testStarted && selectedTest) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen w-full px-6 md:px-12 py-8 flex flex-col">
+      <div className="min-h-screen w-full px-6 md:px-12 py-8 flex flex-col">
           {/* Test Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -162,13 +160,11 @@ export default function MockTestsPage() {
             </div>
           </div>
         </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
+    <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -342,6 +338,5 @@ export default function MockTestsPage() {
           )}
         </AnimatePresence>
       </div>
-    </DashboardLayout>
   );
 }
