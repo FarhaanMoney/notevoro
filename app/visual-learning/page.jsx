@@ -1,62 +1,84 @@
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
-import LessonCard from '@/components/visual-learning/LessonCard';
+import { Sparkles, BookOpen, ClipboardList, ArrowRight } from 'lucide-react';
 
-const recommended = [
-  { id: 'photosynthesis', title: 'Photosynthesis', desc: 'How plants convert light to energy' },
-  { id: 'black-holes', title: 'Black Holes', desc: 'Spacetime, gravity wells, and event horizons' },
-  { id: 'api-flow', title: 'How APIs Work', desc: 'Request/response, endpoints, and auth' },
+const visualFeatures = [
+  { title: 'Scene-based lessons', description: 'Structured visual worlds with steps, nodes, and key story beats.' },
+  { title: 'Dynamic canvas', description: 'Zoomable, interactive concept maps that feel alive.' },
+  { title: 'Narration flow', description: 'AI-guided explanations that move with the visuals.' },
+];
+
+const sampleLessons = [
+  { title: 'Black Holes', description: 'Gravity wells, event horizons, and spacetime arcs.' },
+  { title: 'Photosynthesis', description: 'Light capture, energy flow, and cellular structure.' },
+  { title: 'APIs in motion', description: 'Request, response, endpoints, and authorization.' },
 ];
 
 export default function VisualLearningHome() {
   return (
-    <div className="p-6 md:p-10">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">Visual Learning</h1>
-        <p className="text-zinc-400 mt-2 max-w-2xl">Immersive AI-powered visual lessons: interactive diagrams, animated whiteboards, and progressive tutoring.</p>
-      </header>
+    <div className="space-y-10">
+      <section className="rounded-[2rem] border border-white/10 bg-[#0f172a]/90 p-8 shadow-2xl shadow-black/20">
+        <div className="grid gap-6 lg:grid-cols-[1.35fr_0.75fr]">
+          <div className="space-y-5">
+            <p className="text-xs uppercase tracking-[0.32em] text-cyan-300">Visual learning world</p>
+            <h1 className="text-5xl font-semibold text-white">Enter the interactive study studio.</h1>
+            <p className="max-w-2xl text-lg leading-8 text-slate-300">Generate cinematic visual lessons with live scene building, linked concepts, and a rich animation-first learning experience.</p>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/visual-learning/whiteboard" className="rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-black">Open Whiteboard</Link>
+              <Link href="/" className="inline-flex items-center rounded-2xl border border-white/10 px-6 py-3 text-sm text-white transition hover:bg-white/10">Back Home</Link>
+            </div>
+          </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2 rounded-lg bg-gradient-to-br from-[#071028] to-[#07102a] p-6 shadow-lg border border-white/6">
-          <h2 className="text-xl font-semibold mb-3">AI Whiteboard</h2>
-          <p className="text-zinc-400 mb-4">Ask the AI to teach any concept visually and get an interactive lesson you can play, explore, and save.</p>
-          <div className="flex gap-3">
-            <Link href="/visual-learning/whiteboard">
-              <a className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow">Open Whiteboard</a>
-            </Link>
-            <Link href="/visual-explanation/demo">
-              <a className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-white">Try Demo</a>
-            </Link>
+          <div className="rounded-[2rem] bg-[#09131f]/90 p-6 shadow-inner shadow-black/30">
+            <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Classroom essentials</p>
+            <div className="mt-6 grid gap-4">
+              <div className="rounded-3xl bg-[#0b1424] p-5">
+                <p className="text-sm text-slate-400">Roadmap</p>
+                <p className="mt-2 text-xl font-semibold text-white">Step-by-step visual journey</p>
+              </div>
+              <div className="rounded-3xl bg-[#0b1424] p-5">
+                <p className="text-sm text-slate-400">Canvas</p>
+                <p className="mt-2 text-xl font-semibold text-white">Zoom, drag, and explore ideas</p>
+              </div>
+            </div>
           </div>
         </div>
+      </section>
 
-        <aside className="space-y-4">
-          <div className="rounded-lg p-4 bg-[#071024] border border-white/6">
-            <h3 className="font-semibold">Continue Learning</h3>
-            <p className="text-sm text-zinc-400">Pick up where you left off or review saved lessons.</p>
-            <div className="mt-3 grid gap-2">
-              <LessonCard title="Photosynthesis (Chapter 1)" meta="3 steps · 8 min" />
-              <LessonCard title="Intro to APIs" meta="5 steps · 12 min" />
-            </div>
+      <section className="grid gap-4 lg:grid-cols-3">
+        {visualFeatures.map((feature) => (
+          <div key={feature.title} className="rounded-[2rem] border border-white/10 bg-[#08131f]/90 p-6 shadow-lg shadow-black/20">
+            <p className="text-sm uppercase tracking-[0.32em] text-cyan-300">{feature.title}</p>
+            <h2 className="mt-4 text-2xl font-semibold text-white">{feature.title}</h2>
+            <p className="mt-3 text-slate-400">{feature.description}</p>
           </div>
+        ))}
+      </section>
 
-          <div className="rounded-lg p-4 bg-[#071024] border border-white/6">
-            <h3 className="font-semibold">Recommended Topics</h3>
-            <div className="mt-3 grid gap-2">
-              {recommended.map(r => <LessonCard key={r.id} title={r.title} desc={r.desc} />)}
-            </div>
+      <section className="rounded-[2rem] border border-white/10 bg-[#09131f]/90 p-6 shadow-lg shadow-black/20">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">Lesson samples</p>
+            <h2 className="mt-3 text-3xl font-semibold text-white">Choose a visual study path</h2>
           </div>
-        </aside>
-      </div>
+          <Link href="/visual-learning/whiteboard" className="rounded-2xl bg-white/5 px-4 py-2 text-sm text-white transition hover:bg-white/10">Generate lesson</Link>
+        </div>
 
-      <section className="mt-8">
-        <h3 className="text-lg font-semibold mb-3">Recent Visual Lessons</h3>
-        <div className="grid md:grid-cols-3 gap-4">
-          <LessonCard title="Black Holes: Visualized" desc="Spacetime explained" />
-          <LessonCard title="Cell Structure" desc="Organelles and their roles" />
-          <LessonCard title="Sorting Algorithms" desc="Step-by-step execution" />
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          {sampleLessons.map((lesson) => (
+            <div key={lesson.title} className="rounded-3xl border border-white/10 bg-[#0b1424] p-5">
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <h3 className="mt-4 text-xl font-semibold text-white">{lesson.title}</h3>
+              <p className="mt-2 text-slate-400">{lesson.description}</p>
+              <div className="mt-4 inline-flex items-center gap-2 text-sm text-cyan-300">
+                <ArrowRight className="h-4 w-4" />
+                Start lesson
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
