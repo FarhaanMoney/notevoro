@@ -48,18 +48,18 @@ export default function AuthCallback() {
 
         if (!session) {
           console.warn('No session found after auth callback, redirecting to auth page');
-          return router.replace('/auth');
+          return router.replace(`/auth?redirect=${encodeURIComponent(safeRedirect)}`);
         }
 
         const response = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${session.access_token}` } });
         if (response.status === 401) {
           await sb.auth.signOut();
-          return router.replace('/auth');
+          return router.replace(`/auth?redirect=${encodeURIComponent(safeRedirect)}`);
         }
 
         if (!response.ok) {
           console.warn('Auth/me response not ok:', response.status);
-          return router.replace(safeRedirect);
+          return router.replace(`/auth?redirect=${encodeURIComponent(safeRedirect)}`);
         }
 
         const userData = await response.json();
@@ -67,7 +67,8 @@ export default function AuthCallback() {
         return router.replace(isOnboardingComplete ? safeRedirect : '/onboarding');
       } catch (error) {
         console.error('Auth callback failed:', error);
-        return router.replace('/auth');
+        const fallbackRedirect = normalizeRedirect(url.searchParams.get('redirect') || '/dashboard');
+        return router.replace(`/auth?redirect=${encodeURIComponent(fallbackRedirect)}`);
       }
     })();
   }, [router]);

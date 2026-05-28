@@ -35,13 +35,15 @@ export default function AuthPage() {
   }, [searchParams]);
 
   async function routeAfterAuth(session, fallbackRedirect = '/dashboard') {
+    const safeRedirect = normalizeRedirect(fallbackRedirect);
     try {
       const response = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
 
       if (!response.ok) {
-        router.replace(fallbackRedirect);
+        await supabaseBrowser().auth.signOut();
+        router.replace(`/auth?redirect=${encodeURIComponent(safeRedirect)}`);
         return;
       }
 
@@ -50,11 +52,12 @@ export default function AuthPage() {
       if (!isOnboardingComplete) {
         router.replace('/onboarding');
       } else {
-        router.replace(normalizeRedirect(fallbackRedirect));
+        router.replace(safeRedirect);
       }
     } catch (error) {
       console.error('Route after auth failed:', error);
-      router.replace(fallbackRedirect);
+      await supabaseBrowser().auth.signOut();
+      router.replace(`/auth?redirect=${encodeURIComponent(safeRedirect)}`);
     }
   }
 
@@ -62,14 +65,14 @@ export default function AuthPage() {
     const { data: { subscription } } = supabaseBrowser().auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         console.log('Auth state change: SIGNED_IN');
-        await routeAfterAuth(session);
+        await routeAfterAuth(session, redirectTo);
       } else {
         console.log('No session found');
       }
     });
     
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, redirectTo]);
 
   // Fallback session check on page load
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function AuthPage() {
         
         if (session?.user) {
           console.log('Session found on page load, routing after auth');
-          await routeAfterAuth(session);
+          await routeAfterAuth(session, redirectTo);
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -95,7 +98,7 @@ export default function AuthPage() {
     checkSession();
     
     return () => clearTimeout(timeoutId);
-  }, [router]);
+  }, [router, redirectTo]);
 
   async function googleSignIn() {
     try {
