@@ -139,3 +139,69 @@ code {
     @apply bg-background text-foreground;
     }
 }
+
+/* Custom landing page visuals */
+.star-field {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 10% 10%, rgba(255,255,255,0.9) 0px, transparent 2px),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.75) 0px, transparent 2px),
+    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.65) 0px, transparent 2px),
+    radial-gradient(circle at 70% 70%, rgba(255,255,255,0.5) 0px, transparent 2px);
+  background-size: 150px 150px, 230px 230px, 180px 180px, 280px 280px;
+  opacity: 0.35;
+  animation: star-drift 40s linear infinite;
+  pointer-events: none;
+}
+
+.nebula-layer,
+.nebula-layer-2 {
+  position: absolute;
+  inset: 0;
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.nebula-layer {
+  background: radial-gradient(circle at 20% 30%, rgba(79,70,229,0.24), transparent 28%),
+    radial-gradient(circle at 80% 40%, rgba(14,165,233,0.18), transparent 22%),
+    radial-gradient(circle at 50% 70%, rgba(99,102,241,0.14), transparent 26%);
+  mix-blend-mode: screen;
+  animation: nebula-shift 55s ease-in-out infinite;
+}
+
+.nebula-layer-2 {
+  background: radial-gradient(circle at 30% 20%, rgba(234,179,8,0.12), transparent 20%),
+    radial-gradient(circle at 75% 65%, rgba(125,211,252,0.14), transparent 24%);
+  mix-blend-mode: screen;
+  animation: nebula-shift 65s ease-in-out infinite reverse;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px);
+}
+
+.shadow-glow-purple {
+  box-shadow: 0 20px 80px rgba(168, 85, 247, 0.24);
+}
+
+@keyframes star-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-120px, 80px, 0);
+  }
+}
+
+@keyframes nebula-shift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(20px, -30px, 0) scale(1.04);
+  }
+}
