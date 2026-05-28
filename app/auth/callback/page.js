@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { Loader2 } from 'lucide-react';
+import { normalizeRedirect } from '@/lib/auth-utils';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -17,6 +18,9 @@ export default function AuthCallback() {
     (async () => {
       try {
         if (error) throw new Error(error);
+
+        const redirectParam = url.searchParams.get('redirect');
+        const safeRedirect = normalizeRedirect(redirectParam || '/dashboard');
 
         let session = null;
 
@@ -55,12 +59,12 @@ export default function AuthCallback() {
 
         if (!response.ok) {
           console.warn('Auth/me response not ok:', response.status);
-          return router.replace('/dashboard');
+          return router.replace(safeRedirect);
         }
 
         const userData = await response.json();
         const isOnboardingComplete = userData.user?.personalization?.onboarding_completed || userData.user?.onboardingStep === 'completed' || Boolean(userData.user?.onboardingCompletedAt);
-        return router.replace(isOnboardingComplete ? '/dashboard' : '/onboarding');
+        return router.replace(isOnboardingComplete ? safeRedirect : '/onboarding');
       } catch (error) {
         console.error('Auth callback failed:', error);
         return router.replace('/auth');

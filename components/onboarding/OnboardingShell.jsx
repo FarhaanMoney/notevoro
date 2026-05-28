@@ -4,7 +4,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-export default function OnboardingShell({ children, title, subtitle, step, total, onBack }) {
+export default function OnboardingShell({ children, title, subtitle, step, total, onBack, footer }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-[#03040a] via-[#090b15] to-black">
       <div className="w-full max-w-lg">
@@ -26,11 +26,17 @@ export default function OnboardingShell({ children, title, subtitle, step, total
 
           <div className="space-y-4">{children}</div>
 
-          <div className="mt-6 flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={onBack} className="text-zinc-300" disabled={step <= 1}>Back</Button>
-            <div />
-          </div>
-        </Card>
+          <div className="mt-6">
+          {typeof footer !== 'undefined' ? (
+            footer
+          ) : (
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" onClick={onBack} className="text-zinc-300" disabled={step <= 1}>Back</Button>
+              <div />
+            </div>
+          )}
+        </div>
+      </Card>
       </div>
     </div>
   );

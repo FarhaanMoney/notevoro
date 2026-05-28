@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabaseBrowser } from '@/lib/supabase/browser';
+import { normalizeRedirect } from '@/lib/auth-utils';
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState('login');
   const [step, setStep] = useState('auth');
@@ -22,27 +24,37 @@ export default function AuthPage() {
   const [showOtp, setShowOtp] = useState(false);
   const [personalization, setPersonalization] = useState({ goal: '', subjects: '', style: '' });
   const [themeError, setThemeError] = useState(null);
+  const [redirectTo, setRedirectTo] = useState('/dashboard');
   const googleBtnRef = useRef(null);
 
-  async function routeAfterAuth(session) {
+  useEffect(() => {
+    const redirect = searchParams?.get('redirect');
+    if (redirect && normalizeRedirect(redirect)) {
+      setRedirectTo(redirect);
+    }
+  }, [searchParams]);
+
+  async function routeAfterAuth(session, fallbackRedirect = '/dashboard') {
     try {
       const response = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
+
       if (!response.ok) {
-        router.replace('/dashboard');
+        router.replace(fallbackRedirect);
         return;
       }
+
       const data = await response.json();
       const isOnboardingComplete = data.user?.personalization?.onboarding_completed || data.user?.onboardingStep === 'completed' || Boolean(data.user?.onboardingCompletedAt);
       if (!isOnboardingComplete) {
         router.replace('/onboarding');
       } else {
-        router.replace('/dashboard');
+        router.replace(normalizeRedirect(fallbackRedirect));
       }
     } catch (error) {
       console.error('Route after auth failed:', error);
-      router.replace('/dashboard');
+      router.replace(fallbackRedirect);
     }
   }
 
@@ -90,11 +102,12 @@ export default function AuthPage() {
       setLoading(true);
       const sb = supabaseBrowser();
       const base = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-      
+      const callbackUrl = `${base}/auth/callback?redirect=${encodeURIComponent(normalizeRedirect(redirectTo))}`;
+
       const { error } = await sb.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${base}/auth/callback`,
+          redirectTo: callbackUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -140,7 +153,7 @@ export default function AuthPage() {
         }
 
         if (data?.session) {
-          await routeAfterAuth(data.session);
+          await routeAfterAuth(data.session, redirectTo);
           return;
         }
 
@@ -168,7 +181,7 @@ export default function AuthPage() {
       }
       
       if (data?.session) {
-        await routeAfterAuth(data.session);
+        await routeAfterAuth(data.session, redirectTo);
         return;
       }
 
@@ -211,7 +224,7 @@ export default function AuthPage() {
       }
 
       if (data?.session) {
-        await routeAfterAuth(data.session);
+        await routeAfterAuth(data.session, redirectTo);
         return;
       }
       
