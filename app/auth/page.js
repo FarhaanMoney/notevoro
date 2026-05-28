@@ -94,7 +94,7 @@ export default function AuthPage() {
       const { error } = await sb.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${base}/auth?google=true`,
+          redirectTo: `${base}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -117,18 +117,17 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     
-    // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       setLoading(false);
       toast.error('Authentication timed out. Please try again.');
-    }, 30000); // 30 second timeout
+    }, 30000);
     
     try {
       const sb = supabaseBrowser();
       
       if (tab === 'login') {
         console.log('Attempting login with email:', form.email);
-        const { error } = await sb.auth.signInWithPassword({ 
+        const { data, error } = await sb.auth.signInWithPassword({ 
           email: form.email, 
           password: form.password 
         });
@@ -139,16 +138,19 @@ export default function AuthPage() {
           console.error('Auth error:', error);
           throw error;
         }
-        
+
+        if (data?.session) {
+          await routeAfterAuth(data.session);
+          return;
+        }
+
         console.log('Login successful, waiting for auth state change');
         toast.success('Welcome back!');
-        // Global auth listener will handle redirect
         return;
       }
       
-      // Signup flow
       console.log('Attempting signup with email:', form.email);
-      const { error } = await sb.auth.signUp({ 
+      const { data, error } = await sb.auth.signUp({ 
         email: form.email, 
         password: form.password,
         options: {
@@ -165,10 +167,14 @@ export default function AuthPage() {
         throw error;
       }
       
+      if (data?.session) {
+        await routeAfterAuth(data.session);
+        return;
+      }
+
       console.log('Signup successful, waiting for OTP verification');
       setStep('otp');
       toast.success('Verification code sent to your email!');
-      // Global auth listener will handle redirect after OTP verification
     } catch (e) {
       clearTimeout(timeoutId);
       console.error('Authentication error:', e);
@@ -182,17 +188,16 @@ export default function AuthPage() {
   async function verifyOtp() {
     setLoading(true);
     
-    // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       setLoading(false);
       toast.error('OTP verification timed out. Please try again.');
-    }, 30000); // 30 second timeout
+    }, 30000);
     
     try {
       const sb = supabaseBrowser();
       console.log('Verifying OTP for email:', form.email);
       
-      const { error } = await sb.auth.verifyOtp({
+      const { data, error } = await sb.auth.verifyOtp({
         email: form.email,
         token: otp,
         type: 'signup',
@@ -204,10 +209,14 @@ export default function AuthPage() {
         console.error('OTP verification error:', error);
         throw error;
       }
+
+      if (data?.session) {
+        await routeAfterAuth(data.session);
+        return;
+      }
       
       console.log('OTP verification successful, waiting for auth state change');
       toast.success('Welcome to Notevoro AI!');
-      // Global auth listener will handle redirect
     } catch (e) {
       clearTimeout(timeoutId);
       console.error('OTP verification error:', e);
