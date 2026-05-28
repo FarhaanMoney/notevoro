@@ -53,7 +53,7 @@ export default function VisualLearningPage() {
     },
   ];
 
-  const userPlan = 'pro';
+  const userPlan = 'pro' as 'free' | 'pro';
 
   return (
     <DashboardLayout>
