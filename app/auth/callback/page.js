@@ -22,8 +22,19 @@ export default function AuthCallback() {
 
         if (code) {
           const { data, error: exErr } = await sb.auth.exchangeCodeForSession(code);
-          if (exErr) throw exErr;
-          session = data?.session || null;
+          if (exErr) {
+            console.warn('exchangeCodeForSession failed:', exErr.message || exErr);
+          } else {
+            session = data?.session || null;
+          }
+        }
+
+        if (!session) {
+          const { data, error: urlErr } = await sb.auth.getSessionFromUrl({ storeSession: true });
+          if (urlErr) {
+            console.warn('getSessionFromUrl failed:', urlErr.message || urlErr);
+          }
+          session = session || data?.session || null;
         }
 
         if (!session) {
@@ -31,58 +42,28 @@ export default function AuthCallback() {
           session = data?.session || null;
         }
 
-        if (session?.access_token) {
-          try {
-            const response = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${session.access_token}` } });
-
-            if (response.status === 401) {
-              await sb.auth.signOut();
-              return router.replace('/');
-            }
-
-            if (!response.ok) {
-              return router.replace('/dashboard');
-            }
-
-            const userData = await response.json();
-            const isOnboardingComplete = userData.user?.personalization?.onboarding_completed || userData.user?.onboardingStep === 'completed' || Boolean(userData.user?.onboardingCompletedAt);
-            if (!isOnboardingComplete) {
-              return router.replace('/onboarding');
-            }
-
-            return router.replace('/dashboard');
-          } catch (error) {
-            console.error('Error checking user data:', error);
-            return router.replace('/dashboard');
-          }
+        if (!session) {
+          console.warn('No session found after auth callback, redirecting to auth page');
+          return router.replace('/auth');
         }
 
-        const { data } = await sb.auth.getSession();
-        if (data?.session?.access_token) {
-          try {
-            const response = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${data.session.access_token}` } });
-            if (response.status === 401) {
-              await sb.auth.signOut();
-              router.replace('/');
-              return;
-            }
-            if (response.ok) {
-              const userData = await response.json();
-              const isOnboardingComplete = userData.user?.personalization?.onboarding_completed || userData.user?.onboardingStep === 'completed' || Boolean(userData.user?.onboardingCompletedAt);
-              if (!isOnboardingComplete) {
-                router.replace('/onboarding');
-                return;
-              }
-            }
-          } catch (error) {
-            console.error('Error checking auth:', error);
-          }
-          router.replace('/dashboard');
-        } else {
-          router.replace('/');
+        const response = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${session.access_token}` } });
+        if (response.status === 401) {
+          await sb.auth.signOut();
+          return router.replace('/auth');
         }
-      } catch {
-        router.replace('/');
+
+        if (!response.ok) {
+          console.warn('Auth/me response not ok:', response.status);
+          return router.replace('/dashboard');
+        }
+
+        const userData = await response.json();
+        const isOnboardingComplete = userData.user?.personalization?.onboarding_completed || userData.user?.onboardingStep === 'completed' || Boolean(userData.user?.onboardingCompletedAt);
+        return router.replace(isOnboardingComplete ? '/dashboard' : '/onboarding');
+      } catch (error) {
+        console.error('Auth callback failed:', error);
+        return router.replace('/auth');
       }
     })();
   }, [router]);
