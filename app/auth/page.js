@@ -34,8 +34,8 @@ export default function AuthPage() {
     }
   }, [searchParams]);
 
-  async function routeAfterAuth(session, fallbackRedirect = '/dashboard') {
-    const safeRedirect = normalizeRedirect(fallbackRedirect);
+  async function routeAfterAuth(session) {
+    const safeRedirect = normalizeRedirect(redirectTo);
     try {
       const response = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${session.access_token}` }
@@ -65,7 +65,7 @@ export default function AuthPage() {
     const { data: { subscription } } = supabaseBrowser().auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         console.log('Auth state change: SIGNED_IN');
-        await routeAfterAuth(session, redirectTo);
+        await routeAfterAuth(session);
       } else {
         console.log('No session found');
       }
