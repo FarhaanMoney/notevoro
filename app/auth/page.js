@@ -36,28 +36,38 @@ export default function AuthPage() {
 
   async function routeAfterAuth(session) {
     const safeRedirect = normalizeRedirect(redirectTo);
+    console.log('routeAfterAuth', { safeRedirect, session });
     try {
+      if (!session) {
+        console.warn('routeAfterAuth called without session');
+        window.location.href = `/auth?redirect=${encodeURIComponent(safeRedirect)}`;
+        return;
+      }
+
       const response = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
 
+      console.log('routeAfterAuth /api/auth/me response', response.status);
+
       if (!response.ok) {
         await supabaseBrowser().auth.signOut();
-        router.replace(`/auth?redirect=${encodeURIComponent(safeRedirect)}`);
+        window.location.href = `/auth?redirect=${encodeURIComponent(safeRedirect)}`;
         return;
       }
 
       const data = await response.json();
+      console.log('routeAfterAuth user data', data);
       const isOnboardingComplete = data.user?.personalization?.onboarding_completed || data.user?.onboardingStep === 'completed' || Boolean(data.user?.onboardingCompletedAt);
       if (!isOnboardingComplete) {
-        router.replace('/onboarding');
+        window.location.href = '/onboarding';
       } else {
-        router.replace(safeRedirect);
+        window.location.href = safeRedirect;
       }
     } catch (error) {
       console.error('Route after auth failed:', error);
       await supabaseBrowser().auth.signOut();
-      router.replace(`/auth?redirect=${encodeURIComponent(safeRedirect)}`);
+      window.location.href = `/auth?redirect=${encodeURIComponent(safeRedirect)}`;
     }
   }
 
@@ -80,10 +90,11 @@ export default function AuthPage() {
       try {
         const sb = supabaseBrowser();
         const { data: { session } } = await sb.auth.getSession();
+        console.log('Auth page load current session', session);
         
         if (session?.user) {
           console.log('Session found on page load, routing after auth');
-          await routeAfterAuth(session, redirectTo);
+          await routeAfterAuth(session);
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -147,6 +158,7 @@ export default function AuthPage() {
           email: form.email, 
           password: form.password 
         });
+        console.log('Login result', { data, error });
         
         clearTimeout(timeoutId);
         
@@ -156,7 +168,8 @@ export default function AuthPage() {
         }
 
         if (data?.session) {
-          await routeAfterAuth(data.session, redirectTo);
+          console.log('Login session exists', data.session);
+          await routeAfterAuth(data.session);
           return;
         }
 
@@ -175,6 +188,7 @@ export default function AuthPage() {
           },
         },
       });
+      console.log('Signup result', { data, error });
       
       clearTimeout(timeoutId);
       
@@ -184,7 +198,8 @@ export default function AuthPage() {
       }
       
       if (data?.session) {
-        await routeAfterAuth(data.session, redirectTo);
+        console.log('Signup session exists', data.session);
+        await routeAfterAuth(data.session);
         return;
       }
 
@@ -218,6 +233,7 @@ export default function AuthPage() {
         token: otp,
         type: 'signup',
       });
+      console.log('OTP verify result', { data, error });
       
       clearTimeout(timeoutId);
       
@@ -227,7 +243,8 @@ export default function AuthPage() {
       }
 
       if (data?.session) {
-        await routeAfterAuth(data.session, redirectTo);
+        console.log('OTP session exists', data.session);
+        await routeAfterAuth(data.session);
         return;
       }
       

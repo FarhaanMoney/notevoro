@@ -2,6 +2,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import Head from 'next/head';
 import { Toaster } from '@/components/ui/sonner';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 
 export const metadata = {
   title: 'Notevoro AI — Your AI Study Partner',
@@ -19,8 +20,10 @@ export default function RootLayout({ children }) {
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       </Head>
       <body className="min-h-screen bg-[#0b0b0f] text-zinc-100 antialiased">
-        {children}
-        <Toaster theme="dark" position="top-right" richColors />
+        <AuthProvider>
+          {children}
+          <Toaster theme="dark" position="top-right" richColors />
+        </AuthProvider>
       </body>
     </html>
   );

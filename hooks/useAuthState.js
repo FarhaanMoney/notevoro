@@ -17,6 +17,7 @@ export function useAuthState() {
     async function initSession() {
       try {
         const { data } = await sb.auth.getSession();
+        console.log('useAuthState initSession', data?.session);
         if (!mounted) return;
         setSession(data?.session || null);
         setStatus(data?.session ? 'authenticated' : 'unauthenticated');
@@ -29,7 +30,8 @@ export function useAuthState() {
 
     initSession();
 
-    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, sessionPayload) => {
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, sessionPayload) => {
+      console.log('useAuthState auth state change', event, sessionPayload);
       if (!mounted) return;
       setSession(sessionPayload || null);
       setStatus(sessionPayload ? 'authenticated' : 'unauthenticated');
@@ -56,9 +58,11 @@ export function useAuthState() {
       setUserLoading(true);
       setUserError(null);
       try {
+        console.log('useAuthState fetchUser session', session);
         const response = await fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
+        console.log('useAuthState fetchUser response', response.status);
 
         if (!mounted) return;
         if (!response.ok) {
@@ -73,6 +77,7 @@ export function useAuthState() {
         }
 
         const data = await response.json();
+        console.log('useAuthState fetched user', data.user);
         setUser(data.user || null);
       } catch (error) {
         console.error('Failed to load user profile:', error);
