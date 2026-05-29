@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -8,282 +8,283 @@ import {
   Sparkles,
   Zap,
   BookOpen,
-  BarChart3,
   Brain,
-  TrendingUp,
-  Clock,
-  Target,
+  BarChart3,
+  MessageCircle,
+  Flame,
+  Lightbulb,
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const [userName] = useState('Farhaan');
-  const [streakDays] = useState(12);
-  const [totalHours] = useState(48.5);
 
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+      transition: { staggerChildren: 0.08, delayChildren: 0.05 },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+    hidden: { opacity: 0, y: 8 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
 
   return (
-    <div className="min-h-screen w-full space-y-8 px-6 md:px-12 py-8">
-        {/* Welcome Hero Section */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="rounded-[3rem] border border-white/10 bg-gradient-to-br from-violet-500/10 via-slate-950/80 to-cyan-500/10 p-10 shadow-[0_40px_120px_rgba(59,130,246,0.12)]"
+    <div className="w-full space-y-6 p-6 md:p-8">
+      {/* Greeting Section */}
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="mb-2"
+      >
+        <motion.div variants={itemVariants} className="space-y-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-[rgb(var(--text-primary))]">
+            Welcome back, {userName}
+          </h1>
+          <p className="text-sm text-[rgb(var(--text-secondary))]">
+            Continue your learning journey with AI-powered study tools
+          </p>
+        </motion.div>
+      </motion.section>
+
+      {/* Status Cards - Horizontal */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        <motion.div
+          variants={itemVariants}
+          className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] p-4 backdrop-blur-sm"
         >
-          <motion.div variants={itemVariants} className="space-y-6">
-            <div className="space-y-2">
-              <p className="text-sm uppercase tracking-[0.3em] text-cyan-200/90">Welcome back</p>
-              <h1 className="text-4xl md:text-5xl font-bold text-white">
-                Hey {userName}, keep the momentum
-              </h1>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))]">
+                Study Streak
+              </p>
+              <p className="mt-1 text-2xl font-bold text-orange-600 dark:text-orange-400">12</p>
+              <p className="text-xs text-[rgb(var(--text-secondary))]">days in a row</p>
             </div>
+            <Flame className="h-5 w-5 text-orange-500 opacity-70" />
+          </div>
+        </motion.div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Streak Card */}
-              <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs uppercase tracking-[0.3em] text-amber-200/80">Study streak</p>
-                  <span className="text-2xl font-bold text-amber-300">{streakDays}</span>
-                </div>
-                <p className="text-sm text-amber-200/70">Days in a row • Don't break it!</p>
-              </div>
-
-              {/* Progress Card */}
-              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Total studied</p>
-                  <span className="text-2xl font-bold text-cyan-300">{totalHours}h</span>
-                </div>
-                <p className="text-sm text-cyan-200/70">Consistent dedication pays off</p>
-              </div>
-
-              {/* AI Recommendation Card */}
-              <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs uppercase tracking-[0.3em] text-violet-200/80">AI insight</p>
-                  <Sparkles className="h-5 w-5 text-violet-300" />
-                </div>
-                <p className="text-sm text-violet-200/70">Your Biology notes need review</p>
-              </div>
+        <motion.div
+          variants={itemVariants}
+          className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] p-4 backdrop-blur-sm"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))]">
+                Hours Studied
+              </p>
+              <p className="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">48.5</p>
+              <p className="text-xs text-[rgb(var(--text-secondary))]">this month</p>
             </div>
+            <Zap className="h-5 w-5 text-cyan-500 opacity-70" />
+          </div>
+        </motion.div>
 
-            <div className="flex flex-wrap items-center gap-3">
+        <motion.div
+          variants={itemVariants}
+          className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] p-4 backdrop-blur-sm"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))]">
+                Current Focus
+              </p>
+              <p className="mt-1 text-lg font-bold text-indigo-600 dark:text-indigo-400">Biology</p>
+              <p className="text-xs text-[rgb(var(--text-secondary))]">genetics unit</p>
+            </div>
+            <BookOpen className="h-5 w-5 text-indigo-500 opacity-70" />
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Quick Start - Continue Learning */}
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-3"
+      >
+        <motion.h2 variants={itemVariants} className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+          Continue Learning
+        </motion.h2>
+
+        <motion.div
+          variants={itemVariants}
+          className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {[
+            {
+              icon: BarChart3,
+              title: 'Biology Quiz',
+              desc: 'Ecosystems - 8/10 completed',
+              href: '/dashboard/quizzes',
+              color: 'from-cyan-500 to-blue-500',
+            },
+            {
+              icon: Zap,
+              title: 'Spanish Vocab',
+              desc: '24/32 flashcards mastered',
+              href: '/dashboard/flashcards',
+              color: 'from-violet-500 to-purple-500',
+            },
+            {
+              icon: BookOpen,
+              title: 'Physics Notes',
+              desc: 'Laws of Motion - AI generated',
+              href: '/dashboard/notes',
+              color: 'from-emerald-500 to-teal-500',
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
               <Link
-                href="/dashboard/chat"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_20px_80px_rgba(59,130,246,0.25)] transition hover:-translate-y-0.5"
+                key={item.title}
+                href={item.href}
+                className="group"
               >
-                Ask AI anything
+                <motion.div
+                  variants={itemVariants}
+                  className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] p-4 backdrop-blur-sm hover:border-[rgb(var(--accent-primary))] hover:bg-[rgba(var(--bg-secondary),0.8)] transition-all"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${item.color}`}>
+                      <Icon className="h-4 w-4 text-white" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-[rgb(var(--text-tertiary))] group-hover:text-[rgb(var(--accent-primary))] transition-colors" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[rgb(var(--text-primary))] mb-1">{item.title}</h3>
+                  <p className="text-xs text-[rgb(var(--text-secondary))]">{item.desc}</p>
+                </motion.div>
+              </Link>
+            );
+          })}
+        </motion.div>
+      </motion.section>
+
+      {/* Quick Actions */}
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-3"
+      >
+        <motion.h2 variants={itemVariants} className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+          Quick Actions
+        </motion.h2>
+
+        <motion.div variants={itemVariants} className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+          {[
+            { icon: BookOpen, label: 'New Notes', href: '/dashboard/notes', color: 'emerald' },
+            { icon: BarChart3, label: 'New Quiz', href: '/dashboard/quizzes', color: 'cyan' },
+            { icon: Zap, label: 'Flashcards', href: '/dashboard/flashcards', color: 'violet' },
+            { icon: MessageCircle, label: 'Ask AI', href: '/dashboard/chat', color: 'pink' },
+          ].map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.label}
+                href={action.href}
+              >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="group rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] p-4 text-center backdrop-blur-sm hover:border-[rgb(var(--accent-primary))] hover:bg-[rgba(var(--bg-secondary),0.8)] transition-all"
+                >
+                  <Icon className="h-5 w-5 text-[rgb(var(--accent-primary))] mx-auto mb-2 opacity-80 group-hover:opacity-100" />
+                  <p className="text-xs font-medium text-[rgb(var(--text-primary))]">{action.label}</p>
+                </motion.div>
+              </Link>
+            );
+          })}
+        </motion.div>
+      </motion.section>
+
+      {/* AI Suggestions */}
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-3"
+      >
+        <motion.h2 variants={itemVariants} className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+          AI Suggestions
+        </motion.h2>
+
+        <motion.div variants={itemVariants} className="space-y-2">
+          {[
+            {
+              icon: Lightbulb,
+              title: 'Generate Flashcards',
+              desc: 'Create flashcards from your Biology notes on genetics',
+            },
+            {
+              icon: Brain,
+              title: 'Continue Quiz',
+              desc: 'Resume where you left off - 2 questions remaining',
+            },
+            {
+              icon: Sparkles,
+              title: 'AI Summary',
+              desc: 'Your Physics notes need review - AI can summarize them',
+            },
+          ].map((suggestion) => {
+            const Icon = suggestion.icon;
+            return (
+              <motion.button
+                key={suggestion.title}
+                variants={itemVariants}
+                className="w-full text-left rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] p-4 backdrop-blur-sm hover:border-[rgb(var(--accent-primary))] hover:bg-[rgba(var(--bg-secondary),0.8)] transition-all"
+              >
+                <div className="flex items-start gap-3">
+                  <Icon className="h-5 w-5 text-[rgb(var(--accent-primary))] flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[rgb(var(--text-primary))]">{suggestion.title}</p>
+                    <p className="text-xs text-[rgb(var(--text-secondary))] mt-0.5">{suggestion.desc}</p>
+                  </div>
+                </div>
+              </motion.button>
+            );
+          })}
+        </motion.div>
+      </motion.section>
+
+      {/* CTA */}
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="pt-4 pb-8"
+      >
+        <motion.div
+          variants={itemVariants}
+          className="rounded-lg border border-[rgb(var(--border-color))] bg-gradient-to-br from-indigo-500/10 to-blue-500/10 p-6 backdrop-blur-sm"
+        >
+          <div className="flex items-start gap-4">
+            <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-[rgb(var(--text-primary))] mb-1">Upgrade to Pro</h3>
+              <p className="text-sm text-[rgb(var(--text-secondary))] mb-3">
+                Unlock unlimited AI prompts, advanced analytics, and collaborative studying.
+              </p>
+              <Link
+                href="/premium"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+              >
+                Learn more
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-                View recommendations
-              </button>
             </div>
-          </motion.div>
-        </motion.section>
-
-        {/* Continue Learning Section */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
-        >
-          <motion.h2 variants={itemVariants} className="text-2xl font-bold text-white">
-            Continue Learning
-          </motion.h2>
-
-          <motion.div
-            variants={itemVariants}
-            className="grid gap-4 lg:grid-cols-3"
-          >
-            {/* Recent Quiz */}
-            <Link href="/dashboard/quizzes" className="group">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-cyan-400/40 hover:bg-cyan-500/5">
-                <div className="flex items-center justify-between mb-4">
-                  <BarChart3 className="h-5 w-5 text-cyan-300" />
-                  <span className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Recent</span>
-                </div>
-                <h3 className="font-semibold text-white mb-2">Biology Ecosystems Quiz</h3>
-                <p className="text-sm text-zinc-400 mb-4">8/10 • Completed yesterday</p>
-                <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full w-4/5 bg-gradient-to-r from-cyan-400 to-blue-500" />
-                </div>
-              </div>
-            </Link>
-
-            {/* Recent Flashcards */}
-            <Link href="/dashboard/flashcards" className="group">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-violet-400/40 hover:bg-violet-500/5">
-                <div className="flex items-center justify-between mb-4">
-                  <Zap className="h-5 w-5 text-violet-300" />
-                  <span className="text-xs uppercase tracking-[0.3em] text-violet-200/80">Recent</span>
-                </div>
-                <h3 className="font-semibold text-white mb-2">Spanish Vocabulary Set</h3>
-                <p className="text-sm text-zinc-400 mb-4">24/32 mastered • 5 days ago</p>
-                <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full w-3/4 bg-gradient-to-r from-violet-400 to-pink-500" />
-                </div>
-              </div>
-            </Link>
-
-            {/* Recent Notes */}
-            <Link href="/dashboard/notes" className="group">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-emerald-400/40 hover:bg-emerald-500/5">
-                <div className="flex items-center justify-between mb-4">
-                  <BookOpen className="h-5 w-5 text-emerald-300" />
-                  <span className="text-xs uppercase tracking-[0.3em] text-emerald-200/80">Recent</span>
-                </div>
-                <h3 className="font-semibold text-white mb-2">Physics: Laws of Motion</h3>
-                <p className="text-sm text-zinc-400 mb-4">AI summary generated • Today</p>
-                <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full w-full bg-gradient-to-r from-emerald-400 to-teal-500" />
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-        </motion.section>
-
-        {/* Quick Actions Section */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
-        >
-          <motion.h2 variants={itemVariants} className="text-2xl font-bold text-white">
-            Quick Actions
-          </motion.h2>
-
-          <motion.div variants={itemVariants} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: BookOpen, label: 'Generate Notes', href: '/dashboard/notes', color: 'emerald' },
-              { icon: BarChart3, label: 'Create Quiz', href: '/dashboard/quizzes', color: 'cyan' },
-              { icon: Zap, label: 'Make Flashcards', href: '/dashboard/flashcards', color: 'violet' },
-              { icon: Brain, label: 'Ask AI', href: '/dashboard/chat', color: 'pink' },
-            ].map((action) => {
-              const Icon = action.icon;
-              const colorMap = {
-                emerald: 'from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600',
-                cyan: 'from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600',
-                violet: 'from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600',
-                pink: 'from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600',
-              };
-
-              return (
-                <Link
-                  key={action.label}
-                  href={action.href}
-                  className={`group rounded-2xl bg-gradient-to-r ${colorMap[action.color as keyof typeof colorMap]} p-5 shadow-[0_20px_80px_rgba(59,130,246,0.12)] transition hover:shadow-[0_24px_100px_rgba(59,130,246,0.18)]`}
-                >
-                  <div className="flex flex-col items-start gap-4">
-                    <Icon className="h-6 w-6 text-white opacity-90" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-white">{action.label}</p>
-                      <p className="text-xs text-white/70 mt-1">Start now</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-white opacity-0 transition group-hover:opacity-100 group-hover:translate-x-1" />
-                  </div>
-                </Link>
-              );
-            })}
-          </motion.div>
-        </motion.section>
-
-        {/* Study Stats Section */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
-        >
-          <motion.h2 variants={itemVariants} className="text-2xl font-bold text-white">
-            Study Statistics
-          </motion.h2>
-
-          <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Clock, label: 'Hours Studied', value: '48.5h', trend: '+12h this week' },
-              { icon: BarChart3, label: 'Quizzes Done', value: '156', trend: '+8 this week' },
-              { icon: Zap, label: 'Flashcards', value: '1,243', trend: '+89 this week' },
-              { icon: TrendingUp, label: 'Avg. Score', value: '84.3%', trend: '+3.2% this week' },
-            ].map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <Icon className="h-5 w-5 text-cyan-300" />
-                    <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">{stat.trend}</p>
-                  </div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-zinc-400 mb-2">{stat.label}</p>
-                  <p className="text-3xl font-bold text-white">{stat.value}</p>
-                </div>
-              );
-            })}
-          </motion.div>
-        </motion.section>
-
-        {/* AI Recommendations Section */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4 pb-8"
-        >
-          <motion.h2 variants={itemVariants} className="text-2xl font-bold text-white">
-            AI Recommendations
-          </motion.h2>
-
-          <motion.div variants={itemVariants} className="grid gap-4 lg:grid-cols-2">
-            {[
-              {
-                title: 'Weak Subjects',
-                items: ['Biology: Genetics', 'Chemistry: Stoichiometry', 'History: Medieval Period'],
-                icon: Target,
-                color: 'rose',
-              },
-              {
-                title: 'Continue Learning',
-                items: ['Finish Spanish Set', 'Review Physics Notes', 'Complete Mock Test 3'],
-                icon: TrendingUp,
-                color: 'emerald',
-              },
-            ].map((rec) => {
-              const Icon = rec.icon;
-              return (
-                <div key={rec.title} className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                  <div className="flex items-center gap-3 mb-5">
-                    <Icon className="h-5 w-5 text-cyan-300" />
-                    <h3 className="font-semibold text-white">{rec.title}</h3>
-                  </div>
-                  <ul className="space-y-2">
-                    {rec.items.map((item) => (
-                      <li key={item} className="flex items-center gap-3 text-sm text-zinc-300">
-                        <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </motion.div>
-        </motion.section>
-      </div>
+          </div>
+        </motion.div>
+      </motion.section>
+    </div>
   );
 }

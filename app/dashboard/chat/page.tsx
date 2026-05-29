@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Paperclip, Mic, Loader } from 'lucide-react';
+import { Send, Loader, Copy, ThumbsUp, ThumbsDown } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -16,7 +16,15 @@ export default function ChatPage() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hey there! I\'m your AI study companion. Ask me anything about your subjects, and I\'ll help you understand complex concepts, solve problems, or explain topics in detail.',
+      content: `Hey! I'm your AI study companion. I can help you with:
+      
+• Explain complex concepts
+• Generate study materials
+• Answer homework questions
+• Create summaries and flashcards
+• Discuss topics in depth
+
+What would you like to learn about today?`,
       timestamp: new Date(),
     },
   ]);
@@ -49,14 +57,20 @@ export default function ChatPage() {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `That's a great question about "${input}". Let me break this down for you...
+        content: `That's a great question! Here are some key points about "${input}":
 
-**Key Points:**
-1. First concept explanation
-2. Second concept explanation
-3. Practical example
+**Main Concepts:**
+- First key concept with explanation
+- Second key concept with context
+- Practical application examples
 
-Feel free to ask follow-up questions or request clarification on any part!`,
+**Why This Matters:**
+Understanding this will help you grasp more advanced topics. Feel free to ask for:
+- Clarification on any point
+- More examples
+- A summary to review later
+
+What else would you like to know?`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
@@ -65,100 +79,138 @@ Feel free to ask follow-up questions or request clarification on any part!`,
   };
 
   return (
-    <div className="h-full flex flex-col">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-6 md:mx-12 mt-8 mb-6 space-y-2"
-        >
-          <h1 className="text-3xl md:text-4xl font-bold text-white">AI Chat</h1>
-          <p className="text-zinc-400">Ask me anything. I'm here to help you learn.</p>
-        </motion.div>
-
-        {/* Chat Container */}
-        <div className="flex-1 flex flex-col mx-6 md:mx-12 gap-6 overflow-hidden">
-          {/* Messages */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto space-y-6 pr-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
-          >
-            <AnimatePresence mode="popLayout">
-              {messages.map((message, index) => (
+    <div className="h-full flex flex-col bg-[rgb(var(--bg-primary))]">
+      {/* Messages Container */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto space-y-4 p-6 md:p-8"
+      >
+        <AnimatePresence mode="popLayout">
+          {messages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`max-w-xl lg:max-w-2xl ${message.role === 'user' ? 'flex-end' : 'flex-start'}`}>
+                {/* Message Bubble */}
                 <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`rounded-lg px-4 py-3 text-sm leading-relaxed ${
+                    message.role === 'user'
+                      ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-br-none'
+                      : 'bg-[rgba(var(--bg-secondary),0.5)] border border-[rgb(var(--border-color))] text-[rgb(var(--text-primary))] rounded-bl-none backdrop-blur-sm'
+                  }`}
                 >
-                  <div
-                    className={`max-w-2xl rounded-2xl px-6 py-4 ${
-                      message.role === 'user'
-                        ? 'rounded-br-none bg-gradient-to-r from-violet-500/30 to-cyan-500/30 border border-cyan-400/30 text-white'
-                        : 'rounded-bl-none bg-white/5 border border-white/10 text-zinc-100'
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {message.content}
-                    </p>
-                  </div>
+                  <p className="whitespace-pre-wrap">{message.content}</p>
                 </motion.div>
-              ))}
-            </AnimatePresence>
 
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex justify-start"
-              >
-                <div className="rounded-2xl rounded-bl-none bg-white/5 border border-white/10 px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <Loader className="h-4 w-4 animate-spin text-cyan-300" />
-                    <span className="text-sm text-zinc-400">Thinking...</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </div>
+                {/* Message Actions (for assistant only) */}
+                {message.role === 'assistant' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="flex gap-1.5 mt-2 text-[rgb(var(--text-tertiary))]"
+                  >
+                    <button
+                      className="p-1.5 hover:bg-[rgba(var(--bg-secondary),0.5)] rounded transition-colors"
+                      title="Copy message"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      className="p-1.5 hover:bg-green-500/10 rounded transition-colors text-green-600 dark:text-green-400"
+                      title="Helpful"
+                    >
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      className="p-1.5 hover:bg-red-500/10 rounded transition-colors text-red-600 dark:text-red-400"
+                      title="Not helpful"
+                    >
+                      <ThumbsDown className="h-3.5 w-3.5" />
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
-          {/* Input Area */}
+        {isLoading && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="pb-8 space-y-4"
+            className="flex justify-start"
           >
-            <div className="flex gap-3">
-              <button className="rounded-lg border border-white/10 bg-white/5 p-3 text-zinc-400 transition hover:bg-white/10">
-                <Paperclip className="h-5 w-5" />
-              </button>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                placeholder="Ask me anything..."
-                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-zinc-500 outline-none transition focus:border-cyan-400/50 focus:bg-white/10"
-              />
-              <button className="rounded-lg border border-white/10 bg-white/5 p-3 text-zinc-400 transition hover:bg-white/10">
-                <Mic className="h-5 w-5" />
-              </button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className="rounded-lg bg-gradient-to-r from-violet-500 to-cyan-400 px-4 py-3 text-white font-semibold shadow-[0_20px_80px_rgba(59,130,246,0.25)] transition hover:brightness-110 disabled:opacity-50"
-              >
-                <Send className="h-5 w-5" />
-              </motion.button>
+            <div className="rounded-lg rounded-bl-none bg-[rgba(var(--bg-secondary),0.5)] border border-[rgb(var(--border-color))] px-4 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <Loader className="h-4 w-4 animate-spin text-[rgb(var(--accent-primary))]" />
+                <span className="text-sm text-[rgb(var(--text-secondary))]">Thinking...</span>
+              </div>
             </div>
-            <p className="text-xs text-zinc-500 text-center">
-              Shift + Enter for new line • AI responses are always generated fresh
-            </p>
           </motion.div>
-        </div>
+        )}
       </div>
+
+      {/* Quick Prompts */}
+      {messages.length === 1 && !isLoading && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-6 md:px-8 pb-4 space-y-2"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))]">
+            Try asking
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              'Explain photosynthesis in simple terms',
+              'Help me with calculus limits',
+              'Create a study plan for Biology',
+              'Summarize the American Revolution',
+            ].map((prompt) => (
+              <motion.button
+                key={prompt}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => setInput(prompt)}
+                className="text-left px-3 py-2 rounded-lg text-xs text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] bg-[rgba(var(--bg-secondary),0.5)] hover:bg-[rgba(var(--bg-secondary),0.8)] border border-[rgb(var(--border-color))] transition-all"
+              >
+                {prompt}
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Input Area */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="px-6 md:px-8 py-6 border-t border-[rgb(var(--border-color))]"
+      >
+        <div className="max-w-2xl mx-auto flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            placeholder="Ask me anything... (Shift + Enter for new line)"
+            className="flex-1 rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] px-4 py-2.5 text-sm text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-tertiary))] outline-none transition-all backdrop-blur-sm hover:border-[rgb(var(--accent-primary))] focus:border-[rgb(var(--accent-primary))]"
+          />
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading}
+            className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
+          >
+            <Send className="h-4 w-4" />
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
   );
 }

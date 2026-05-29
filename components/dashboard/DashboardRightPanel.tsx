@@ -5,51 +5,51 @@ import { Sparkles, Clock, BookOpen, Bolt } from 'lucide-react';
 
 export function DashboardRightPanel() {
   return (
-    <aside className="hidden xl:flex xl:w-[26rem] flex-col gap-6 py-6 pr-6">
+    <aside className="hidden xl:flex xl:w-72 flex-col gap-4 py-6 pr-6">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        className="sticky top-6 flex flex-col gap-5"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="sticky top-6 flex flex-col gap-4"
       >
-        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-3">
+        <div className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.6)] p-5 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-cyan-200/80">Learning Companion</p>
-              <h2 className="mt-3 text-xl font-bold text-white">AI-powered focus assistant</h2>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))]">Learning Companion</p>
+              <h2 className="mt-1 text-base font-semibold text-[rgb(var(--text-primary))]">AI focus guide</h2>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-[0_20px_60px_rgba(59,130,246,0.25)]">
-              <Sparkles className="h-5 w-5 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500">
+              <Sparkles className="h-4 w-4 text-white" />
             </div>
           </div>
 
-          <p className="mt-4 text-sm leading-6 text-zinc-400">
-            Keep your learning aligned with your current mission. Get quick prompts, review goals, and stay on track without leaving your workflow.
+          <p className="text-xs leading-relaxed text-[rgb(var(--text-secondary))]">
+            Stay focused. Get quick prompts and AI insights to keep your learning on track.
           </p>
 
-          <div className="mt-6 grid gap-3">
-            <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-4">
-              <div className="flex items-center gap-3 text-sm text-zinc-300">
-                <Bolt className="h-4 w-4 text-cyan-300" />
-                <span>Focus boost ready</span>
+          <div className="mt-4 space-y-2">
+            <div className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgb(var(--bg-tertiary),0.3)] p-3">
+              <div className="flex items-center gap-2 text-xs text-[rgb(var(--text-secondary))]">
+                <Bolt className="h-3.5 w-3.5 text-cyan-500" />
+                <span className="font-medium">Focus boost ready</span>
               </div>
-              <p className="mt-3 text-white">Use AI to summarize your next study session in 30 seconds.</p>
+              <p className="mt-2 text-xs text-[rgb(var(--text-primary))]">Summarize your next session in 30 seconds.</p>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-4">
-              <div className="flex items-center gap-3 text-sm text-zinc-300">
-                <Clock className="h-4 w-4 text-violet-300" />
-                <span>Next review</span>
+            <div className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgb(var(--bg-tertiary),0.3)] p-3">
+              <div className="flex items-center gap-2 text-xs text-[rgb(var(--text-secondary))]">
+                <Clock className="h-3.5 w-3.5 text-indigo-500" />
+                <span className="font-medium">Next review</span>
               </div>
-              <p className="mt-3 text-white">Algebra practice at 5:00 PM. Keep the streak alive.</p>
+              <p className="mt-2 text-xs text-[rgb(var(--text-primary))]">Algebra at 5:00 PM. Keep streak alive.</p>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-4">
-              <div className="flex items-center gap-3 text-sm text-zinc-300">
-                <BookOpen className="h-4 w-4 text-cyan-300" />
-                <span>Suggested path</span>
+            <div className="rounded-lg border border-[rgb(var(--border-color))] bg-[rgb(var(--bg-tertiary),0.3)] p-3">
+              <div className="flex items-center gap-2 text-xs text-[rgb(var(--text-secondary))]">
+                <BookOpen className="h-3.5 w-3.5 text-blue-500" />
+                <span className="font-medium">Suggested path</span>
               </div>
-              <p className="mt-3 text-white">Review Biology notes, then switch to visual learning for stronger recall.</p>
+              <p className="mt-2 text-xs text-[rgb(var(--text-primary))]">Review Biology, then visual learning.</p>
             </div>
           </div>
         </div>
