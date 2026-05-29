@@ -1,216 +1,169 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader, Copy, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ArrowRight, Copy, Loader, MessageCircle, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
 }
+
+const pinnedChats = [
+  { title: 'Physics Concept Review', subtitle: 'Last used 18m ago' },
+  { title: 'Exam prep plan', subtitle: 'Last used yesterday' },
+  { title: 'Biology summary', subtitle: 'Last used 2 days ago' },
+];
+
+const suggestedPrompts = [
+  'Explain photosynthesis in one paragraph',
+  'Make 5 flashcards for equations',
+  'Summarize my study plan for tomorrow',
+];
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
+      id: 'welcome',
       role: 'assistant',
-      content: `Hey! I'm your AI study companion. I can help you with:
-      
-• Explain complex concepts
-• Generate study materials
-• Answer homework questions
-• Create summaries and flashcards
-• Discuss topics in depth
-
-What would you like to learn about today?`,
-      timestamp: new Date(),
+      content: 'Ready to study? Ask me anything and I’ll turn it into notes, flashcards, or a review plan.',
     },
   ]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, loading]);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    const text = input.trim();
+    setMessages((current) => [...current, { id: `${Date.now()}-user`, role: 'user', content: text }]);
     setInput('');
-    setIsLoading(true);
+    setLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `That's a great question! Here are some key points about "${input}":
+    window.setTimeout(() => {
+      setMessages((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          content: `I’ve got that. Here’s a quick breakdown for: ${text}
 
-**Main Concepts:**
-- First key concept with explanation
-- Second key concept with context
-- Practical application examples
-
-**Why This Matters:**
-Understanding this will help you grasp more advanced topics. Feel free to ask for:
-- Clarification on any point
-- More examples
-- A summary to review later
-
-What else would you like to know?`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1500);
+- Key idea 1
+- Key idea 2
+- Quick action you can take next`,
+        },
+      ]);
+      setLoading(false);
+    }, 1400);
   };
 
+  const history = useMemo(
+    () => 
+      messages.filter((message) => message.role === 'user').slice(-3).map((message) => message.content),
+    [messages]
+  );
+
   return (
-    <div className="h-full flex flex-col bg-[rgb(var(--bg-primary))]">
-      {/* Messages Container */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-4 p-6 md:p-8"
-      >
-        <AnimatePresence mode="popLayout">
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`max-w-xl lg:max-w-2xl ${message.role === 'user' ? 'flex-end' : 'flex-start'}`}>
-                {/* Message Bubble */}
-                <motion.div
-                  className={`rounded-lg px-4 py-3 text-sm leading-relaxed ${
-                    message.role === 'user'
-                      ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-br-none'
-                      : 'bg-[rgba(var(--bg-secondary),0.5)] border border-[rgb(var(--border-color))] text-[rgb(var(--text-primary))] rounded-bl-none backdrop-blur-sm'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
-                </motion.div>
-
-                {/* Message Actions (for assistant only) */}
-                {message.role === 'assistant' && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex gap-1.5 mt-2 text-[rgb(var(--text-tertiary))]"
-                  >
-                    <button
-                      className="p-1.5 hover:bg-[rgba(var(--bg-secondary),0.5)] rounded transition-colors"
-                      title="Copy message"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      className="p-1.5 hover:bg-green-500/10 rounded transition-colors text-green-600 dark:text-green-400"
-                      title="Helpful"
-                    >
-                      <ThumbsUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      className="p-1.5 hover:bg-red-500/10 rounded transition-colors text-red-600 dark:text-red-400"
-                      title="Not helpful"
-                    >
-                      <ThumbsDown className="h-3.5 w-3.5" />
-                    </button>
-                  </motion.div>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-start"
-          >
-            <div className="rounded-lg rounded-bl-none bg-[rgba(var(--bg-secondary),0.5)] border border-[rgb(var(--border-color))] px-4 py-3 backdrop-blur-sm">
-              <div className="flex items-center gap-2">
-                <Loader className="h-4 w-4 animate-spin text-[rgb(var(--accent-primary))]" />
-                <span className="text-sm text-[rgb(var(--text-secondary))]">Thinking...</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Quick Prompts */}
-      {messages.length === 1 && !isLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="px-6 md:px-8 pb-4 space-y-2"
-        >
-          <p className="text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))]">
-            Try asking
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {[
-              'Explain photosynthesis in simple terms',
-              'Help me with calculus limits',
-              'Create a study plan for Biology',
-              'Summarize the American Revolution',
-            ].map((prompt) => (
-              <motion.button
-                key={prompt}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => setInput(prompt)}
-                className="text-left px-3 py-2 rounded-lg text-xs text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] bg-[rgba(var(--bg-secondary),0.5)] hover:bg-[rgba(var(--bg-secondary),0.8)] border border-[rgb(var(--border-color))] transition-all"
-              >
-                {prompt}
-              </motion.button>
+    <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <aside className="hidden rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.7)] p-4 lg:block">
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-[rgb(var(--text-tertiary))]">Chats</p>
+            <h2 className="mt-2 text-lg font-semibold text-[rgb(var(--text-primary))]">Pinned conversations</h2>
+          </div>
+          <div className="space-y-3">
+            {pinnedChats.map((chat) => (
+              <button key={chat.title} className="w-full rounded-3xl border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.8)] p-4 text-left transition hover:border-[rgb(var(--accent-primary))]">
+                <p className="font-semibold text-[rgb(var(--text-primary))]">{chat.title}</p>
+                <p className="text-sm text-[rgb(var(--text-secondary))]">{chat.subtitle}</p>
+              </button>
             ))}
           </div>
-        </motion.div>
-      )}
-
-      {/* Input Area */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="px-6 md:px-8 py-6 border-t border-[rgb(var(--border-color))]"
-      >
-        <div className="max-w-2xl mx-auto flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-            placeholder="Ask me anything... (Shift + Enter for new line)"
-            className="flex-1 rounded-lg border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.5)] px-4 py-2.5 text-sm text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-tertiary))] outline-none transition-all backdrop-blur-sm hover:border-[rgb(var(--accent-primary))] focus:border-[rgb(var(--accent-primary))]"
-          />
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
-          >
-            <Send className="h-4 w-4" />
-          </motion.button>
         </div>
-      </motion.div>
+      </aside>
+
+      <div className="space-y-6">
+        <div className="rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.7)] p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.35em] text-[rgb(var(--text-tertiary))]">AI Chat</p>
+              <h1 className="text-2xl font-semibold text-[rgb(var(--text-primary))]">Ask your study coach</h1>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(var(--bg-tertiary),0.9)] px-4 py-2 text-xs text-[rgb(var(--text-secondary))]">
+              <MessageCircle className="h-4 w-4 text-cyan-400" />
+              Quick responses
+            </div>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {suggestedPrompts.map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => setInput(prompt)}
+                className="rounded-full border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.75)] px-4 py-2 text-xs text-[rgb(var(--text-primary))] transition hover:border-[rgb(var(--accent-primary))] hover:bg-[rgba(var(--bg-secondary),0.95)]"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div ref={scrollRef} className="space-y-4 overflow-y-auto rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.75)] p-5 max-h-[calc(100vh-360px)]">
+          <AnimatePresence mode="popLayout">
+            {messages.map((message) => (
+              <motion.div key={message.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className={`max-w-3xl ${message.role === 'user' ? 'ml-auto' : ''}`}>
+                <div className={`rounded-3xl p-5 shadow-sm ${message.role === 'user' ? 'bg-gradient-to-r from-indigo-500 to-cyan-500 text-white' : 'bg-[rgba(var(--bg-primary),0.95)] border border-[rgb(var(--border-color))] text-[rgb(var(--text-primary))]'}`}>
+                  <p className="whitespace-pre-wrap text-sm leading-7">{message.content}</p>
+                </div>
+                {message.role === 'assistant' && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-[rgb(var(--text-secondary))]">
+                    <button className="rounded-full border border-[rgb(var(--border-color))] px-3 py-2 transition hover:border-[rgb(var(--accent-primary))]">Copy</button>
+                    <button className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--border-color))] px-3 py-2 transition hover:border-emerald-400"><ThumbsUp className="h-3.5 w-3.5" /> Helpful</button>
+                    <button className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--border-color))] px-3 py-2 transition hover:border-rose-400"><ThumbsDown className="h-3.5 w-3.5" /> Not helpful</button>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+            {loading && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl">
+                <div className="inline-flex items-center gap-3 rounded-3xl bg-[rgba(var(--bg-primary),0.95)] border border-[rgb(var(--border-color))] p-4 text-[rgb(var(--text-secondary))]">
+                  <Loader className="h-4 w-4 animate-spin text-[rgb(var(--accent-primary))]" />
+                  Thinking...
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.7)] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <textarea
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  handleSend();
+                }
+              }}
+              rows={1}
+              placeholder="Type your question here..."
+              className="min-h-[56px] w-full resize-none rounded-3xl border border-[rgb(var(--border-color))] bg-transparent px-4 py-3 text-sm text-[rgb(var(--text-primary))] outline-none placeholder:text-[rgb(var(--text-tertiary))]"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="inline-flex h-12 items-center justify-center rounded-3xl bg-gradient-to-r from-indigo-500 to-cyan-500 px-6 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Send <ArrowRight className="ml-2 h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

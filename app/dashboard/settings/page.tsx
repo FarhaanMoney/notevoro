@@ -2,232 +2,88 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Shield, Palette, Volume2, Zap, LogOut, Save } from 'lucide-react';
+import { Bell, Palette, Shield, Zap, LogOut } from 'lucide-react';
+
+const settingsGroups = [
+  {
+    title: 'Notifications',
+    icon: Bell,
+    items: [
+      { key: 'reminders', label: 'Study reminders' },
+      { key: 'weeklyReport', label: 'Weekly summary' },
+    ],
+  },
+  {
+    title: 'Appearance',
+    icon: Palette,
+    items: [
+      { key: 'reduceMotion', label: 'Reduce motion' },
+      { key: 'compactMode', label: 'Compact layout' },
+    ],
+  },
+];
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
-    notifications: true,
-    emailUpdates: false,
-    darkMode: true,
-    soundEffects: true,
-    animationsEnabled: true,
-    dailyReminders: true,
+  const [toggles, setToggles] = useState({
+    reminders: true,
+    weeklyReport: false,
+    reduceMotion: false,
+    compactMode: false,
   });
 
-  const [saved, setSaved] = useState(false);
-
-  const handleToggle = (key: keyof typeof settings) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-    setSaved(false);
-  };
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const settingGroups = [
-    {
-      title: 'Notifications',
-      icon: Bell,
-      items: [
-        { key: 'notifications', label: 'Push Notifications', description: 'Get notified about study reminders' },
-        { key: 'emailUpdates', label: 'Email Updates', description: 'Weekly progress reports and tips' },
-        { key: 'dailyReminders', label: 'Daily Reminders', description: 'Study streak reminder notifications' },
-      ],
-    },
-    {
-      title: 'Preferences',
-      icon: Palette,
-      items: [
-        { key: 'darkMode', label: 'Dark Mode', description: 'Use dark theme for the interface' },
-        { key: 'animationsEnabled', label: 'Animations', description: 'Enable smooth UI animations' },
-        { key: 'soundEffects', label: 'Sound Effects', description: 'Play audio cues during activities' },
-      ],
-    },
-  ];
+  const toggle = (key: keyof typeof toggles) => setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
-    <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-2"
-        >
-          <h1 className="text-3xl md:text-4xl font-bold text-white">Settings</h1>
-          <p className="text-zinc-400">Customize your Notevoro experience</p>
-        </motion.div>
-
-        {/* Settings Groups */}
-        <div className="max-w-3xl space-y-6">
-          {settingGroups.map((group) => {
-            const Icon = group.icon;
-            return (
-              <motion.section
-                key={group.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="h-6 w-6 text-cyan-300" />
-                  <h2 className="text-xl font-bold text-white">{group.title}</h2>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-                  {group.items.map((item) => (
-                    <div
-                      key={item.key}
-                      className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-                    >
-                      <div className="space-y-1">
-                        <p className="font-semibold text-white">{item.label}</p>
-                        <p className="text-sm text-zinc-400">{item.description}</p>
-                      </div>
-
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleToggle(item.key as keyof typeof settings)}
-                        className={`relative h-7 w-12 rounded-full transition ${
-                          settings[item.key as keyof typeof settings]
-                            ? 'bg-cyan-500/30 border-cyan-400/40'
-                            : 'bg-white/10 border-white/10'
-                        } border`}
-                      >
-                        <motion.div
-                          className="absolute top-1 left-1 h-5 w-5 rounded-full bg-white shadow-lg"
-                          animate={{
-                            x: settings[item.key as keyof typeof settings] ? 20 : 0,
-                          }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                        />
-                      </motion.button>
-                    </div>
-                  ))}
-                </div>
-              </motion.section>
-            );
-          })}
+    <div className="space-y-8">
+      <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.7)] p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-[rgb(var(--text-tertiary))]">Settings</p>
+            <h1 className="text-3xl font-semibold text-[rgb(var(--text-primary))]">Fine-tune your study experience</h1>
+          </div>
+          <button className="inline-flex items-center gap-2 rounded-3xl bg-gradient-to-r from-indigo-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110">
+            <Zap className="h-4 w-4" /> Upgrade plan
+          </button>
         </div>
+      </motion.section>
 
-        {/* Account Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl space-y-4"
-        >
-          <div className="flex items-center gap-3">
-            <Shield className="h-6 w-6 text-cyan-300" />
-            <h2 className="text-xl font-bold text-white">Account</h2>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-3">
-            <button className="w-full flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition text-left">
-              <div className="space-y-1">
-                <p className="font-semibold text-white">Change Password</p>
-                <p className="text-sm text-zinc-400">Update your account password</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        {settingsGroups.map((group) => {
+          const Icon = group.icon;
+          return (
+            <motion.section key={group.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.7)] p-6">
+              <div className="flex items-center gap-3 text-sm font-semibold text-[rgb(var(--text-primary))]">
+                <Icon className="h-5 w-5 text-cyan-400" />
+                {group.title}
               </div>
-              <div className="text-zinc-400">→</div>
-            </button>
-
-            <button className="w-full flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition text-left">
-              <div className="space-y-1">
-                <p className="font-semibold text-white">Connected Apps</p>
-                <p className="text-sm text-zinc-400">Manage Google and other integrations</p>
+              <div className="mt-5 space-y-4">
+                {group.items.map((item) => (
+                  <div key={item.key} className="flex items-center justify-between rounded-3xl border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-primary),0.95)] px-4 py-4">
+                    <div>
+                      <p className="font-medium text-[rgb(var(--text-primary))]">{item.label}</p>
+                    </div>
+                    <button onClick={() => toggle(item.key as keyof typeof toggles)} className={`relative inline-flex h-9 w-16 items-center rounded-full transition ${toggles[item.key as keyof typeof toggles] ? 'bg-cyan-500' : 'bg-[rgb(var(--border-color))]'}`}>
+                      <span className={`absolute left-1 h-7 w-7 rounded-full bg-white transition ${toggles[item.key as keyof typeof toggles] ? 'translate-x-7' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                ))}
               </div>
-              <div className="text-zinc-400">→</div>
-            </button>
-
-            <button className="w-full flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition text-left">
-              <div className="space-y-1">
-                <p className="font-semibold text-white">Data & Privacy</p>
-                <p className="text-sm text-zinc-400">View and manage your data</p>
-              </div>
-              <div className="text-zinc-400">→</div>
-            </button>
-          </div>
-        </motion.section>
-
-        {/* Plan Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl space-y-4"
-        >
-          <div className="flex items-center gap-3">
-            <Zap className="h-6 w-6 text-cyan-300" />
-            <h2 className="text-xl font-bold text-white">Subscription</h2>
-          </div>
-
-          <div className="rounded-2xl border border-violet-400/30 bg-violet-500/10 p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="font-semibold text-white">Current Plan: Pro</p>
-                <p className="text-sm text-zinc-400">Renews on June 15, 2026</p>
-              </div>
-              <div className="text-right space-y-1">
-                <p className="font-semibold text-white">₹299/month</p>
-                <button className="text-xs font-semibold text-violet-300 hover:text-violet-200">Manage</button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-violet-400/20">
-              <button className="rounded-lg border border-violet-400/30 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20">
-                Upgrade to Premium
-              </button>
-              <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
-                View Benefits
-              </button>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Danger Zone */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl space-y-4 pb-8"
-        >
-          <h2 className="text-xl font-bold text-rose-400">Danger Zone</h2>
-
-          <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-6 space-y-3">
-            <button className="w-full flex items-center justify-between p-4 rounded-xl border border-rose-400/30 bg-rose-500/10 hover:bg-rose-500/20 transition text-left">
-              <div className="space-y-1">
-                <p className="font-semibold text-rose-200">Logout All Devices</p>
-                <p className="text-sm text-rose-200/70">Sign out from all sessions</p>
-              </div>
-              <LogOut className="h-5 w-5 text-rose-400" />
-            </button>
-
-            <button className="w-full flex items-center justify-between p-4 rounded-xl border border-rose-400/30 bg-rose-500/10 hover:bg-rose-500/20 transition text-left">
-              <div className="space-y-1">
-                <p className="font-semibold text-rose-200">Delete Account</p>
-                <p className="text-sm text-rose-200/70">Permanently delete your account and data</p>
-              </div>
-              <div className="text-rose-400">→</div>
-            </button>
-          </div>
-        </motion.section>
-
-        {/* Save Button */}
-        <motion.div
-          className="sticky bottom-0 left-0 right-0 flex justify-center pb-6"
-        >
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleSave}
-            className={`rounded-xl px-8 py-3 font-semibold text-white shadow-[0_20px_80px_rgba(59,130,246,0.25)] transition ${
-              saved
-                ? 'bg-emerald-500'
-                : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:brightness-110'
-            }`}
-          >
-            {saved ? '✓ Saved' : <span className="flex items-center gap-2"><Save className="h-5 w-5" /> Save Changes</span>}
-          </motion.button>
-        </motion.div>
+            </motion.section>
+          );
+        })}
       </div>
+
+      <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="rounded-[32px] border border-rose-400/30 bg-[rgba(255,0,0,0.04)] p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-rose-300">Danger zone</p>
+            <p className="text-sm text-[rgb(var(--text-secondary))]">Sensitive account actions are listed here.</p>
+          </div>
+          <button className="inline-flex items-center gap-2 rounded-3xl border border-rose-300/50 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20">
+            <LogOut className="h-4 w-4" /> Logout All Devices
+          </button>
+        </div>
+      </motion.section>
+    </div>
   );
 }

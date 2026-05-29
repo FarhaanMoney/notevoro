@@ -1,199 +1,74 @@
-"use client";
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Sparkles, Play } from 'lucide-react';
+import { ArrowRight, Globe, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
+
+const nodes = [
+  { id: 'A', top: '16%', left: '12%', title: 'Core concept', color: 'from-cyan-500 to-blue-500' },
+  { id: 'B', top: '24%', left: '58%', title: 'Key example', color: 'from-violet-500 to-indigo-500' },
+  { id: 'C', top: '62%', left: '26%', title: 'Important formula', color: 'from-emerald-500 to-teal-500' },
+  { id: 'D', top: '66%', left: '70%', title: 'Related idea', color: 'from-slate-600 to-cyan-500' },
+];
 
 export default function VisualLearningPage() {
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-
-  const topics = [
-    {
-      id: 'mitosis',
-      title: 'Cell Mitosis',
-      description: 'Watch the dynamic process of cell division with animated diagrams',
-      category: 'Biology',
-      isPremium: false,
-    },
-    {
-      id: 'photosynthesis',
-      title: 'Photosynthesis Flow',
-      description: 'Interactive concept map showing energy conversion in plants',
-      category: 'Biology',
-      isPremium: false,
-    },
-    {
-      id: 'water-cycle',
-      title: 'Water Cycle',
-      description: 'Animated illustration of evaporation, condensation, and precipitation',
-      category: 'Earth Science',
-      isPremium: true,
-    },
-    {
-      id: 'planetary-motion',
-      title: 'Planetary Motion',
-      description: 'Interactive solar system with orbital mechanics visualization',
-      category: 'Physics',
-      isPremium: true,
-    },
-    {
-      id: 'molecular-bonds',
-      title: 'Molecular Bonds',
-      description: 'Visual representation of covalent and ionic bonds',
-      category: 'Chemistry',
-      isPremium: false,
-    },
-    {
-      id: 'ecosystem-pyramid',
-      title: 'Energy Pyramid',
-      description: 'Understand energy transfer through ecosystems',
-      category: 'Biology',
-      isPremium: true,
-    },
-  ];
-
-  const userPlan = 'pro' as 'free' | 'pro';
-
   return (
-    <div className="min-h-screen w-full px-6 md:px-12 py-8 space-y-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-2"
-        >
-          <h1 className="text-3xl md:text-4xl font-bold text-white">Visual Learning</h1>
-          <p className="text-zinc-400">Interactive diagrams and animated concepts to supercharge learning</p>
-        </motion.div>
-
-        {/* Preview Section */}
-        {selectedTopic && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative h-96 rounded-3xl border border-white/10 bg-gradient-to-br from-slate-950/70 to-slate-900/50 overflow-hidden shadow-[0_40px_120px_rgba(15,23,42,0.35)]"
-          >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.2),_transparent_60%)]" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center space-y-4">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 100 }}
-                  className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-cyan-500/20 border border-cyan-400/40"
-                >
-                  <Play className="h-8 w-8 text-cyan-300 ml-1" />
-                </motion.div>
-                <h2 className="text-2xl font-bold text-white">
-                  {topics.find((t) => t.id === selectedTopic)?.title}
-                </h2>
-                <p className="text-zinc-400 max-w-md">
-                  {topics.find((t) => t.id === selectedTopic)?.description}
-                </p>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-3 font-semibold text-white shadow-[0_20px_80px_rgba(34,211,238,0.25)]"
-                >
-                  Play Visualization
-                </motion.button>
-              </div>
-            </div>
-            <button
-              onClick={() => setSelectedTopic(null)}
-              className="absolute top-4 right-4 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white backdrop-blur-xl transition hover:bg-white/10"
-            >
-              Close
-            </button>
-          </motion.div>
-        )}
-
-        {/* Topics Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
-        >
-          <h2 className="text-2xl font-bold text-white">Available Topics</h2>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {topics.map((topic) => {
-              const isLocked = topic.isPremium && userPlan === 'free';
-
-              return (
-                <motion.button
-                  key={topic.id}
-                  onClick={() => !isLocked && setSelectedTopic(topic.id)}
-                  disabled={isLocked}
-                  whileHover={!isLocked ? { scale: 1.02 } : {}}
-                  className={`relative rounded-2xl border p-6 text-left transition overflow-hidden group ${
-                    isLocked
-                      ? 'border-white/10 bg-white/5 opacity-60 cursor-not-allowed'
-                      : 'border-white/10 bg-white/5 hover:border-cyan-400/40 hover:bg-cyan-500/5 cursor-pointer'
-                  }`}
-                >
-                  {/* Glow effect on hover */}
-                  {!isLocked && (
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.1),_transparent_60%)] opacity-0 group-hover:opacity-100 transition" />
-                  )}
-
-                  <div className="relative space-y-4">
-                    {/* Badge */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">
-                        {topic.category}
-                      </span>
-                      {isLocked && <Lock className="h-4 w-4 text-amber-400" />}
-                      {!isLocked && (
-                        <Play className="h-4 w-4 text-cyan-300 opacity-0 group-hover:opacity-100 transition" />
-                      )}
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="font-semibold text-white">{topic.title}</h3>
-
-                    {/* Description */}
-                    <p className="text-sm text-zinc-400 leading-relaxed">
-                      {topic.description}
-                    </p>
-
-                    {/* Pro badge */}
-                    {topic.isPremium && (
-                      <div className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-200">
-                        <Sparkles className="h-3 w-3" />
-                        Pro Feature
-                      </div>
-                    )}
-                  </div>
-                </motion.button>
-              );
-            })}
+    <div className="space-y-8">
+      <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.7)] p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.35em] text-[rgb(var(--text-tertiary))]">Visual Learning</p>
+            <h1 className="text-3xl font-semibold text-[rgb(var(--text-primary))]">See concepts connect.</h1>
           </div>
-        </motion.div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(var(--bg-tertiary),0.9)] px-4 py-2 text-xs text-[rgb(var(--text-secondary))]">
+            <Globe className="h-4 w-4 text-cyan-400" /> Canvas mode
+          </div>
+        </div>
+      </motion.section>
 
-        {/* Upgrade CTA for Free Users */}
-        {userPlan === 'free' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-violet-400/30 bg-violet-500/10 p-8"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold text-white">Unlock Visual Learning</h2>
-                <p className="text-zinc-300 max-w-2xl">
-                  Premium members get access to advanced visual learning tools, interactive diagrams, and animated concept maps. Upgrade to Pro to see how concepts come alive.
-                </p>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 px-6 py-3 font-semibold text-white shadow-[0_20px_80px_rgba(139,92,246,0.25)] transition hover:brightness-110 flex-shrink-0"
-              >
-                Upgrade Now
-              </motion.button>
+      <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.06 }} className="rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.7)] p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2 rounded-full bg-[rgba(var(--bg-tertiary),0.9)] px-4 py-2 text-xs text-[rgb(var(--text-secondary))]">
+            <Sparkles className="h-4 w-4 text-cyan-400" /> Drag nodes to build connections.
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="rounded-full border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.75)] p-3 text-[rgb(var(--text-secondary))] transition hover:border-[rgb(var(--accent-primary))]">
+              <ZoomOut className="h-4 w-4" />
+            </button>
+            <button className="rounded-full border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.75)] p-3 text-[rgb(var(--text-secondary))] transition hover:border-[rgb(var(--accent-primary))]">
+              <ZoomIn className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="relative mt-6 h-[540px] overflow-hidden rounded-[32px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-primary),0.95)] p-6 shadow-[0_40px_120px_rgba(15,23,42,0.08)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.1),transparent_20%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,_rgba(168,85,247,0.08),transparent_20%)]" />
+          <div className="absolute left-24 top-20 h-0.5 w-[40%] bg-gradient-to-r from-cyan-400/60 to-transparent" />
+          <div className="absolute left-[34%] top-[32%] h-0.5 w-[32%] bg-gradient-to-r from-violet-500/60 to-transparent" />
+          <div className="absolute left-[18%] top-[64%] h-0.5 w-[42%] bg-gradient-to-r from-emerald-400/60 to-transparent" />
+
+          {nodes.map((node) => (
+            <div key={node.id} style={{ top: node.top, left: node.left }} className="absolute w-48 rounded-[28px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.86)] p-5 shadow-lg shadow-slate-900/5">
+              <div className={`inline-flex rounded-full bg-gradient-to-r ${node.color} px-3 py-1 text-xs font-semibold text-white`}>{node.id}</div>
+              <h3 className="mt-4 text-lg font-semibold text-[rgb(var(--text-primary))]">{node.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[rgb(var(--text-secondary))]">A quick note to connect the concept with the rest of your study map.</p>
             </div>
-          </motion.div>
-        )}
-      </div>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.12 }} className="grid gap-4 sm:grid-cols-3">
+        {[
+          { label: 'Concept nodes', description: 'Build ideas with clear info nodes.' },
+          { label: 'Visual flow', description: 'See relationships between topics.' },
+          { label: 'Focus mode', description: 'Minimal controls for deep learning.' },
+        ].map((item) => (
+          <div key={item.label} className="rounded-[28px] border border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.75)] p-5 text-sm text-[rgb(var(--text-primary))] transition hover:border-[rgb(var(--accent-primary))] hover:bg-[rgba(var(--bg-secondary),0.95)]">
+            <p className="font-semibold">{item.label}</p>
+            <p className="mt-2 text-[rgb(var(--text-secondary))]">{item.description}</p>
+          </div>
+        ))}
+      </motion.section>
+    </div>
   );
 }
