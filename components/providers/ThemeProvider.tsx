@@ -47,7 +47,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Prevent flash by only rendering content after hydration
   if (!mounted) {
-    return <>{children}</>;
+    return null;
   }
 
   return (

@@ -56,7 +56,7 @@ export function DashboardSidebar({ isOpen, onToggle }: DashboardSidebarProps) {
         initial={{ x: -280 }}
         animate={{ x: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="hidden md:flex fixed left-0 top-0 h-screen w-56 flex-col gap-4 rounded-r-xl border-r border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.6)] p-4 backdrop-blur-sm z-30"
+        className="hidden md:flex fixed left-0 top-0 h-screen w-[220px] flex-col gap-4 rounded-r-xl border-r border-[rgb(var(--border-color))] bg-[rgba(var(--bg-secondary),0.6)] p-4 backdrop-blur-sm z-30"
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-1 py-2">

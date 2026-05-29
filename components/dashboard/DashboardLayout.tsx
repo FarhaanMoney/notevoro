@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { DashboardSidebar } from './DashboardSidebar';
@@ -16,6 +16,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
+  // Keyboard shortcut: Cmd/Ctrl + B to toggle sidebar
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setSidebarOpen((s) => !s);
+      }
+      if (e.key === 'Escape') {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   return (
     <div className="relative min-h-screen w-full bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] overflow-hidden">
       {/* Background effects for dark mode only */}
@@ -30,7 +47,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="relative z-10 flex min-h-screen w-full">
         <DashboardSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
-        <div className="flex flex-1 flex-col overflow-hidden md:pl-56">
+        <div className="flex flex-1 flex-col overflow-hidden md:pl-[220px]">
           <DashboardNavbar onSidebarToggle={() => setSidebarOpen(!sidebarOpen)} />
 
           <main className="flex-1 overflow-auto pb-24">
@@ -49,7 +66,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </main>
 
           {/* Floating AI Input */}
-          <div className="fixed bottom-0 left-0 right-0 md:left-56">
+          <div className="fixed bottom-0 left-0 right-0 md:left-[220px]">
             <FloatingAIInput onSubmit={(msg) => console.log('AI message:', msg)} />
           </div>
         </div>
