@@ -1,23 +1,43 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
+import type { Session } from '@supabase/supabase-js';
 
-const AuthContext = createContext(null);
+type AuthUser = {
+  id: string;
+  email?: string;
+  plan?: string;
+  is_trial_active?: boolean;
+  personalization?: Record<string, unknown>;
+  onboardingStep?: string;
+  onboardingCompletedAt?: string;
+  [key: string]: unknown;
+} | null;
 
-export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
-  const [user, setUser] = useState(null);
+type AuthContextValue = {
+  session: Session | null;
+  user: AuthUser;
+  loading: boolean;
+  isAuthenticated: boolean;
+  isOnboardingComplete: boolean;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser>(null);
   const [loading, setLoading] = useState(true);
-  const lastSessionTokenRef = useRef(null);
+  const lastSessionTokenRef = useRef<string | null>(null);
   const startedRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
     const sb = supabaseBrowser();
-    let initialSessionToken = null;
+    let initialSessionToken: string | null = null;
 
-    async function loadUserFromSession(currentSession) {
+    async function loadUserFromSession(currentSession: Session | null) {
       if (!currentSession?.access_token) {
         lastSessionTokenRef.current = null;
         setUser(null);
@@ -100,7 +120,7 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const value = useMemo(() => {
+  const value = useMemo<AuthContextValue>(() => {
     const isAuthenticated = Boolean(session);
     const isOnboardingComplete = Boolean(
       user?.personalization?.onboarding_completed ||
@@ -120,7 +140,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within AuthProvider');

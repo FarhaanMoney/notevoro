@@ -35,7 +35,8 @@ type AuthProfile = {
 
 export function useWhatsAppDashboard() {
   const router = useRouter();
-  const { user, session, isAuthenticated, loading: authLoading } = useAuth();
+  const { user: rawUser, session, isAuthenticated, loading: authLoading } = useAuth();
+  const user = (rawUser as AuthProfile | null) || null;
   const [status, setStatus] = useState<WhatsAppDashboardStatus | null>(null);
   const [verified, setVerified] = useState(false);
   const [messages, setMessages] = useState<WhatsAppDashboardMessage[]>([]);
