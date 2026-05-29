@@ -9,11 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from 'sonner';
 import { PLAN_ENERGY, PLAN_FEATURES, PLAN_PRICES, PLAN_BADGE_COLORS } from '@/lib/plans';
 import { Coins, Crown, Zap, BookOpen, Sparkles, Check, ArrowLeft } from 'lucide-react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 export default function PremiumPage() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { user, loading: authLoading, isAuthenticated, session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -22,25 +22,13 @@ export default function PremiumPage() {
   const selectedPlanPrice = selectedPlan === 'pro' ? '₹299/month' : selectedPlan === 'premium' ? '₹499/month' : '₹0/month';
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabaseBrowser().auth.getSession();
-        if (session?.access_token) {
-          const response = await fetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${session.access_token}` }
-          });
-          const data = await response.json();
-          setUser(data.user);
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.replace('/auth');
+      return;
+    }
+    setLoading(false);
+  }, [authLoading, isAuthenticated, router]);
 
   const plans = [
     {

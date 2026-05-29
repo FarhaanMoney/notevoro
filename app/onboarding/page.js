@@ -4,9 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OnboardingShell from '@/components/onboarding/OnboardingShell';
 import { Button } from '@/components/ui/button';
-import { supabaseBrowser } from '@/lib/supabase/browser';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const GOALS = [
   'Exams',
@@ -41,52 +41,19 @@ export default function OnboardingPage() {
   const [modes, setModes] = useState([]);
   const [style, setStyle] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
+  const { user, session, loading: authLoading, isAuthenticated, isOnboardingComplete } = useAuth();
 
   useEffect(() => {
-    let mounted = true;
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.replace(`/auth?redirect=/onboarding`);
+      return;
+    }
 
-    const verifyAuth = async () => {
-      try {
-        const { data: { session } } = await supabaseBrowser().auth.getSession();
-        if (!session) {
-          router.replace(`/auth?redirect=/onboarding`);
-          return;
-        }
-
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-
-        if (res.status === 401) {
-          router.replace(`/auth?redirect=/onboarding`);
-          return;
-        }
-
-        const data = await res.json();
-        const done = Boolean(
-          data.user?.personalization?.onboarding_completed ||
-          data.user?.onboardingStep === 'completed' ||
-          data.user?.onboardingCompletedAt
-        );
-
-        if (done) {
-          router.replace('/dashboard');
-          return;
-        }
-      } catch (error) {
-        console.error('Onboarding auth check failed:', error);
-        router.replace('/auth?redirect=/onboarding');
-      } finally {
-        if (mounted) setCheckingSession(false);
-      }
-    };
-
-    verifyAuth();
-    return () => {
-      mounted = false;
-    };
-  }, [router]);
+    if (isOnboardingComplete) {
+      router.replace('/dashboard');
+    }
+  }, [authLoading, isAuthenticated, isOnboardingComplete, router]);
 
   const progressTitle = useMemo(() => {
     switch (step) {
@@ -156,8 +123,7 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
-      if (!session) throw new Error('Please sign in to continue.');
+      if (!session?.access_token) throw new Error('Please sign in to continue.');
 
       const payload = {
         goals,
@@ -191,7 +157,7 @@ export default function OnboardingPage() {
     }
   };
 
-  if (checkingSession) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#04050b] text-white">
         <div className="flex flex-col items-center gap-4">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { useWhatsAppRealtime } from './useWhatsAppRealtime';
 import { toast } from 'sonner';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 export type WhatsAppDashboardStatus = {
   id: string;
@@ -34,7 +35,7 @@ type AuthProfile = {
 
 export function useWhatsAppDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<AuthProfile | null>(null);
+  const { user, session, isAuthenticated, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<WhatsAppDashboardStatus | null>(null);
   const [verified, setVerified] = useState(false);
   const [messages, setMessages] = useState<WhatsAppDashboardMessage[]>([]);
@@ -115,12 +116,8 @@ export function useWhatsAppDashboard() {
 
     async function init() {
       try {
-        const sb = supabaseBrowser();
-        const {
-          data: { session },
-        } = await sb.auth.getSession();
-
-        if (!session?.access_token) {
+        if (authLoading) return;
+        if (!isAuthenticated || !session?.access_token) {
           router.replace('/auth');
           return;
         }
@@ -128,18 +125,6 @@ export function useWhatsAppDashboard() {
         if (cancelled) return;
         setToken(session.access_token);
 
-        const profileRes = await fetch('/api/auth/me', {
-          headers: authHeaders(session.access_token),
-        });
-        const profileJson = await profileRes.json();
-
-        if (!profileJson?.user) {
-          router.replace('/auth');
-          return;
-        }
-
-        if (cancelled) return;
-        setUser(profileJson.user);
         await loadStatus(session.access_token);
         await loadMessages(session.access_token);
       } catch (err) {
@@ -157,7 +142,7 @@ export function useWhatsAppDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [router, authHeaders, loadStatus, loadMessages]);
+  }, [authLoading, isAuthenticated, router, session?.access_token, authHeaders, loadStatus, loadMessages]);
 
   const connect = useCallback(async () => {
     if (!token) return;

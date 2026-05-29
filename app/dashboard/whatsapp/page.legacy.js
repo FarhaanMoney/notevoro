@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { supabaseBrowser } from '@/lib/supabase/browser';
 import { toast } from 'sonner';
 import { PLAN_BADGE_COLORS, canUseWhatsApp } from '@/lib/plans';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { 
   MessageSquare, 
   CheckCircle, 
@@ -26,7 +26,7 @@ import {
 
 export default function WhatsAppDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { user, session, isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -44,28 +44,27 @@ export default function WhatsAppDashboard() {
   const [debugInfo, setDebugInfo] = useState(null);
 
   useEffect(() => {
-    fetchUserAndStatus();
+    if (authLoading) return;
+    if (!isAuthenticated || !session?.access_token) {
+      router.push('/auth');
+      return;
+    }
+
     const intervalId = setInterval(fetchUserAndStatus, 15000);
+    fetchUserAndStatus();
+
     return () => clearInterval(intervalId);
-  }, []);
+  }, [authLoading, isAuthenticated, router, session?.access_token]);
 
   const fetchUserAndStatus = async () => {
+    if (!session?.access_token) return;
+
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
-      if (!session) {
-        router.push('/auth');
-        return;
-      }
+      const statusRes = await fetch('/api/whatsapp/status', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
 
-      const [userRes, statusRes] = await Promise.all([
-        fetch('/api/auth/me', { headers: { Authorization: `Bearer ${session.access_token}` } }),
-        fetch('/api/whatsapp/status', { headers: { Authorization: `Bearer ${session.access_token}` } })
-      ]);
-
-      const userData = await userRes.json();
       const statusData = await statusRes.json().catch(() => null);
-
-      setUser(userData.user);
 
       if (!statusRes.ok) {
         console.error('WhatsApp status API error:', statusRes.status, statusData);
@@ -90,7 +89,11 @@ export default function WhatsAppDashboard() {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
+      if (!session?.access_token) {
+        router.push('/auth');
+        return;
+      }
+
       const res = await fetch('/api/onboarding/link-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
@@ -116,7 +119,10 @@ export default function WhatsAppDashboard() {
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
+      if (!session?.access_token) {
+        router.push('/auth');
+        return;
+      }
       const res = await fetch('/api/whatsapp/disconnect', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` }
@@ -165,7 +171,10 @@ export default function WhatsAppDashboard() {
 
   const handleSendTestMessage = async () => {
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
+      if (!session?.access_token) {
+        router.push('/auth');
+        return;
+      }
       const res = await fetch('/api/whatsapp/test', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` }

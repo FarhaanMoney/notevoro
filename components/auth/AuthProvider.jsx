@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 
 const AuthContext = createContext(null);
@@ -9,16 +9,26 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const lastSessionTokenRef = useRef(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
     const sb = supabaseBrowser();
+    let initialSessionToken = null;
 
     async function loadUserFromSession(currentSession) {
       if (!currentSession?.access_token) {
+        lastSessionTokenRef.current = null;
         setUser(null);
         return;
       }
+
+      if (lastSessionTokenRef.current === currentSession.access_token) {
+        return;
+      }
+
+      lastSessionTokenRef.current = currentSession.access_token;
 
       try {
         const response = await fetch('/api/auth/me', {
@@ -47,6 +57,7 @@ export function AuthProvider({ children }) {
         console.log('AuthProvider initialize session', data?.session);
         if (!mounted) return;
         setSession(data?.session || null);
+        initialSessionToken = data?.session?.access_token || null;
         if (data?.session) {
           await loadUserFromSession(data.session);
         }
@@ -56,6 +67,7 @@ export function AuthProvider({ children }) {
       } finally {
         if (!mounted) return;
         setLoading(false);
+        startedRef.current = true;
       }
     }
 
@@ -64,11 +76,18 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, newSession) => {
       console.log('AuthProvider onAuthStateChange', event, newSession);
       if (!mounted) return;
+
+      const newToken = newSession?.access_token || null;
+      if (!startedRef.current && event === 'SIGNED_IN' && newToken === initialSessionToken) {
+        return;
+      }
+
       setSession(newSession || null);
       setLoading(true);
       if (newSession) {
         await loadUserFromSession(newSession);
       } else {
+        lastSessionTokenRef.current = null;
         setUser(null);
       }
       if (!mounted) return;
