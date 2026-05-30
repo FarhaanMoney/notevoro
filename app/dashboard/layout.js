@@ -20,11 +20,14 @@ export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('home');
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const sb = supabaseBrowser();
     
     const checkAuth = async () => {
+      if (authChecked) return;
+      
       try {
         const { data: { session } } = await sb.auth.getSession();
         if (!session?.access_token) {
@@ -55,6 +58,7 @@ export default function DashboardLayout({ children }) {
         
         setUser(data.user);
         setLoading(false);
+        setAuthChecked(true);
       } catch (error) {
         console.error('Auth check failed:', error);
         router.replace('/');
@@ -70,7 +74,7 @@ export default function DashboardLayout({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, authChecked]);
 
   if (loading || !user) {
     return (
