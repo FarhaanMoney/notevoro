@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { 
   Home, MessageSquare, NotebookPen, BookOpen, ClipboardList, 
-  LayoutDashboard, Settings, Crown, Coins, Flame, Trophy,
+  LayoutDashboard, Settings, Crown, Flame, Trophy,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -43,9 +43,6 @@ export default function Sidebar({ user, activeView, onViewChange }) {
 
   const plan = user?.plan || 'free';
   const isTrialActive = Boolean(user?.is_trial_active);
-  const energy = typeof user?.aiEnergy === 'number' ? user.aiEnergy : 20;
-  const energyMax = typeof user?.aiEnergy_max === 'number' ? user.aiEnergy_max : 20;
-  const energyDisplay = plan === 'premium' ? 'Unlimited' : energy;
   const streak = user?.streak || 0;
   const xp = user?.xp || 0;
 
@@ -122,12 +119,6 @@ export default function Sidebar({ user, activeView, onViewChange }) {
               </button>
             </div>
 
-            {/* Energy */}
-            <div className="flex items-center gap-2 text-sm">
-              <Coins className="h-4 w-4 text-yellow-500" />
-              <span className="text-gray-600">{energyDisplay} AI Energy</span>
-            </div>
-
             {/* Streak */}
             <div className="flex items-center gap-2 text-sm">
               <Flame className="h-4 w-4 text-orange-500" />
@@ -148,13 +139,12 @@ export default function Sidebar({ user, activeView, onViewChange }) {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center">
             <Avatar className="h-8 w-8">
               <div className="h-full w-full bg-purple-100 flex items-center justify-center text-xs font-medium text-purple-600">
                 {user?.name?.[0] || 'U'}
               </div>
             </Avatar>
-            <Coins className="h-4 w-4 text-yellow-500" />
           </div>
         )}
 

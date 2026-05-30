@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Upload, Mic, FileText, Copy, RefreshCcw, Volume2 } from 'lucide-react';
+import { MessageSquare, Send, Upload, Mic, FileText, Copy, RefreshCcw, Volume2, Loader2 } from 'lucide-react';
+import UpgradeModal from '@/components/UpgradeModal';
 
 const suggestedPrompts = [
   'Explain Photosynthesis',
@@ -15,16 +16,124 @@ const suggestedPrompts = [
 export default function ChatPage({ user }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
+  const [error, setError] = useState(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    // TODO: Implement chat functionality
-    console.log('Send message:', inputValue);
+  useEffect(() => {
+    loadChatHistory();
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const loadChatHistory = async () => {
+    try {
+      const response = await fetch('/api/chat');
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.messages || []);
+        if (data.messages && data.messages.length > 0) {
+          setConversationId(data.messages[0].conversation_id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage = inputValue.trim();
     setInputValue('');
+    setError(null);
+
+    // Add user message to UI immediately
+    const newUserMessage = { role: 'user', content: userMessage };
+    setMessages((prev) => [...prev, newUserMessage]);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: userMessage,
+          conversationId 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 429) {
+          setShowUpgradeModal(true);
+          setMessages((prev) => prev.slice(0, -1));
+          setIsLoading(false);
+          return;
+        }
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+
+      const convId = response.headers.get('X-Conversation-ID');
+      if (convId) {
+        setConversationId(convId);
+      }
+
+      // Stream the response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let aiResponse = '';
+
+      // Add empty AI message that will be filled with streaming content
+      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        aiResponse += chunk;
+
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = { role: 'assistant', content: aiResponse };
+          return newMessages;
+        });
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setError(error.message);
+      // Remove the empty AI message if error occurred
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePromptClick = (prompt) => {
     setInputValue(prompt);
+  };
+
+  const handleCopy = (content) => {
+    navigator.clipboard.writeText(content);
+  };
+
+  const handleRegenerate = async () => {
+    if (messages.length < 2 || isLoading) return;
+    
+    const lastUserMessage = messages[messages.length - 2];
+    if (lastUserMessage.role === 'user') {
+      setInputValue(lastUserMessage.content);
+      setMessages((prev) => prev.slice(0, -1));
+    }
   };
 
   if (messages.length === 0) {
@@ -81,10 +190,13 @@ export default function ChatPage({ user }) {
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               className="flex-1 border-0 bg-transparent focus-visible:ring-0"
             />
-            <Button onClick={handleSendMessage} className="h-10 w-10 rounded-xl">
-              <Send className="h-5 w-5" />
+            <Button onClick={handleSendMessage} disabled={isLoading} className="h-10 w-10 rounded-xl">
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </Button>
           </div>
+          {error && (
+            <p className="text-red-500 text-sm mt-2">{error}</p>
+          )}
         </div>
       </div>
     );
@@ -99,45 +211,53 @@ export default function ChatPage({ user }) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
-        {/* Chat messages will go here */}
-        <div className="space-y-6">
-          {/* User Message Example */}
-          <div className="flex justify-end">
-            <div className="max-w-2xl rounded-2xl px-6 py-4 text-white" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-              <p className="text-body">Explain photosynthesis</p>
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {messages.map((message, index) => (
+            <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {message.role === 'user' ? (
+                <div className="max-w-2xl rounded-2xl px-6 py-4 text-white" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                  <p className="text-body">{message.content}</p>
+                </div>
+              ) : (
+                <div className="max-w-2xl">
+                  <div className="premium-card p-6 mb-3">
+                    <p className="text-body text-gray-700 mb-4 whitespace-pre-wrap">{message.content}</p>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" className="h-8" onClick={() => handleCopy(message.content)}>
+                        <Copy className="h-4 w-4 mr-1" />
+                        Copy
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8" onClick={handleRegenerate}>
+                        <RefreshCcw className="h-4 w-4 mr-1" />
+                        Regenerate
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8">
+                        <Volume2 className="h-4 w-4 mr-1" />
+                        Listen
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* AI Message Example */}
-          <div className="flex justify-start">
-            <div className="max-w-2xl">
-              <div className="premium-card p-6 mb-3">
-                <p className="text-body text-gray-700 mb-4">
-                  Photosynthesis is the process by which plants convert light energy into chemical energy. During this process, plants use sunlight, water, and carbon dioxide to produce glucose and oxygen.
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="h-8">
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copy
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8">
-                    <RefreshCcw className="h-4 w-4 mr-1" />
-                    Regenerate
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8">
-                    <Volume2 className="h-4 w-4 mr-1" />
-                    Listen
-                  </Button>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="premium-card p-6">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                  <p className="text-sm text-gray-500">Thinking...</p>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Input */}
       <div className="border-t border-gray-200 px-8 py-4 bg-white">
-        <div className="flex gap-2 items-center bg-gray-50 rounded-2xl p-2 shadow-sm">
+        <div className="flex gap-2 items-center bg-gray-50 rounded-2xl p-2 shadow-sm max-w-4xl mx-auto">
           <Button variant="ghost" size="icon" className="h-10 w-10">
             <Upload className="h-5 w-5 text-gray-500" />
           </Button>
@@ -153,12 +273,22 @@ export default function ChatPage({ user }) {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
             className="flex-1 border-0 bg-transparent focus-visible:ring-0"
+            disabled={isLoading}
           />
-          <Button onClick={handleSendMessage} className="h-10 w-10 rounded-xl">
-            <Send className="h-5 w-5" />
+          <Button onClick={handleSendMessage} disabled={isLoading} className="h-10 w-10 rounded-xl">
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </Button>
         </div>
+        {error && (
+          <p className="text-red-500 text-sm mt-2 text-center">{error}</p>
+        )}
       </div>
+
+      <UpgradeModal 
+        isOpen={showUpgradeModal} 
+        onClose={() => setShowUpgradeModal(false)}
+        feature="AI Chat"
+      />
     </div>
   );
 }

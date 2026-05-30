@@ -1,6 +1,7 @@
 'use client';
 
-import { MessageSquare, NotebookPen, BookOpen, ClipboardList, LayoutDashboard, ArrowRight, Flame, Coins, FileText, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MessageSquare, NotebookPen, BookOpen, ClipboardList, LayoutDashboard, ArrowRight, Flame, FileText, Clock, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -14,11 +15,67 @@ const studyTools = [
 ];
 
 export default function DashboardPage({ user, onViewChange }) {
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [materialsCount, setMaterialsCount] = useState(0);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      const [notesRes, quizzesRes, flashcardsRes] = await Promise.all([
+        fetch('/api/notes'),
+        fetch('/api/quizzes'),
+        fetch('/api/flashcards'),
+      ]);
+
+      const notes = notesRes.ok ? (await notesRes.json()).notes || [] : [];
+      const quizzes = quizzesRes.ok ? (await quizzesRes.json()).quizzes || [] : [];
+      const flashcards = flashcardsRes.ok ? (await flashcardsRes.json()).flashcards || [] : [];
+
+      setMaterialsCount(notes.length + quizzes.length + flashcards.length);
+
+      const activity = [];
+      
+      notes.slice(0, 2).forEach(note => {
+        activity.push({
+          type: 'note',
+          title: `Created note: ${note.title}`,
+          time: new Date(note.created_at).toLocaleString(),
+          icon: NotebookPen,
+        });
+      });
+
+      quizzes.slice(0, 2).forEach(quiz => {
+        activity.push({
+          type: 'quiz',
+          title: `Created quiz: ${quiz.title}`,
+          time: new Date(quiz.created_at).toLocaleString(),
+          icon: ClipboardList,
+        });
+      });
+
+      flashcards.slice(0, 2).forEach(flashcard => {
+        activity.push({
+          type: 'flashcard',
+          title: 'Created flashcards',
+          time: new Date(flashcard.created_at).toLocaleString(),
+          icon: BookOpen,
+        });
+      });
+
+      activity.sort((a, b) => new Date(b.time) - new Date(a.time));
+      setRecentActivity(activity.slice(0, 5));
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    }
+  };
+
   const userName = user?.name || 'Student';
   const greeting = getGreeting();
-  const energy = user?.aiEnergy || 20;
+  const plan = user?.plan || 'free';
   const streak = user?.streak || 0;
-  const materialsCreated = user?.materialsCreated || 0;
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -35,12 +92,12 @@ export default function DashboardPage({ user, onViewChange }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="premium-card p-6">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-yellow-50 flex items-center justify-center">
-                  <Coins className="h-6 w-6 text-yellow-500" />
+                <div className="h-12 w-12 rounded-full bg-purple-50 flex items-center justify-center">
+                  <Crown className="h-6 w-6 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">AI Energy</p>
-                  <p className="text-2xl font-bold text-gray-900">{energy}</p>
+                  <p className="text-sm text-gray-500">Plan</p>
+                  <p className="text-2xl font-bold text-gray-900 capitalize">{plan}</p>
                 </div>
               </div>
             </Card>
@@ -64,7 +121,7 @@ export default function DashboardPage({ user, onViewChange }) {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Materials Created</p>
-                  <p className="text-2xl font-bold text-gray-900">{materialsCreated}</p>
+                  <p className="text-2xl font-bold text-gray-900">{materialsCount}</p>
                 </div>
               </div>
             </Card>
@@ -101,18 +158,20 @@ export default function DashboardPage({ user, onViewChange }) {
           <div>
             <h2 className="text-section-title text-gray-900 mb-6">Recent Activity</h2>
             <Card className="premium-card p-8">
-              {materialsCreated > 0 ? (
+              {recentActivity.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                    <div className="h-10 w-10 rounded-full bg-purple-50 flex items-center justify-center">
-                      <ClipboardList className="h-5 w-5 text-purple-500" />
+                  {recentActivity.map((activity, index) => (
+                    <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                        <activity.icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{activity.title}</p>
+                        <p className="text-sm text-gray-500">{getTimeAgo(activity.time)}</p>
+                      </div>
+                      <Clock className="h-4 w-4 text-gray-400" />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">Recent Quiz</p>
-                      <p className="text-sm text-gray-500">Completed 2 hours ago</p>
-                    </div>
-                    <Clock className="h-4 w-4 text-gray-400" />
-                  </div>
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -133,4 +192,15 @@ function getGreeting() {
   if (hour < 12) return 'Good morning';
   if (hour < 18) return 'Good afternoon';
   return 'Good evening';
+}
+
+function getTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+  return `${Math.floor(seconds / 86400)} days ago`;
 }

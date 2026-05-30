@@ -29,14 +29,14 @@ export default function DashboardLayout({ children }) {
       if (authChecked) return;
       
       try {
-        const { data: { session } } = await sb.auth.getSession();
-        if (!session?.access_token) {
+        const { data: { user }, error } = await sb.auth.getUser();
+        if (error || !user) {
           router.replace('/');
           return;
         }
 
         const response = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${session.access_token}` }
+          headers: { Authorization: `Bearer ${(await sb.auth.getSession()).data.session?.access_token}` }
         });
         
         if (response.status === 401) {
@@ -67,9 +67,20 @@ export default function DashboardLayout({ children }) {
 
     checkAuth();
 
-    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!session?.access_token) {
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
         router.replace('/');
+      } else {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          const response = await fetch('/api/auth/me', {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
+          }
+        }
       }
     });
 
