@@ -52,10 +52,24 @@ export async function GET(req: NextRequest) {
     
     if (profileError) {
       console.error('Profile fetch error:', profileError);
+      // Profile doesn't exist yet, create it
+      console.log('Creating profile for user:', user.id);
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+        });
+      
+      if (insertError) {
+        console.error('Profile creation error:', insertError);
+      }
     }
-    
+
     console.log('User authenticated in auth/me:', user.id, user.email);
-    
+
     return NextResponse.json({ 
       user: {
         ...user,
