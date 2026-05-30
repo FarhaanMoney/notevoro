@@ -21,17 +21,14 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabaseClient(req);
     console.log('Supabase client created');
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    console.log('Session:', session);
-    console.log('Session error:', sessionError);
-    console.log('User from session:', session?.user);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('User:', user);
+    console.log('Auth error:', authError);
     
-    if (sessionError || !session || !session.user) {
-      console.log('Unauthorized - session missing or invalid');
+    if (authError || !user) {
+      console.log('Unauthorized - user missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const user = session.user;
 
     // Get note content if noteId is provided
     let content = topic;
@@ -126,17 +123,14 @@ export async function GET(req: NextRequest) {
     const supabase = await createServerSupabaseClient(req);
     console.log('Supabase client created');
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    console.log('Session:', session);
-    console.log('Session error:', sessionError);
-    console.log('User from session:', session?.user);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('User:', user);
+    console.log('Auth error:', authError);
     
-    if (sessionError || !session || !session.user) {
-      console.log('Unauthorized - session missing or invalid');
+    if (authError || !user) {
+      console.log('Unauthorized - user missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const user = session.user;
 
     const { data: flashcards, error } = await supabase
       .from('flashcards')
@@ -164,17 +158,14 @@ export async function PATCH(req: NextRequest) {
     const supabase = await createServerSupabaseClient(req);
     console.log('Supabase client created');
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    console.log('Session:', session);
-    console.log('Session error:', sessionError);
-    console.log('User from session:', session?.user);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('User:', user);
+    console.log('Auth error:', authError);
     
-    if (sessionError || !session || !session.user) {
-      console.log('Unauthorized - session missing or invalid');
+    if (authError || !user) {
+      console.log('Unauthorized - user missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const user = session.user;
 
     // Get current flashcard
     const { data: flashcard } = await supabase
