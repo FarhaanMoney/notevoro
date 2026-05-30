@@ -94,11 +94,11 @@ code {
         --sidebar-ring: 217.2 91.2% 59.8%;
     }
   .dark {
-        --background: 222.2 84% 4.9%;
+        --background: 240 6% 10%;
         --foreground: 210 40% 98%;
-        --card: 222.2 84% 4.9%;
+        --card: 240 6% 10%;
         --card-foreground: 210 40% 98%;
-        --popover: 222.2 84% 4.9%;
+        --popover: 240 6% 10%;
         --popover-foreground: 210 40% 98%;
         --primary: 210 40% 98%;
         --primary-foreground: 222.2 47.4% 11.2%;
@@ -137,5 +137,6 @@ code {
     }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 }
