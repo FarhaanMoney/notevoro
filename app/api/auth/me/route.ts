@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,10 +7,34 @@ export async function GET(req: NextRequest) {
     console.log('Request cookies:', req.headers.get('cookie'));
     console.log('Authorization header:', req.headers.get('authorization'));
     
-    const supabase = await createServerSupabaseClient(req);
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Token extracted:', token ? 'yes' : 'no');
+    console.log('Token length:', token?.length);
+    
+    if (!token) {
+      console.log('No token found in Authorization header');
+      return NextResponse.json({ error: 'Unauthorized', details: 'No token provided' }, { status: 401 });
+    }
+    
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!url || !anon) {
+      throw new Error('NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY not configured');
+    }
+    
+    const supabase = createClient(url, anon, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    
     console.log('Supabase client created');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     console.log('User:', user);
     console.log('Auth error:', authError);
     

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 function getOpenAI() {
@@ -17,11 +17,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // Get authenticated user
-    const supabase = await createServerSupabaseClient(req);
+    // Extract token from Authorization header
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Token extracted:', token ? 'yes' : 'no');
+    
+    if (!token) {
+      console.log('No token found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!url || !anon) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
+    const supabase = createClient(url, anon, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    
     console.log('Supabase client created');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     console.log('User:', user);
     console.log('Auth error:', authError);
     
@@ -148,11 +171,34 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const conversationId = searchParams.get('conversationId');
 
-    // Get authenticated user
-    const supabase = await createServerSupabaseClient(req);
+    // Extract token from Authorization header
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Token extracted:', token ? 'yes' : 'no');
+    
+    if (!token) {
+      console.log('No token found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!url || !anon) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
+    const supabase = createClient(url, anon, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    
     console.log('Supabase client created');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     console.log('User:', user);
     console.log('Auth error:', authError);
     
