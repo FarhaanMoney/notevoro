@@ -62,7 +62,7 @@ export default function UpgradeModal({ isOpen, onClose, feature }) {
           {feature && (
             <div className="mb-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
               <p className="text-sm text-purple-900">
-                You've reached your daily limit for <strong>{feature}</strong>. Upgrade to continue learning without limits.
+                You&apos;ve reached your daily limit for <strong>{feature}</strong>. Upgrade to continue learning without limits.
               </p>
             </div>
           )}

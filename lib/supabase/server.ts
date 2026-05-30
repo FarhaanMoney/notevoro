@@ -34,6 +34,8 @@ export async function createServerSupabaseClient() {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY not configured');
   }
 
+  const cookie = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ');
+
   return createClient(url, anon, {
     auth: {
       persistSession: false,
@@ -42,11 +44,7 @@ export async function createServerSupabaseClient() {
     },
     global: {
       headers: {
-        cookie: {
-          name: 'sb-access-token',
-          value: cookieStore.get('sb-access-token')?.value || '',
-          options: { path: '/' },
-        },
+        cookie,
       },
     },
   });

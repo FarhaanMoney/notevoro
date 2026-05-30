@@ -129,7 +129,7 @@ export default function OnboardingPage() {
               <li>🎁 Premium features unlocked</li>
               <li>⏰ Cancel anytime, no credit card required</li>
             </ul>
-            <p className="text-xs text-zinc-400">After 7 days, you'll revert to the Free plan unless you upgrade.</p>
+            <p className="text-xs text-zinc-400">After 7 days, you&apos;ll revert to the Free plan unless you upgrade.</p>
           </div>
           <QuestionCard question={q.question} options={q.options} selected={answers[q.id]} onSelect={(v)=>handleSelect(q.id,v)} />
           <div className="flex justify-end gap-2">

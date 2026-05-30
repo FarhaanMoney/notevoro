@@ -166,7 +166,7 @@ export default function StudyStreak({ userId }) {
         {streakInfo.streak_count >= 3 && streakInfo.streak_count < 7 && (
           <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
             <p className="text-xs text-blue-300">
-              🚀 You're building consistency! Almost one week!
+              🚀 You&apos;re building consistency! Almost one week!
             </p>
           </div>
         )}

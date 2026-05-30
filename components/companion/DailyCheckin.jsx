@@ -84,7 +84,7 @@ export default function DailyCheckin({ userId, onCheckinComplete }) {
       <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-4">
           <CheckCircle className="h-5 w-5 text-green-400" />
-          <h3 className="text-white font-semibold">Today's Check-in</h3>
+          <h3 className="text-white font-semibold">Today&apos;s Check-in</h3>
           <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
             Completed
           </Badge>

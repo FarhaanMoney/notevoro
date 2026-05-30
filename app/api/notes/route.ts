@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
       prompt = `Generate comprehensive study notes about: ${topic}\n\nReturn the response in JSON format with: summary, key_concepts (array), important_points (array), definitions (array of objects with term and definition).`;
     }
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {

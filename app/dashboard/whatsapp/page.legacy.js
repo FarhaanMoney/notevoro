@@ -386,7 +386,7 @@ export default function WhatsAppDashboard() {
                   <div className="bg-white/[0.02] rounded-lg p-4">
                     <h3 className="font-semibold text-white mb-2">How it works:</h3>
                     <ol className="text-zinc-400 text-sm space-y-1 list-decimal list-inside">
-                      <li>Click "Connect WhatsApp" below</li>
+                      <li>Click &quot;Connect WhatsApp&quot; below</li>
                       <li>Send the verification message to our WhatsApp number</li>
                       <li>Your account will be linked automatically</li>
                       <li>Start chatting with AI on WhatsApp!</li>

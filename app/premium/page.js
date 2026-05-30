@@ -419,7 +419,7 @@ export default function PremiumPage() {
             <DialogHeader>
               <DialogTitle className="text-xl">Complete Your Upgrade</DialogTitle>
               <DialogDescription className="text-zinc-400">
-                You're upgrading to <span className="text-purple-400 font-semibold">{selectedPlanLabel}</span> plan
+                You&apos;re upgrading to <span className="text-purple-400 font-semibold">{selectedPlanLabel}</span> plan
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
