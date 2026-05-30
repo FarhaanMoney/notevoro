@@ -36,6 +36,7 @@ export async function createServerSupabaseClient(req?: NextRequest) {
   // If request is provided, check for Authorization header
   if (req) {
     const authHeader = req.headers.get('authorization');
+    console.log('Server client: Authorization header:', authHeader ? 'exists' : 'none');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       return createClient(url, anon, {
         auth: {
@@ -54,7 +55,10 @@ export async function createServerSupabaseClient(req?: NextRequest) {
 
   // Fall back to cookies
   const cookieStore = cookies();
-  const cookie = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ');
+  const allCookies = cookieStore.getAll();
+  console.log('Server client: All cookies:', allCookies.map(c => ({ name: c.name, valueLength: c.value.length })));
+  const cookie = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
+  console.log('Server client: Cookie string length:', cookie.length);
 
   return createClient(url, anon, {
     auth: {

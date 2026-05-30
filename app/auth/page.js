@@ -27,7 +27,7 @@ export default function AuthPage() {
   async function routeAfterAuth(session) {
     try {
       const response = await fetch('/api/auth/me', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session.access_token}` }
       });
       if (!response.ok) {
         router.replace('/dashboard');
