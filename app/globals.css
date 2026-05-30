@@ -136,7 +136,7 @@ code {
     @apply border-border;
     }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-gray-900;
     font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 }

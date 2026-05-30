@@ -15,11 +15,11 @@ export default function EmptyState({
     <div className={cn('flex flex-col items-center justify-center h-full px-8', className)}>
       {Icon && (
         <div className="mb-6">
-          <Icon className="h-16 w-16 text-muted-foreground/50" />
+          <Icon className="h-16 w-16 text-gray-300" />
         </div>
       )}
-      <h2 className="text-2xl font-semibold text-foreground mb-2">{title}</h2>
-      <p className="text-muted-foreground text-center mb-8 max-w-md">{subtitle}</p>
+      <h2 className="text-2xl font-semibold text-gray-900 mb-2">{title}</h2>
+      <p className="text-gray-500 text-center mb-8 max-w-md">{subtitle}</p>
       {buttonText && onButtonClick && (
         <Button onClick={onButtonClick} size="lg">
           {buttonText}

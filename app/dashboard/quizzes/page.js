@@ -19,11 +19,11 @@ export default function QuizzesPage({ user }) {
 
   if (!hasQuizzes) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col bg-white">
         {/* Header */}
-        <div className="border-b border-border px-8 py-6">
+        <div className="border-b border-gray-200 px-8 py-6 bg-white">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-semibold text-foreground">Quizzes</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">Quizzes</h1>
             <Button onClick={handleCreateQuiz}>
               <Plus className="h-4 w-4 mr-2" />
               Create Quiz
@@ -59,7 +59,7 @@ export default function QuizzesPage({ user }) {
       </div>
 
       {/* Tabs and Search */}
-      <div className="border-b border-border px-8 py-4">
+      <div className="border-b border-gray-200 px-8 py-4 bg-white">
         <div className="flex items-center justify-between">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
@@ -71,7 +71,7 @@ export default function QuizzesPage({ user }) {
           
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search quizzes..."
                 value={searchQuery}
@@ -84,7 +84,7 @@ export default function QuizzesPage({ user }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 py-8">
+      <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
         {/* Quiz content will go here */}
       </div>
     </div>

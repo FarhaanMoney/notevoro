@@ -15,11 +15,11 @@ export default function MockTestsPage({ user }) {
 
   if (!hasMockTests) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col bg-white">
         {/* Header */}
-        <div className="border-b border-border px-8 py-6">
+        <div className="border-b border-gray-200 px-8 py-6 bg-white">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-semibold text-foreground">Mock Tests</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">Mock Tests</h1>
             <Button onClick={handleCreateMockTest}>
               <Plus className="h-4 w-4 mr-2" />
               Create Mock Test
@@ -42,11 +42,11 @@ export default function MockTestsPage({ user }) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col bg-white">
       {/* Header */}
-      <div className="border-b border-border px-8 py-6">
+      <div className="border-b border-gray-200 px-8 py-6 bg-white">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold text-foreground">Mock Tests</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">Mock Tests</h1>
           <Button onClick={handleCreateMockTest}>
             <Plus className="h-4 w-4 mr-2" />
             Create New
@@ -55,7 +55,7 @@ export default function MockTestsPage({ user }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 py-8">
+      <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
         {/* Mock test content will go here */}
       </div>
     </div>

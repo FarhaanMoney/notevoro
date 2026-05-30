@@ -15,11 +15,11 @@ export default function NotesPage({ user }) {
 
   if (!hasNotes) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col bg-white">
         {/* Header */}
-        <div className="border-b border-border px-8 py-6">
+        <div className="border-b border-gray-200 px-8 py-6 bg-white">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-semibold text-foreground">Smart Notes</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">Smart Notes</h1>
             <Button onClick={handleCreateNote}>
               <Plus className="h-4 w-4 mr-2" />
               Create Note
@@ -42,11 +42,11 @@ export default function NotesPage({ user }) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col bg-white">
       {/* Header */}
-      <div className="border-b border-border px-8 py-6">
+      <div className="border-b border-gray-200 px-8 py-6 bg-white">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold text-foreground">Smart Notes</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">Smart Notes</h1>
           <Button onClick={handleCreateNote}>
             <Plus className="h-4 w-4 mr-2" />
             Create New
@@ -55,7 +55,7 @@ export default function NotesPage({ user }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 py-8">
+      <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
         {/* Notes content will go here */}
       </div>
     </div>

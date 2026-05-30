@@ -106,7 +106,7 @@ export default function DashboardLayout({ children }) {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-white">
       <Sidebar user={user} activeView={activeView} onViewChange={setActiveView} />
       <main className="flex-1 min-w-0 flex flex-col">
         {renderView()}

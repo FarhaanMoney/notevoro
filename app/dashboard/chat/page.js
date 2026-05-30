@@ -19,10 +19,10 @@ export default function ChatPage({ user }) {
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col bg-white">
         {/* Header */}
-        <div className="border-b border-border px-8 py-6">
-          <h1 className="text-3xl font-semibold text-foreground">AI Chat</h1>
+        <div className="border-b border-gray-200 px-8 py-6 bg-white">
+          <h1 className="text-3xl font-semibold text-gray-900">AI Chat</h1>
         </div>
 
         {/* Empty State */}
@@ -37,7 +37,7 @@ export default function ChatPage({ user }) {
         </div>
 
         {/* Input */}
-        <div className="border-t border-border px-8 py-4">
+        <div className="border-t border-gray-200 px-8 py-4 bg-white">
           <div className="flex gap-2">
             <Input
               placeholder="Ask anything..."
@@ -56,19 +56,19 @@ export default function ChatPage({ user }) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col bg-white">
       {/* Header */}
-      <div className="border-b border-border px-8 py-6">
-        <h1 className="text-3xl font-semibold text-foreground">AI Chat</h1>
+      <div className="border-b border-gray-200 px-8 py-6 bg-white">
+        <h1 className="text-3xl font-semibold text-gray-900">AI Chat</h1>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-8 py-8">
+      <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
         {/* Chat messages will go here */}
       </div>
 
       {/* Input */}
-      <div className="border-t border-border px-8 py-4">
+      <div className="border-t border-gray-200 px-8 py-4 bg-white">
         <div className="flex gap-2">
           <Input
             placeholder="Ask anything..."
