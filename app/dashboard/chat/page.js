@@ -38,8 +38,14 @@ export default function ChatPage({ user }) {
   const loadChatHistory = async () => {
     try {
       console.log('Chat page: Loading chat history...');
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
+      console.log('Chat page: Session:', session);
+      console.log('Chat page: Session user:', session?.user);
+      console.log('Chat page: Access token exists:', !!session?.access_token);
+      
       const response = await fetch('/api/chat', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session?.access_token}` }
       });
       console.log('Chat page: Response status:', response.status);
       
@@ -68,11 +74,13 @@ export default function ChatPage({ user }) {
     setIsLoading(true);
 
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/chat', {
         method: 'POST',
-        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ 
           message: userMessage,

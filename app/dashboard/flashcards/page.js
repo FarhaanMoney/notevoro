@@ -30,8 +30,14 @@ export default function FlashcardsPage({ user }) {
     setIsLoading(true);
     try {
       console.log('Flashcards page: Loading flashcards...');
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
+      console.log('Flashcards page: Session:', session);
+      console.log('Flashcards page: Session user:', session?.user);
+      console.log('Flashcards page: Access token exists:', !!session?.access_token);
+      
       const response = await fetch('/api/flashcards', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session?.access_token}` }
       });
       console.log('Flashcards page: Response status:', response.status);
       
@@ -56,11 +62,13 @@ export default function FlashcardsPage({ user }) {
     setError(null);
 
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/flashcards', {
         method: 'POST',
-        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ topic: topic.trim(), fileUrl: uploadedFile?.url }),
       });
@@ -112,11 +120,13 @@ export default function FlashcardsPage({ user }) {
   const handleRateCard = async (isCorrect) => {
     const currentCard = flashcards[currentIndex];
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       await fetch('/api/flashcards', {
         method: 'PATCH',
-        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ flashcardId: currentCard.id, isCorrect }),
       });

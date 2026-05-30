@@ -37,8 +37,14 @@ export default function QuizzesPage({ user }) {
     setIsLoading(true);
     try {
       console.log('Quizzes page: Loading quizzes...');
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
+      console.log('Quizzes page: Session:', session);
+      console.log('Quizzes page: Session user:', session?.user);
+      console.log('Quizzes page: Access token exists:', !!session?.access_token);
+      
       const response = await fetch('/api/quizzes', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session?.access_token}` }
       });
       console.log('Quizzes page: Response status:', response.status);
       
@@ -63,11 +69,13 @@ export default function QuizzesPage({ user }) {
     setError(null);
 
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/quizzes', {
         method: 'POST',
-        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ 
           topic: topic.trim(),

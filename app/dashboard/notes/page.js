@@ -38,8 +38,14 @@ export default function NotesPage({ user }) {
     setIsLoading(true);
     try {
       console.log('Notes page: Loading notes...');
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
+      console.log('Notes page: Session:', session);
+      console.log('Notes page: Session user:', session?.user);
+      console.log('Notes page: Access token exists:', !!session?.access_token);
+      
       const response = await fetch('/api/notes', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session?.access_token}` }
       });
       console.log('Notes page: Response status:', response.status);
       
@@ -64,11 +70,13 @@ export default function NotesPage({ user }) {
     setError(null);
 
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/notes', {
         method: 'POST',
-        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ 
           topic: topic.trim(),
