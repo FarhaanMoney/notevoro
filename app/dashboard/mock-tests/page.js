@@ -49,7 +49,9 @@ export default function MockTestsPage({ user }) {
   const loadMockTests = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/mock-tests');
+      const response = await fetch('/api/mock-tests', {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setMockTests(data.mockTests || []);
@@ -73,6 +75,7 @@ export default function MockTestsPage({ user }) {
     try {
       const response = await fetch('/api/mock-tests', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           topic: topic.trim(),
@@ -178,6 +181,7 @@ export default function MockTestsPage({ user }) {
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 

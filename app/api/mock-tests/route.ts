@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
 function getOpenAI() {
@@ -17,13 +17,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check daily limits for free users
-    const { data: profile } = await supabaseBrowser()
+    const { data: profile } = await supabase
       .from('profiles')
       .select('plan')
       .eq('id', user.id)
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     if (profile?.plan === 'free') {
       const today = new Date().toISOString().split('T')[0];
-      const { data: usage } = await supabaseBrowser()
+      const { data: usage } = await supabase
         .from('daily_usage')
         .select('mock_tests_created')
         .eq('user_id', user.id)
@@ -126,7 +127,7 @@ Return the response in JSON format with this structure:
     const testData = JSON.parse(content);
 
     // Save mock test to database
-    const { data: mockTest, error: insertError } = await supabaseBrowser()
+    const { data: mockTest, error: insertError } = await supabase
       .from('mock_tests')
       .insert({
         user_id: user.id,
@@ -146,7 +147,7 @@ Return the response in JSON format with this structure:
     // Update daily usage
     if (profile?.plan === 'free') {
       const today = new Date().toISOString().split('T')[0];
-      const { data: existingUsage } = await supabaseBrowser()
+      const { data: existingUsage } = await supabase
         .from('daily_usage')
         .select('*')
         .eq('user_id', user.id)
@@ -154,12 +155,12 @@ Return the response in JSON format with this structure:
         .single();
 
       if (existingUsage) {
-        await supabaseBrowser()
+        await supabase
           .from('daily_usage')
           .update({ mock_tests_created: existingUsage.mock_tests_created + 1 })
           .eq('id', existingUsage.id);
       } else {
-        await supabaseBrowser()
+        await supabase
           .from('daily_usage')
           .insert({
             user_id: user.id,
@@ -181,12 +182,13 @@ Return the response in JSON format with this structure:
 
 export async function GET(req: NextRequest) {
   try {
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: mockTests, error } = await supabaseBrowser()
+    const { data: mockTests, error } = await supabase
       .from('mock_tests')
       .select('*')
       .eq('user_id', user.id)

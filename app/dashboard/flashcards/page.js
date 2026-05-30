@@ -28,7 +28,9 @@ export default function FlashcardsPage({ user }) {
   const loadFlashcards = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/flashcards');
+      const response = await fetch('/api/flashcards', {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setFlashcards(data.flashcards || []);
@@ -52,6 +54,7 @@ export default function FlashcardsPage({ user }) {
     try {
       const response = await fetch('/api/flashcards', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: topic.trim(), fileUrl: uploadedFile?.url }),
       });
@@ -105,6 +108,7 @@ export default function FlashcardsPage({ user }) {
     try {
       await fetch('/api/flashcards', {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ flashcardId: currentCard.id, isCorrect }),
       });
@@ -142,6 +146,7 @@ export default function FlashcardsPage({ user }) {
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 

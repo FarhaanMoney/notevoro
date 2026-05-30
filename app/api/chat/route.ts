@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
 function getOpenAI() {
@@ -17,20 +17,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check daily limits for free users
-    const { data: profile } = await supabaseBrowser()
+    const { data: profile } = await supabase
       .from('profiles')
       .select('plan')
       .eq('id', user.id)
       .single();
 
     if (profile?.plan === 'free') {
-      const { data: usage } = await supabaseBrowser()
+      const { data: usage } = await supabase
         .from('daily_usage')
         .select('chats_sent')
         .eq('user_id', user.id)
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     const convId = conversationId || crypto.randomUUID();
 
     // Save user message to chat history
-    await supabaseBrowser().from('chat_history').insert({
+    await supabase.from('chat_history').insert({
       user_id: user.id,
       conversation_id: convId,
       role: 'user',
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
     // Update daily usage
     if (profile?.plan === 'free') {
       const today = new Date().toISOString().split('T')[0];
-      const { data: existingUsage } = await supabaseBrowser()
+      const { data: existingUsage } = await supabase
         .from('daily_usage')
         .select('id, chats_sent')
         .eq('user_id', user.id)
@@ -67,12 +68,12 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (existingUsage) {
-        await supabaseBrowser()
+        await supabase
           .from('daily_usage')
           .update({ chats_sent: existingUsage.chats_sent + 1 })
           .eq('id', existingUsage.id);
       } else {
-        await supabaseBrowser()
+        await supabase
           .from('daily_usage')
           .insert({ user_id: user.id, date: today, chats_sent: 1 });
       }
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
           }
 
           // Save AI response to chat history
-          await supabaseBrowser().from('chat_history').insert({
+          await supabase.from('chat_history').insert({
             user_id: user.id,
             conversation_id: convId,
             role: 'assistant',
@@ -140,12 +141,13 @@ export async function GET(req: NextRequest) {
     const conversationId = searchParams.get('conversationId');
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let query = supabaseBrowser()
+    let query = supabase
       .from('chat_history')
       .select('*')
       .eq('user_id', user.id)

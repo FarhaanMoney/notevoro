@@ -35,7 +35,9 @@ export default function QuizzesPage({ user }) {
   const loadQuizzes = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/quizzes');
+      const response = await fetch('/api/quizzes', {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setQuizzes(data.quizzes || []);
@@ -59,6 +61,7 @@ export default function QuizzesPage({ user }) {
     try {
       const response = await fetch('/api/quizzes', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           topic: topic.trim(),
@@ -146,6 +149,7 @@ export default function QuizzesPage({ user }) {
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 

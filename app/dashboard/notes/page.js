@@ -36,7 +36,9 @@ export default function NotesPage({ user }) {
   const loadNotes = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/notes');
+      const response = await fetch('/api/notes', {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setNotes(data.notes || []);
@@ -60,6 +62,7 @@ export default function NotesPage({ user }) {
     try {
       const response = await fetch('/api/notes', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           topic: topic.trim(),
@@ -112,6 +115,7 @@ export default function NotesPage({ user }) {
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 

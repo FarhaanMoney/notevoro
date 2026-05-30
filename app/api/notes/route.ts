@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
 function getOpenAI() {
@@ -17,13 +17,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check daily limits for free users
-    const { data: profile } = await supabaseBrowser()
+    const { data: profile } = await supabase
       .from('profiles')
       .select('plan')
       .eq('id', user.id)
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     if (profile?.plan === 'free') {
       const today = new Date().toISOString().split('T')[0];
-      const { data: usage } = await supabaseBrowser()
+      const { data: usage } = await supabase
         .from('daily_usage')
         .select('notes_created')
         .eq('user_id', user.id)
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
     const title = topic || 'Untitled Notes';
 
     // Save notes to database
-    const { data: note, error: insertError } = await supabaseBrowser()
+    const { data: note, error: insertError } = await supabase
       .from('notes')
       .insert({
         user_id: user.id,
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
     // Update daily usage
     if (profile?.plan === 'free') {
       const today = new Date().toISOString().split('T')[0];
-      const { data: existingUsage } = await supabaseBrowser()
+      const { data: existingUsage } = await supabase
         .from('daily_usage')
         .select('id, notes_created')
         .eq('user_id', user.id)
@@ -108,12 +109,12 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (existingUsage) {
-        await supabaseBrowser()
+        await supabase
           .from('daily_usage')
           .update({ notes_created: existingUsage.notes_created + 1 })
           .eq('id', existingUsage.id);
       } else {
-        await supabaseBrowser()
+        await supabase
           .from('daily_usage')
           .insert({ user_id: user.id, date: today, notes_created: 1 });
       }
@@ -129,12 +130,13 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: notes, error } = await supabaseBrowser()
+    const { data: notes, error } = await supabase
       .from('notes')
       .select('*')
       .eq('user_id', user.id)

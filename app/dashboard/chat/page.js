@@ -36,7 +36,9 @@ export default function ChatPage({ user }) {
 
   const loadChatHistory = async () => {
     try {
-      const response = await fetch('/api/chat');
+      const response = await fetch('/api/chat', {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages || []);
@@ -64,6 +66,7 @@ export default function ChatPage({ user }) {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: userMessage,

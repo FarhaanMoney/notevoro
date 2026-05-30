@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabaseBrowser()
+    const { data: uploadData, error: uploadError } = await supabase
       .storage
       .from('user-uploads')
       .upload(fileName, buffer, {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabaseBrowser()
+    const { data: { publicUrl } } = supabase
       .storage
       .from('user-uploads')
       .getPublicUrl(fileName);

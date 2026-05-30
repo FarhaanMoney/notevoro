@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
 function getOpenAI() {
@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     // Get note content if noteId is provided
     let content = topic;
     if (noteId) {
-      const { data: note } = await supabaseBrowser()
+      const { data: note } = await supabase
         .from('notes')
         .select('title, content, summary, key_concepts')
         .eq('id', noteId)
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
     // Save flashcards to database
     const savedFlashcards = [];
     for (const card of flashcardsData.flashcards) {
-      const { data: flashcard, error: insertError } = await supabaseBrowser()
+      const { data: flashcard, error: insertError } = await supabase
         .from('flashcards')
         .insert({
           user_id: user.id,
@@ -111,12 +112,13 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: flashcards, error } = await supabaseBrowser()
+    const { data: flashcards, error } = await supabase
       .from('flashcards')
       .select('*')
       .eq('user_id', user.id)
@@ -138,13 +140,14 @@ export async function PATCH(req: NextRequest) {
     const { flashcardId, isCorrect } = await req.json();
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseBrowser().auth.getUser();
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get current flashcard
-    const { data: flashcard } = await supabaseBrowser()
+    const { data: flashcard } = await supabase
       .from('flashcards')
       .select('mastery_level, review_count')
       .eq('id', flashcardId)
@@ -160,7 +163,7 @@ export async function PATCH(req: NextRequest) {
       ? Math.min(5, flashcard.mastery_level + 1)
       : Math.max(0, flashcard.mastery_level - 1);
 
-    const { data: updatedFlashcard, error: updateError } = await supabaseBrowser()
+    const { data: updatedFlashcard, error: updateError } = await supabase
       .from('flashcards')
       .update({
         mastery_level: newMasteryLevel,

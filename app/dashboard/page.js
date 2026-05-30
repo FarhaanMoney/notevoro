@@ -25,9 +25,9 @@ export default function DashboardPage({ user, onViewChange }) {
   const loadDashboardData = async () => {
     try {
       const [notesRes, quizzesRes, flashcardsRes] = await Promise.all([
-        fetch('/api/notes'),
-        fetch('/api/quizzes'),
-        fetch('/api/flashcards'),
+        fetch('/api/notes', { credentials: 'include' }),
+        fetch('/api/quizzes', { credentials: 'include' }),
+        fetch('/api/flashcards', { credentials: 'include' }),
       ]);
 
       const notes = notesRes.ok ? (await notesRes.json()).notes || [] : [];
