@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import Sidebar from '@/components/layout/Sidebar';
 import { Loader2 } from 'lucide-react';
-import DashboardPage from './page-new';
+import DashboardPage from './page';
 import QuizzesPage from './quizzes/page';
 import FlashcardsPage from './flashcards/page';
 import NotesPage from './notes/page';
