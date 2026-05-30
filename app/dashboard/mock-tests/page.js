@@ -50,10 +50,8 @@ export default function MockTestsPage({ user }) {
   const loadMockTests = async () => {
     setIsLoading(true);
     try {
-      const sb = supabaseBrowser();
-      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/mock-tests', {
-        headers: { Authorization: `Bearer ${session?.access_token}` }
+        credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
@@ -76,13 +74,11 @@ export default function MockTestsPage({ user }) {
     setError(null);
 
     try {
-      const sb = supabaseBrowser();
-      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/mock-tests', {
         method: 'POST',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ 
           topic: topic.trim(),
@@ -186,11 +182,9 @@ export default function MockTestsPage({ user }) {
       formData.append('file', file);
       formData.append('folder', 'mock-tests');
 
-      const sb = supabaseBrowser();
-      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/upload', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+        credentials: 'include',
         body: formData,
       });
 

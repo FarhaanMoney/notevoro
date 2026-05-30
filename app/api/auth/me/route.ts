@@ -10,14 +10,17 @@ export async function GET(req: NextRequest) {
     const supabase = await createServerSupabaseClient(req);
     console.log('Supabase client created');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('User:', user);
-    console.log('Auth error:', authError);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('Session:', session);
+    console.log('Session error:', sessionError);
+    console.log('User from session:', session?.user);
     
-    if (authError || !user) {
+    if (sessionError || !session || !session.user) {
       console.log('User not authenticated in auth/me');
-      return NextResponse.json({ error: 'Unauthorized', details: authError?.message }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', details: sessionError?.message }, { status: 401 });
     }
+    
+    const user = session.user;
     
     // Get user profile
     const { data: profile, error: profileError } = await supabase
