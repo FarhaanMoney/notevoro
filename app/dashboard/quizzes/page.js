@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ClipboardList, Search, Plus } from 'lucide-react';
-import EmptyState from '@/components/layout/EmptyState';
+import { Card } from '@/components/ui/card';
+import { ClipboardList, Search, Plus, CheckCircle } from 'lucide-react';
 
 export default function QuizzesPage({ user }) {
   const [hasQuizzes, setHasQuizzes] = useState(false);
@@ -23,7 +23,10 @@ export default function QuizzesPage({ user }) {
         {/* Header */}
         <div className="border-b border-gray-200 px-8 py-6 bg-white">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-semibold text-gray-900">Quizzes</h1>
+            <div>
+              <h1 className="text-page-title text-gray-900">Quizzes</h1>
+              <p className="text-body text-gray-500 mt-1">Generate and manage AI-powered quizzes.</p>
+            </div>
             <Button onClick={handleCreateQuiz}>
               <Plus className="h-4 w-4 mr-2" />
               Create Quiz
@@ -32,14 +35,44 @@ export default function QuizzesPage({ user }) {
         </div>
 
         {/* Empty State */}
-        <div className="flex-1 flex items-center justify-center">
-          <EmptyState
-            icon={ClipboardList}
-            title="Quiz Generator"
-            subtitle="Generate quizzes from notes, PDFs, flashcards, or AI notes."
-            buttonText="Create Quiz"
-            onButtonClick={handleCreateQuiz}
-          />
+        <div className="flex-1 flex items-center justify-center px-8">
+          <div className="text-center max-w-md">
+            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
+              <ClipboardList className="h-10 w-10 text-purple-500" />
+            </div>
+            <h2 className="text-section-title text-gray-900 mb-3">Quiz Generator</h2>
+            <p className="text-body text-gray-500 mb-8">
+              Generate quizzes from notes, PDFs, flashcards, and AI notes.
+            </p>
+            <Button size="lg" onClick={handleCreateQuiz}>
+              Create Quiz
+            </Button>
+          </div>
+        </div>
+
+        {/* Information Card */}
+        <div className="px-8 pb-8">
+          <Card className="premium-card p-8">
+            <h3 className="text-card-title text-gray-900 mb-4">Why Create Quizzes?</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                <p className="text-body text-gray-600">Improve retention</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                <p className="text-body text-gray-600">Practice exam questions</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                <p className="text-body text-gray-600">Identify weak areas</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                <p className="text-body text-gray-600">Track learning progress</p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     );
@@ -48,9 +81,12 @@ export default function QuizzesPage({ user }) {
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Header */}
-      <div className="border-b border-border px-8 py-6">
+      <div className="border-b border-gray-200 px-8 py-6 bg-white">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold text-foreground">Quizzes</h1>
+          <div>
+            <h1 className="text-page-title text-gray-900">Quizzes</h1>
+            <p className="text-body text-gray-500 mt-1">Generate and manage AI-powered quizzes.</p>
+          </div>
           <Button onClick={handleCreateQuiz}>
             <Plus className="h-4 w-4 mr-2" />
             Create New

@@ -10,16 +10,31 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { useState } from 'react';
 
-const navigationItems = [
-  { id: 'home', icon: Home, label: 'Home' },
-  { id: 'chat', icon: MessageSquare, label: 'AI Chat' },
-  { id: 'notes', icon: NotebookPen, label: 'Smart Notes' },
-  { id: 'flashcards', icon: BookOpen, label: 'Flashcards' },
-  { id: 'quizzes', icon: ClipboardList, label: 'Quizzes' },
-  { id: 'mock-tests', icon: ClipboardList, label: 'Mock Tests' },
-  { id: 'visual-learning', icon: LayoutDashboard, label: 'Visual Learning' },
-  { id: 'progress', icon: Trophy, label: 'Progress' },
-  { id: 'settings', icon: Settings, label: 'Settings' },
+const navigationGroups = [
+  {
+    title: 'WORKSPACE',
+    items: [
+      { id: 'home', icon: Home, label: 'Home' },
+      { id: 'chat', icon: MessageSquare, label: 'AI Chat' },
+      { id: 'notes', icon: NotebookPen, label: 'Smart Notes' },
+    ]
+  },
+  {
+    title: 'STUDY TOOLS',
+    items: [
+      { id: 'flashcards', icon: BookOpen, label: 'Flashcards' },
+      { id: 'quizzes', icon: ClipboardList, label: 'Quizzes' },
+      { id: 'mock-tests', icon: ClipboardList, label: 'Mock Tests' },
+      { id: 'visual-learning', icon: LayoutDashboard, label: 'Visual Learning' },
+    ]
+  },
+  {
+    title: 'ACCOUNT',
+    items: [
+      { id: 'progress', icon: Trophy, label: 'Progress' },
+      { id: 'settings', icon: Settings, label: 'Settings' },
+    ]
+  },
 ];
 
 export default function Sidebar({ user, activeView, onViewChange }) {
@@ -51,27 +66,43 @@ export default function Sidebar({ user, activeView, onViewChange }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeView === item.id;
-          
-          return (
-            <button
-              key={item.id}
-              onClick={() => onViewChange(item.id)}
-              className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-purple-50 text-purple-600'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              }`}
-              title={collapsed ? item.label : ''}
-            >
-              <Icon className={`h-4 w-4 shrink-0 ${collapsed ? 'mx-auto' : ''}`} />
-              {!collapsed && <span className="ml-3">{item.label}</span>}
-            </button>
-          );
-        })}
+      <nav className="flex-1 py-4 px-2 overflow-y-auto">
+        {navigationGroups.map((group) => (
+          <div key={group.title} className="mb-4">
+            {!collapsed && (
+              <div className="px-3 mb-2">
+                <span className="text-xs font-semibold text-gray-400 tracking-wider">
+                  {group.title}
+                </span>
+              </div>
+            )}
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.id;
+                
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onViewChange(item.id)}
+                    className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${
+                      isActive
+                        ? 'bg-[#f4f1ff] text-[#6c4cff]'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                    title={collapsed ? item.label : ''}
+                  >
+                    {isActive && !collapsed && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#6c4cff] rounded-r-full" />
+                    )}
+                    <Icon className={`h-4 w-4 shrink-0 ${collapsed ? 'mx-auto' : ''}`} />
+                    {!collapsed && <span className="ml-3">{item.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* User Section */}
