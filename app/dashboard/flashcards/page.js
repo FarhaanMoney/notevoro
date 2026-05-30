@@ -29,11 +29,18 @@ export default function FlashcardsPage({ user }) {
   const loadFlashcards = async () => {
     setIsLoading(true);
     try {
+      console.log('Flashcards page: Loading flashcards...');
       const sb = supabaseBrowser();
       const { data: { session } } = await sb.auth.getSession();
+      console.log('Flashcards page: Session:', session);
+      console.log('Flashcards page: Session user:', session?.user);
+      console.log('Flashcards page: Access token exists:', !!session?.access_token);
+      
       const response = await fetch('/api/flashcards', {
         headers: { Authorization: `Bearer ${session?.access_token}` }
       });
+      console.log('Flashcards page: Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
         setFlashcards(data.flashcards || []);

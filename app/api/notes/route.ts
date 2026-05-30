@@ -10,6 +10,7 @@ function getOpenAI() {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('Notes POST route hit');
     const { topic, text, sourceType, fileUrl } = await req.json();
 
     if (!topic && !text && !fileUrl) {
@@ -18,10 +19,19 @@ export async function POST(req: NextRequest) {
 
     // Get authenticated user
     const supabase = await createServerSupabaseClient(req);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    console.log('Supabase client created');
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('Session:', session);
+    console.log('Session error:', sessionError);
+    console.log('User from session:', session?.user);
+    
+    if (sessionError || !session || !session.user) {
+      console.log('Unauthorized - session missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const user = session.user;
 
     // Check daily limits for free users
     const { data: profile } = await supabase
@@ -129,12 +139,22 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    console.log('Notes GET route hit');
     // Get authenticated user
     const supabase = await createServerSupabaseClient(req);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    console.log('Supabase client created');
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('Session:', session);
+    console.log('Session error:', sessionError);
+    console.log('User from session:', session?.user);
+    
+    if (sessionError || !session || !session.user) {
+      console.log('Unauthorized - session missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const user = session.user;
 
     const { data: notes, error } = await supabase
       .from('notes')

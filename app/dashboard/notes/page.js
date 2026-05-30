@@ -37,11 +37,18 @@ export default function NotesPage({ user }) {
   const loadNotes = async () => {
     setIsLoading(true);
     try {
+      console.log('Notes page: Loading notes...');
       const sb = supabaseBrowser();
       const { data: { session } } = await sb.auth.getSession();
+      console.log('Notes page: Session:', session);
+      console.log('Notes page: Session user:', session?.user);
+      console.log('Notes page: Access token exists:', !!session?.access_token);
+      
       const response = await fetch('/api/notes', {
         headers: { Authorization: `Bearer ${session?.access_token}` }
       });
+      console.log('Notes page: Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
         setNotes(data.notes || []);

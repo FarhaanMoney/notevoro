@@ -36,11 +36,18 @@ export default function QuizzesPage({ user }) {
   const loadQuizzes = async () => {
     setIsLoading(true);
     try {
+      console.log('Quizzes page: Loading quizzes...');
       const sb = supabaseBrowser();
       const { data: { session } } = await sb.auth.getSession();
+      console.log('Quizzes page: Session:', session);
+      console.log('Quizzes page: Session user:', session?.user);
+      console.log('Quizzes page: Access token exists:', !!session?.access_token);
+      
       const response = await fetch('/api/quizzes', {
         headers: { Authorization: `Bearer ${session?.access_token}` }
       });
+      console.log('Quizzes page: Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
         setQuizzes(data.quizzes || []);

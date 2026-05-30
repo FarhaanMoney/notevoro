@@ -10,6 +10,7 @@ function getOpenAI() {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('Flashcards POST route hit');
     const { topic, noteId, fileUrl } = await req.json();
 
     if (!topic && !noteId && !fileUrl) {
@@ -18,10 +19,19 @@ export async function POST(req: NextRequest) {
 
     // Get authenticated user
     const supabase = await createServerSupabaseClient(req);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    console.log('Supabase client created');
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('Session:', session);
+    console.log('Session error:', sessionError);
+    console.log('User from session:', session?.user);
+    
+    if (sessionError || !session || !session.user) {
+      console.log('Unauthorized - session missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const user = session.user;
 
     // Get note content if noteId is provided
     let content = topic;
@@ -111,12 +121,22 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    console.log('Flashcards GET route hit');
     // Get authenticated user
     const supabase = await createServerSupabaseClient(req);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    console.log('Supabase client created');
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('Session:', session);
+    console.log('Session error:', sessionError);
+    console.log('User from session:', session?.user);
+    
+    if (sessionError || !session || !session.user) {
+      console.log('Unauthorized - session missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const user = session.user;
 
     const { data: flashcards, error } = await supabase
       .from('flashcards')
@@ -137,14 +157,24 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    console.log('Flashcards PATCH route hit');
     const { flashcardId, isCorrect } = await req.json();
 
     // Get authenticated user
     const supabase = await createServerSupabaseClient(req);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    console.log('Supabase client created');
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('Session:', session);
+    console.log('Session error:', sessionError);
+    console.log('User from session:', session?.user);
+    
+    if (sessionError || !session || !session.user) {
+      console.log('Unauthorized - session missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const user = session.user;
 
     // Get current flashcard
     const { data: flashcard } = await supabase

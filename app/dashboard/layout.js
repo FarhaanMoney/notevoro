@@ -29,25 +29,39 @@ export default function DashboardLayout({ children }) {
       if (authChecked) return;
       
       try {
+        console.log('Dashboard layout: Checking auth...');
         const { data: { user }, error } = await sb.auth.getUser();
+        console.log('Dashboard layout: User from getUser:', user);
+        console.log('Dashboard layout: Error from getUser:', error);
+        
         if (error || !user) {
+          console.log('Dashboard layout: No user, redirecting to home');
           router.replace('/');
           return;
         }
 
         const { data: { session } } = await sb.auth.getSession();
+        console.log('Dashboard layout: Session from getSession:', session);
+        console.log('Dashboard layout: Session user:', session?.user);
+        console.log('Dashboard layout: Session access token exists:', !!session?.access_token);
+        
         const response = await fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${session?.access_token}` }
         });
         
         if (response.status === 401) {
+          console.log('Dashboard layout: 401 from auth/me, redirecting to home');
           router.replace('/');
           return;
         }
         
-        if (!response.ok) return;
+        if (!response.ok) {
+          console.log('Dashboard layout: auth/me response not ok:', response.status);
+          return;
+        }
         
         const data = await response.json();
+        console.log('Dashboard layout: User data from auth/me:', data);
         const isOnboardingComplete = data.user?.personalization?.onboarding_completed || 
                                        data.user?.onboardingStep === 'completed' || 
                                        Boolean(data.user?.onboardingCompletedAt);
