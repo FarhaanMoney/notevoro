@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Plus, CheckCircle, Loader2, RotateCw, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { supabaseBrowser } from '@/lib/supabase/browser';
 
 export default function FlashcardsPage({ user }) {
   const [flashcards, setFlashcards] = useState([]);
@@ -28,8 +29,10 @@ export default function FlashcardsPage({ user }) {
   const loadFlashcards = async () => {
     setIsLoading(true);
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/flashcards', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session?.access_token}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -52,10 +55,14 @@ export default function FlashcardsPage({ user }) {
     setError(null);
 
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/flashcards', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ topic: topic.trim(), fileUrl: uploadedFile?.url }),
       });
 
@@ -106,10 +113,14 @@ export default function FlashcardsPage({ user }) {
   const handleRateCard = async (isCorrect) => {
     const currentCard = flashcards[currentIndex];
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       await fetch('/api/flashcards', {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ flashcardId: currentCard.id, isCorrect }),
       });
 
@@ -144,9 +155,11 @@ export default function FlashcardsPage({ user }) {
       formData.append('file', file);
       formData.append('folder', 'flashcards');
 
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/upload', {
         method: 'POST',
-        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
         body: formData,
       });
 

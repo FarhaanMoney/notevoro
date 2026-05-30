@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
+import { supabaseBrowser } from '@/lib/supabase/browser';
 
 export default function QuizzesPage({ user }) {
   const [quizzes, setQuizzes] = useState([]);
@@ -35,8 +36,10 @@ export default function QuizzesPage({ user }) {
   const loadQuizzes = async () => {
     setIsLoading(true);
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/quizzes', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session?.access_token}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -59,10 +62,14 @@ export default function QuizzesPage({ user }) {
     setError(null);
 
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/quizzes', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ 
           topic: topic.trim(),
           difficulty,
@@ -147,9 +154,11 @@ export default function QuizzesPage({ user }) {
       formData.append('file', file);
       formData.append('folder', 'quizzes');
 
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/upload', {
         method: 'POST',
-        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
         body: formData,
       });
 

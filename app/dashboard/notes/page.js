@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NotebookPen, Plus, ArrowRight, Loader2, FileText } from 'lucide-react';
+import { supabaseBrowser } from '@/lib/supabase/browser';
 import UpgradeModal from '@/components/UpgradeModal';
 
 const suggestedTopics = [
@@ -36,8 +37,10 @@ export default function NotesPage({ user }) {
   const loadNotes = async () => {
     setIsLoading(true);
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/notes', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${session?.access_token}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -60,10 +63,14 @@ export default function NotesPage({ user }) {
     setError(null);
 
     try {
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/notes', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ 
           topic: topic.trim(),
           text: text.trim(),
@@ -113,9 +120,11 @@ export default function NotesPage({ user }) {
       formData.append('file', file);
       formData.append('folder', 'notes');
 
+      const sb = supabaseBrowser();
+      const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/upload', {
         method: 'POST',
-        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
         body: formData,
       });
 

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get authenticated user
-    const supabase = await createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient(req);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

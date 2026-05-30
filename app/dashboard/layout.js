@@ -35,8 +35,9 @@ export default function DashboardLayout({ children }) {
           return;
         }
 
+        const { data: { session } } = await sb.auth.getSession();
         const response = await fetch('/api/auth/me', {
-          credentials: 'include',
+          headers: { Authorization: `Bearer ${session?.access_token}` }
         });
         
         if (response.status === 401) {
@@ -73,8 +74,9 @@ export default function DashboardLayout({ children }) {
       } else {
         const { data: { user } } = await sb.auth.getUser();
         if (user) {
+          const { data: { session } } = await sb.auth.getSession();
           const response = await fetch('/api/auth/me', {
-            credentials: 'include',
+            headers: { Authorization: `Bearer ${session?.access_token}` }
           });
           if (response.ok) {
             const data = await response.json();
