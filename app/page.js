@@ -1,385 +1,422 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
-import { MessageSquare, Sparkles, Zap, BookOpen, Trophy, ArrowRight } from 'lucide-react';
+import { BookOpen, Upload, Sparkles, FileText, CheckCircle, Play, ArrowRight, Menu, X } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 
-function App() {
+export default function LandingPage() {
   const router = useRouter();
-  const [authOpen, setAuthOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  async function routeHomeAfterAuth(session) {
-    try {
-      const response = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
-      if (!response.ok) {
-        router.replace('/dashboard');
-        return;
-      }
-      const data = await response.json();
-      const isOnboardingComplete = data.user?.personalization?.onboarding_completed || data.user?.onboardingStep === 'completed' || Boolean(data.user?.onboardingCompletedAt);
-      if (!isOnboardingComplete) {
-        router.replace('/onboarding');
-      } else {
-        router.replace('/dashboard');
-      }
-    } catch (error) {
-      console.error('Home route after auth failed:', error);
-      router.replace('/dashboard');
-    }
-  }
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [demoStep, setDemoStep] = useState(0);
+  const [demoActive, setDemoActive] = useState(false);
 
   useEffect(() => {
     const sb = supabaseBrowser();
     
-    // Check if user is already authenticated
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       if (session?.access_token) {
-        routeHomeAfterAuth(session);
+        router.replace('/dashboard');
       }
     });
     
-    return () => subscription.unsubscribe();
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [router]);
+
+  const handleGetStarted = () => {
+    router.push('/auth');
+  };
 
   const handleLogin = () => {
     router.push('/auth');
   };
 
-  async function googleSignIn() {
-    try {
-      setLoading(true);
-      const sb = supabaseBrowser();
-      const base = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-      const { error } = await sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${base}/auth/callback` },
-      });
-      if (error) throw error;
-    } catch (e) {
-      toast.error(e.message || 'Google sign-in failed');
-      setLoading(false);
-    }
-  }
-
-  async function submit(e) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const sb = supabaseBrowser();
-      if (tab === 'login') {
-        if (loginMethod === 'password') {
-          const { error } = await sb.auth.signInWithPassword({ email: form.email, password: form.password });
-          if (error) throw error;
-          toast.success('Welcome back!');
-          const { data: { session } } = await sb.auth.getSession();
-          if (session) {
-            await routeHomeAfterAuth(session);
-          } else {
-            router.push('/dashboard');
-          }
-          return;
-        }
-        await requestOtp();
-        return;
+  const runDemo = () => {
+    setDemoActive(true);
+    setDemoStep(0);
+    
+    const steps = [
+      () => setDemoStep(1),
+      () => setDemoStep(2),
+      () => setDemoStep(3),
+      () => setDemoStep(4),
+    ];
+    
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      if (currentStep < steps.length) {
+        steps[currentStep]();
+        currentStep++;
+      } else {
+        clearInterval(interval);
+        setTimeout(() => {
+          setDemoActive(false);
+          setDemoStep(0);
+        }, 2000);
       }
-      setStep('personalize');
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function requestOtp() {
-    setLoading(true);
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const googleRedirect = urlParams.get('google');
-      const tempToken = localStorage.getItem('temp_token');
-      
-      // Handle Google OAuth user completing personalization
-      if (googleRedirect === 'true' && tempToken) {
-        const r = await fetch('/api/auth/complete-google-personalization', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tempToken}` },
-          body: JSON.stringify({ personalization }),
-        });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error || 'Failed to complete setup');
-
-        localStorage.removeItem('temp_token');
-        toast.success('Welcome to Notevoro AI! Your 7-day free trial has started! 🎉');
-        await routeHomeAfterAuth({ access_token: tempToken });
-        return;
-      }
-      
-      const r = await fetch('/api/auth/request-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, name: tab === 'signup' ? form.name : null, personalization: tab === 'signup' ? personalization : {} }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Failed to send code');
-      toast.success('OTP sent to your email');
-      setStep('otp');
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function verifyOtp() {
-    setLoading(true);
-    try {
-      const r = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, code: otp }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Verification failed');
-      const { error } = await supabaseBrowser().auth.setSession({
-        access_token: d.session.access_token,
-        refresh_token: d.session.refresh_token,
-      });
-      if (error) throw error;
-      toast.success(tab === 'signup' ? 'Verified! Welcome to Notevoro AI' : 'Logged in with OTP');
-      await routeHomeAfterAuth(d.session);
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function finishSignupWithPassword() {
-    setLoading(true);
-    try {
-      const r = await fetch('/api/auth/password-signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-          name: form.name,
-          personalization,
-        }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Signup failed');
-      const { error } = await supabaseBrowser().auth.setSession({
-        access_token: d.session.access_token,
-        refresh_token: d.session.refresh_token,
-      });
-      if (error) throw error;
-      toast.success('Account created!');
-      await routeHomeAfterAuth(d.session);
-    } catch (e) {
-      toast.error(e.message || 'Signup failed');
-    } finally {
-      setLoading(false);
-    }
-  }
+    }, 800);
+    
+    return () => clearInterval(interval);
+  };
 
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/40 to-zinc-900 text-zinc-100 overflow-hidden">
-        <header className="relative z-10 flex items-center justify-between px-6 md:px-12 py-5 border-b border-white/5">
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
-              <BookOpen className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-semibold text-lg tracking-tight">Notevoro <span className="text-purple-400">AI</span></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" className="text-zinc-300 hover:text-white" onClick={handleLogin}>Login</Button>
-            <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white" onClick={handleLogin}>Get Started</Button>
-          </div>
-        </header>
-
-        <main className="relative z-10 px-6 md:px-12 pt-16 md:pt-28 pb-24 max-w-6xl mx-auto">
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur px-4 py-1.5 text-xs text-zinc-300 mb-8">
-              <Sparkles className="h-3.5 w-3.5 text-purple-400" /> Powered by AI · Built for students
-            </div>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
-              Your AI Study Partner
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              Chat with AI, generate quizzes from any topic, and build flashcards in seconds. Earn XP, keep your streak, and learn faster than ever.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-3">
-              <div className="flex items-center justify-center gap-3">
-                <Button size="lg" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white h-12 px-6 text-base" onClick={handleLogin}>
-                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button size="lg" variant="outline" className="h-12 px-6 text-base bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 hover:text-white" onClick={handleLogin}>
-                  Login
-                </Button>
-              </div>
-                          </div>
-          </div>
-
-          <div className="mt-24 grid md:grid-cols-3 gap-4">
-            {[
-              { icon: MessageSquare, title: 'AI Chat', desc: 'ChatGPT-style streaming chat tuned for studying. Ask anything, get clear answers.' },
-              { icon: Zap, title: 'Smart Quizzes', desc: 'Generate MCQs from any topic. Track accuracy, earn XP, level up.' },
-              { icon: BookOpen, title: 'Flashcards', desc: 'Auto-generated cards with flip animation. Review anywhere.' },
-              { icon: Sparkles, title: 'Visual Explanations', desc: 'AI-generated diagrams and visual learning tools — generate study-ready visuals and summaries.' },
-            ].map((f, i) => (
-              <div key={i} className="group rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur p-6 hover:bg-white/[0.04] transition">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center mb-4">
-                  <f.icon className="h-5 w-5 text-purple-300" />
-                </div>
-                <h3 className="text-lg font-semibold mb-1">{f.title}</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur p-6 flex flex-col md:flex-row items-center justify-around gap-6">
-            <Stat icon={Trophy} label="Earn XP" value="+5 / msg" />
-            <div className="hidden md:block w-px h-10 bg-white/10" />
-            <Stat icon={Zap} label="Quiz reward" value="+10 / correct" />
-            <div className="hidden md:block w-px h-10 bg-white/10" />
-            <Stat icon={BookOpen} label="Daily streak" value="Keep going!" />
-          </div>
-
-          {/* How it works */}
-          <section className="mt-28">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-zinc-300 mb-3">How it works</div>
-              <h2 className="text-3xl md:text-4xl font-bold">Learn smarter in 3 steps</h2>
-              <p className="text-zinc-400 mt-3">From "I don&apos;t get it" to "Got it" — fast.</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              {[
-                { n: '01', title: 'Pick a topic', desc: "Type any subject — biology, calculus, history, code. Anything you're studying." },
-                { n: '02', title: 'Let AI work', desc: "Get clear explanations, MCQ quizzes, flashcards or exam-ready notes — instantly." },
-                { n: '03', title: 'Track & level up', desc: 'XP, streaks, weak-topic detection. Watch your accuracy climb every day.' },
-              ].map((s) => (
-                <div key={s.n} className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-                  <div className="text-purple-400 text-sm font-mono mb-3">{s.n}</div>
-                  <h3 className="text-lg font-semibold mb-1">{s.title}</h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Plans teaser */}
-          <section className="mt-28">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-zinc-300 mb-3">Pricing</div>
-              <h2 className="text-3xl md:text-4xl font-bold">Simple, credit-based pricing</h2>
-              <p className="text-zinc-400 mt-3">Start free. Upgrade anytime. AI Energy resets daily.</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              {[
-                { name: 'Free', price: '₹0', credits: '20', features: ['Basic AI chat', 'Limited notes generation', 'File analysis', 'Standard response speed', 'No WhatsApp AI', 'No visual explanations'], highlight: false },
-                { name: 'Pro', price: '₹299', credits: '250', features: ['Everything in Free', 'WhatsApp AI', 'Visual explanations', 'Advanced analytics', 'Priority queue', 'Faster responses'], highlight: true },
-                { name: 'Premium', price: '₹499', credits: 'Unlimited', features: ['Everything in Pro', 'Unlimited AI Energy', 'Premium AI models', 'Priority support', 'Maximum limits'], highlight: false },
-              ].map((p) => (
-                <div key={p.name} className={`rounded-2xl border p-6 ${p.highlight ? 'border-purple-500/40 bg-gradient-to-b from-purple-500/10 to-transparent relative' : 'border-white/10 bg-white/[0.02]'}`}>
-                  {p.highlight && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] bg-purple-500 text-white">Most popular</div>}
-                  <div className="text-sm text-zinc-400">{p.name}</div>
-                  <div className="text-3xl font-bold mt-1">{p.price}<span className="text-sm font-normal text-zinc-500">/mo</span></div>
-                  <div className="mt-2 text-xs text-yellow-300">{p.credits} AI Energy / day</div>
-                  <ul className="mt-4 space-y-1.5 text-sm text-zinc-300">
-                    {p.features.map((f) => <li key={f}>• {f}</li>)}
-                  </ul>
-                  <Button className={`w-full mt-5 ${p.highlight ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white' : 'bg-white text-black hover:bg-zinc-200'}`} onClick={() => router.push('/premium')}>Start with {p.name}</Button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* FAQ */}
-          <section className="mt-28">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-zinc-300 mb-3">FAQ</div>
-              <h2 className="text-3xl md:text-4xl font-bold">Questions, answered</h2>
-            </div>
-            <div className="grid md:grid-cols-2 gap-3 max-w-4xl mx-auto">
-              {[
-                { q: 'How do credits work?', a: 'Each plan gives you a daily AI Energy pool. Chat = 1, Quiz = 5, Flashcards = 4, Notes = 3, Mock test = 10, File analysis = 8. AI Energy resets every day.' },
-                { q: 'Can I cancel anytime?', a: 'Yes. You keep access until your billing period ends, then drop to Free. No questions asked.' },
-                { q: 'What subjects does it cover?', a: 'Anything — STEM, humanities, languages, programming, exams. The AI adapts to whatever you throw at it.' },
-                { q: 'Is my data private?', a: 'Your chats and notes are stored only for you and personalize your study experience. Public notes are only visible if you choose to share them.' },
-                { q: 'How are payments processed?', a: 'Securely via Razorpay. UPI, cards, net banking — all in INR, no forex fees.' },
-                { q: 'Can I share my notes?', a: 'Yes! Every note has a one-click "Share" button that creates a public link anyone can read.' },
-              ].map((f) => (
-                <div key={f.q} className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
-                  <h4 className="font-medium mb-1.5">{f.q}</h4>
-                  <p className="text-sm text-zinc-400 leading-relaxed">{f.a}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Final CTA */}
-          <section className="mt-28 mb-8">
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-blue-500/5 to-transparent p-10 md:p-16 text-center">
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">Ready to learn faster?</h2>
-              <p className="mt-4 text-zinc-400 max-w-xl mx-auto">Join students already studying with AI. Free to start, no card required.</p>
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <Button size="lg" onClick={() => router.push('/premium')} className="bg-white text-black hover:bg-zinc-200 h-12 px-7 text-base">Get Started Free <ArrowRight className="ml-2 h-4 w-4" /></Button>
-              </div>
-            </div>
-          </section>
-        </main>
-
-        {/* Footer */}
-        <footer className="relative z-10 border-t border-white/5 px-6 md:px-12 py-10 mt-12">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="min-h-screen bg-white">
+      {/* Navbar */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled ? 'bg-white border-b border-gray-200 shadow-sm' : 'bg-transparent'
+      }`}>
+        <div className="max-w-7xl mx-auto px-6 md:px-12">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)'}}>
                 <BookOpen className="h-4 w-4 text-white" />
               </div>
-              <div>
-                <div className="font-semibold tracking-tight">Notevoro <span className="text-purple-400">AI</span></div>
-                <div className="text-[10px] text-zinc-500">Your AI study partner — Powered by AI</div>
+              <span className="font-semibold text-gray-900">Notevoro</span>
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition">Features</a>
+              <a href="#pricing" className="text-sm text-gray-600 hover:text-gray-900 transition">Pricing</a>
+              <a href="#about" className="text-sm text-gray-600 hover:text-gray-900 transition">About</a>
+            </div>
+
+            {/* Desktop CTA */}
+            <div className="hidden md:flex items-center gap-4">
+              <Button variant="ghost" className="text-gray-600 hover:text-gray-900" onClick={handleLogin}>
+                Login
+              </Button>
+              <Button 
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={handleGetStarted}
+              >
+                Get Started
+              </Button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-b border-gray-200">
+            <div className="px-6 py-4 space-y-4">
+              <a href="#features" className="block text-sm text-gray-600 hover:text-gray-900">Features</a>
+              <a href="#pricing" className="block text-sm text-gray-600 hover:text-gray-900">Pricing</a>
+              <a href="#about" className="block text-sm text-gray-600 hover:text-gray-900">About</a>
+              <div className="pt-4 space-y-2">
+                <Button variant="ghost" className="w-full" onClick={handleLogin}>Login</Button>
+                <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white" onClick={handleGetStarted}>Get Started</Button>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-zinc-400">
-              <button onClick={() => { setTab('login'); setAuthOpen(true); }} className="hover:text-white">Login</button>
-              <button onClick={() => { setTab('signup'); setAuthOpen(true); }} className="hover:text-white">Sign up</button>
-              <a href="#" onClick={(e)=>{e.preventDefault(); window.scrollTo({top:0,behavior:'smooth'});}} className="hover:text-white">Back to top</a>
+          </div>
+        )}
+      </nav>
+
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-6 md:px-12">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 tracking-tight mb-6">
+            Study Smarter.<br />Not Harder.
+          </h1>
+          <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Turn notes, PDFs, lectures, and videos into quizzes, flashcards, visual explanations, and AI-powered study sessions in seconds.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <Button 
+              size="lg" 
+              className="bg-blue-500 hover:bg-blue-600 text-white h-12 px-8 text-base"
+              onClick={handleGetStarted}
+            >
+              Get Started Free
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="h-12 px-8 text-base border-gray-300 text-gray-700 hover:bg-gray-50"
+              onClick={() => document.getElementById('demo').scrollIntoView({ behavior: 'smooth' })}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Watch Demo
+            </Button>
+          </div>
+
+          {/* Dashboard Screenshot */}
+          <div className="relative">
+            <div className="rounded-xl border border-gray-200 shadow-2xl overflow-hidden">
+              <div className="bg-gray-100 aspect-video flex items-center justify-center">
+                <div className="text-center">
+                  <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Dashboard Screenshot</p>
+                  <p className="text-sm text-gray-400">Real Notevoro Dashboard</p>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
-            <div>© {new Date().getFullYear()} Notevoro AI. All rights reserved.</div>
-            <div>Made with ❤️ for students · Powered by AI</div>
-          </div>
-        </footer>
-      </div>
-    </>
-  );
-}
+        </div>
+      </section>
 
-function Stat({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
-        <Icon className="h-5 w-5 text-purple-300" />
-      </div>
-      <div>
-        <div className="text-xs text-zinc-400">{label}</div>
-        <div className="text-sm font-semibold">{value}</div>
-      </div>
+      {/* Trust Section */}
+      <section className="py-16 px-6 md:px-12 bg-gray-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-sm text-gray-600 mb-8">Trusted by students worldwide</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <p className="text-3xl font-bold text-gray-900">Millions</p>
+              <p className="text-sm text-gray-600">of study materials processed</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-gray-900">Thousands</p>
+              <p className="text-sm text-gray-600">of quizzes generated daily</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-gray-900">Every Day</p>
+              <p className="text-sm text-gray-600">students studying smarter</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-24 px-6 md:px-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6">
+                <Upload className="h-8 w-8 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Upload</h3>
+              <p className="text-gray-600">Upload notes, PDFs, slides, lectures, or videos.</p>
+            </div>
+            <div className="text-center">
+              <div className="h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6">
+                <Sparkles className="h-8 w-8 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Generate</h3>
+              <p className="text-gray-600">AI instantly creates study tools.</p>
+            </div>
+            <div className="text-center">
+              <div className="h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="h-8 w-8 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Master</h3>
+              <p className="text-gray-600">Study using quizzes, flashcards, visual learning, and AI tutoring.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Demo Section */}
+      <section id="demo" className="py-24 px-6 md:px-12 bg-gray-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">See It In Action</h2>
+            <p className="text-gray-600">Try the demo below to see how Notevoro works</p>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
+            {!demoActive ? (
+              <div className="text-center">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 mb-6">
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">Drop a PDF</p>
+                  <p className="text-sm text-gray-400">or paste your notes</p>
+                </div>
+                <Button 
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  onClick={runDemo}
+                >
+                  Try Demo
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {demoStep >= 1 && (
+                  <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="text-gray-900">Quiz Generated</span>
+                  </div>
+                )}
+                {demoStep >= 2 && (
+                  <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="text-gray-900">Flashcards Generated</span>
+                  </div>
+                )}
+                {demoStep >= 3 && (
+                  <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="text-gray-900">Visual Learning Generated</span>
+                  </div>
+                )}
+                {demoStep >= 4 && (
+                  <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="text-gray-900">Study Notes Generated</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Showcase */}
+      <section id="features" className="py-24 px-6 md:px-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Features</h2>
+          </div>
+
+          {/* Feature 1 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">AI Notes</h3>
+              <p className="text-gray-600 leading-relaxed">Transform lectures and PDFs into organized notes.</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-100 aspect-video flex items-center justify-center">
+              <FileText className="h-12 w-12 text-gray-400" />
+            </div>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div className="order-2 md:order-1 rounded-xl border border-gray-200 bg-gray-100 aspect-video flex items-center justify-center">
+              <FileText className="h-12 w-12 text-gray-400" />
+            </div>
+            <div className="order-1 md:order-2">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">AI Quizzes</h3>
+              <p className="text-gray-600 leading-relaxed">Generate quizzes instantly from your materials.</p>
+            </div>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Flashcards</h3>
+              <p className="text-gray-600 leading-relaxed">Review and remember faster.</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-100 aspect-video flex items-center justify-center">
+              <FileText className="h-12 w-12 text-gray-400" />
+            </div>
+          </div>
+
+          {/* Feature 4 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div className="order-2 md:order-1 rounded-xl border border-gray-200 bg-gray-100 aspect-video flex items-center justify-center">
+              <FileText className="h-12 w-12 text-gray-400" />
+            </div>
+            <div className="order-1 md:order-2">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Visual Learning</h3>
+              <p className="text-gray-600 leading-relaxed">Turn difficult concepts into visual explanations.</p>
+            </div>
+          </div>
+
+          {/* Feature 5 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">AI Tutor</h3>
+              <p className="text-gray-600 leading-relaxed">Ask questions and get personalized explanations.</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-100 aspect-video flex items-center justify-center">
+              <FileText className="h-12 w-12 text-gray-400" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Notevoro */}
+      <section className="py-24 px-6 md:px-12 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Notevoro</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-xl border border-gray-200 p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Personalized Learning</h3>
+              <p className="text-gray-600">AI adapts to your learning style and pace.</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Built For Students</h3>
+              <p className="text-gray-600">Designed specifically for academic success.</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Everything In One Place</h3>
+              <p className="text-gray-600">Notes, quizzes, flashcards, and tutoring together.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-24 px-6 md:px-12">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Your next exam starts today.</h2>
+          <p className="text-xl text-gray-600 mb-10">Join students studying smarter with Notevoro.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button 
+              size="lg" 
+              className="bg-blue-500 hover:bg-blue-600 text-white h-12 px-8 text-base"
+              onClick={handleGetStarted}
+            >
+              Get Started Free
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="h-12 px-8 text-base border-gray-300 text-gray-700 hover:bg-gray-50"
+              onClick={handleLogin}
+            >
+              Login
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-6 md:px-12 border-t border-gray-200">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)'}}>
+                <BookOpen className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900">Notevoro</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600">
+              <a href="#features" className="hover:text-gray-900">Features</a>
+              <a href="#pricing" className="hover:text-gray-900">Pricing</a>
+              <a href="#" className="hover:text-gray-900">Privacy</a>
+              <a href="#" className="hover:text-gray-900">Terms</a>
+              <a href="#" className="hover:text-gray-900">Contact</a>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-gray-200 text-center text-sm text-gray-500">
+            © {new Date().getFullYear()} Notevoro. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
-
-export default App;
