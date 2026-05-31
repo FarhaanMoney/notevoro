@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 export default function QuizzesPage({ user }) {
   const [quizzes, setQuizzes] = useState([]);
@@ -37,7 +37,7 @@ export default function QuizzesPage({ user }) {
     setIsLoading(true);
     try {
       console.log('Quizzes page: Loading quizzes...');
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       console.log('Quizzes page: Session:', session);
       console.log('Quizzes page: Session user:', session?.user);
@@ -69,7 +69,7 @@ export default function QuizzesPage({ user }) {
     setError(null);
 
     try {
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/quizzes', {
         method: 'POST',

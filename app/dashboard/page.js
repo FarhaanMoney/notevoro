@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { MessageSquare, NotebookPen, BookOpen, ClipboardList, LayoutDashboard, ArrowRight, Flame, FileText, Clock, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 const studyTools = [
   { id: 'notes', icon: NotebookPen, title: 'Smart Notes', description: 'Create AI notes from PDFs, lectures and videos.' },

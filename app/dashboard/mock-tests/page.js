@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ClipboardList, Plus, CheckCircle, Clock, Play, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 export default function MockTestsPage({ user }) {
   const [mockTests, setMockTests] = useState([]);

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Plus, CheckCircle, Loader2, RotateCw, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 export default function FlashcardsPage({ user }) {
   const [flashcards, setFlashcards] = useState([]);
@@ -30,7 +30,7 @@ export default function FlashcardsPage({ user }) {
     setIsLoading(true);
     try {
       console.log('Flashcards page: Loading flashcards...');
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       console.log('Flashcards page: Session:', session);
       console.log('Flashcards page: Session user:', session?.user);
@@ -62,7 +62,7 @@ export default function FlashcardsPage({ user }) {
     setError(null);
 
     try {
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/flashcards', {
         method: 'POST',
@@ -120,7 +120,7 @@ export default function FlashcardsPage({ user }) {
   const handleRateCard = async (isCorrect) => {
     const currentCard = flashcards[currentIndex];
     try {
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       await fetch('/api/flashcards', {
         method: 'PATCH',

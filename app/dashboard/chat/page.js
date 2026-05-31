@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageSquare, Send, Upload, Mic, FileText, Copy, RefreshCcw, Volume2, Loader2 } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 const suggestedPrompts = [
   'Explain Photosynthesis',
@@ -38,7 +38,7 @@ export default function ChatPage({ user }) {
   const loadChatHistory = async () => {
     try {
       console.log('Chat page: Loading chat history...');
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       console.log('Chat page: Session:', session);
       console.log('Chat page: Session user:', session?.user);
@@ -74,7 +74,7 @@ export default function ChatPage({ user }) {
     setIsLoading(true);
 
     try {
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/chat', {
         method: 'POST',

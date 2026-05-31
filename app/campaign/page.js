@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 export default function CampaignPage() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function CampaignPage() {
   }
 
   useEffect(() => {
-    const sb = supabaseBrowser();
+    const sb = createClient();
     sb.auth.getSession().then(async ({ data }) => {
       const t = data?.session?.access_token || null;
       if (!t) return router.replace('/');

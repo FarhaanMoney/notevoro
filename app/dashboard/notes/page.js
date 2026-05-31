@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NotebookPen, Plus, ArrowRight, Loader2, FileText } from 'lucide-react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import UpgradeModal from '@/components/UpgradeModal';
 
 const suggestedTopics = [
@@ -38,7 +38,7 @@ export default function NotesPage({ user }) {
     setIsLoading(true);
     try {
       console.log('Notes page: Loading notes...');
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       console.log('Notes page: Session:', session);
       console.log('Notes page: Session user:', session?.user);
@@ -70,7 +70,7 @@ export default function NotesPage({ user }) {
     setError(null);
 
     try {
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       const response = await fetch('/api/notes', {
         method: 'POST',

@@ -4,6 +4,9 @@ import { createServerClient } from '@supabase/ssr'
 export async function createClient() {
   const cookieStore = cookies()
 
+  console.log('SERVER CLIENT: SUPABASE URL', process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log('SERVER CLIENT: SUPABASE KEY EXISTS', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

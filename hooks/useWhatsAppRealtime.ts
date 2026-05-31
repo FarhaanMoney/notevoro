@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 type RealtimeHandlers = {
@@ -22,7 +22,7 @@ export function useWhatsAppRealtime(userId: string | null, handlers: RealtimeHan
   useEffect(() => {
     if (!userId) return;
 
-    const sb = supabaseBrowser();
+    const sb = createClient();
     let connectionChannel: RealtimeChannel | null = null;
     let messageChannel: RealtimeChannel | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;

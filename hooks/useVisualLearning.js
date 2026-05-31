@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import { safeStringify } from '@/lib/utils/safeJson';
 import { toast } from 'sonner';
 
@@ -17,7 +17,7 @@ export function useVisualLearning(initialEnergy = 0) {
   const [context, setContext] = useState('');
 
   const initSession = useCallback(async () => {
-    const { data: { session } } = await supabaseBrowser().auth.getSession();
+    const { data: { session } } = await createClient().auth.getSession();
     if (session?.access_token) {
       setToken(session.access_token);
       return session.access_token;

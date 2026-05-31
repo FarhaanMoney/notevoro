@@ -29,7 +29,7 @@ import {
   Coins, Lock, NotebookPen, Share2, Copy, Upload, ClipboardList, AlarmClock, X, Route, Phone, Check
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import soundEffects from '@/lib/sounds';
 // Hide scrollbar while keeping horizontal scroll usable on mobile.
 // (Local helper to avoid needing a global CSS file.)
@@ -48,7 +48,7 @@ function App() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
-    const sb = supabaseBrowser();
+    const sb = createClient();
     let unsub = null;
     sb.auth.getSession()
       .then(({ data }) => {
@@ -104,7 +104,7 @@ function App() {
 
   async function refreshUser(t = token) {
     try {
-      const sb = supabaseBrowser();
+      const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
       
       if (!session) {
@@ -134,7 +134,7 @@ function App() {
   }
 
   async function logout() {
-    try { await supabaseBrowser().auth.signOut(); } catch {}
+    try { await createClient().auth.signOut(); } catch {}
     setToken(null); setUser(null);
     router.replace('/');
   }
@@ -2046,7 +2046,7 @@ function UpgradeModal({ open, onOpenChange, router }) {
             variant="secondary"
             onClick={async () => {
               try {
-                const sb = supabaseBrowser();
+                const sb = createClient();
                 const { data: { session } } = await sb.auth.getSession();
                 if (!session?.access_token) { toast.error('Please log in to start the trial'); router.push('/login'); return; }
                 const r = await fetch('/api/subscription/start-trial', {
