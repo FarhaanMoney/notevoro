@@ -17,14 +17,5 @@ export default async function DashboardLayout({ children }) {
     .eq('id', user.id)
     .maybeSingle()
 
-  // Check onboarding status
-  const isOnboardingComplete = profile?.personalization?.onboarding_completed || 
-                                 profile?.onboardingStep === 'completed' || 
-                                 Boolean(profile?.onboardingCompletedAt)
-
-  if (!isOnboardingComplete) {
-    redirect('/onboarding')
-  }
-
   return <DashboardClient user={{ ...user, ...profile }}>{children}</DashboardClient>
 }

@@ -282,9 +282,6 @@ function publicUser(u) {
     weekly_reward_claimed: Boolean(u.weekly_reward_claimed),
     weekly_reward_granted: Boolean(u._weeklyRewardGranted),
     level: lvl,
-    onboardingStep: u.onboardingStep || null,
-    onboardingProgress: u.onboardingProgress || 0,
-    onboardingCompletedAt: u.onboardingCompletedAt || null,
     personalization: u.personalization || null,
     quizzes_taken: u.quizzes_taken || 0,
     correct_answers: u.correct_answers || 0,
@@ -1750,24 +1747,6 @@ async function handler(req, { params }) {
         console.error('Payment verification failed:', error);
         return err('Payment verification failed: ' + error.message, 400);
       }
-    }
-
-    /* ============ USER ONBOARDING ============ */
-    if (path === 'user/onboarding' && method === 'POST') {
-      const user = await requireUser(req); if (!user) return err('Unauthorized', 401);
-      const { personalization } = await req.json();
-      
-      const sb = supabaseAdmin();
-      const { error } = await sb.from('users').update({ 
-        personalization: {
-          ...(user.personalization || {}),
-          ...personalization
-        }
-      }).eq('id', user.id);
-      
-      if (error) return err('Failed to save onboarding data: ' + error.message, 500);
-      
-      return json({ success: true });
     }
 
     /* ============ CONFIG ============ */

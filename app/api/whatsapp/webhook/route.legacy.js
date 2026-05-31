@@ -13,7 +13,6 @@ const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 import { sendWhatsAppMessage } from '../../../../lib/whatsapp/sendMessage.js';
 import { generateReply } from '../../../../lib/ai/generateReply.js';
 import { consumeLinkingToken } from '../../../../lib/auth/whatsappLinking.js';
-import { activateOnboardingTrial } from '../../../../lib/onboarding/onboardingManager.js';
 import { startProTrialDb } from '../../../../lib/subscription/trialManagerDb.js';
 
 // Import memory modules
@@ -403,7 +402,7 @@ async function processWhatsAppMessage(messageData, value) {
           console.warn('Could not auto-start DB trial after linking:', e?.message || e);
         }
 
-        const reply = '✅ WhatsApp connected successfully! Return to the app to continue onboarding.';
+        const reply = '✅ WhatsApp connected successfully! Return to the app to continue.';
         await sendWhatsAppMessage(senderPhone, reply);
         return;
       } catch (linkError) {
