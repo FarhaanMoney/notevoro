@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
 import { createClient } from '@/lib/supabase/client';
 
@@ -28,10 +28,31 @@ export default function QuizzesPage({ user }) {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
 
   useEffect(() => {
     loadQuizzes();
+    loadWorkspaces();
   }, []);
+
+  const loadWorkspaces = async () => {
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/workspaces', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaces(data.workspaces || []);
+      }
+    } catch (error) {
+      console.error('Failed to load workspaces:', error);
+    }
+  };
 
   const loadQuizzes = async () => {
     setIsLoading(true);
@@ -388,6 +409,40 @@ export default function QuizzesPage({ user }) {
               </DialogContent>
             </Dialog>
           </div>
+          {workspaces.length > 0 && (
+            <div className="mt-4">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Workspace</label>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setSelectedWorkspace(null)}
+                  className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
+                    !selectedWorkspace
+                      ? 'border-black bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  All Quizzes
+                </button>
+                {workspaces.map((workspace) => (
+                  <button
+                    key={workspace.id}
+                    onClick={() => setSelectedWorkspace(workspace.id)}
+                    className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all flex items-center gap-2 ${
+                      selectedWorkspace === workspace.id
+                        ? 'border-black bg-gray-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div 
+                      className="h-3 w-3 rounded"
+                      style={{ backgroundColor: workspace.color || '#000' }}
+                    />
+                    {workspace.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 flex items-center justify-center px-8">
@@ -518,6 +573,40 @@ export default function QuizzesPage({ user }) {
             </DialogContent>
           </Dialog>
         </div>
+        {workspaces.length > 0 && (
+          <div className="mt-4">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Workspace</label>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setSelectedWorkspace(null)}
+                className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
+                  !selectedWorkspace
+                    ? 'border-black bg-gray-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                All Quizzes
+              </button>
+              {workspaces.map((workspace) => (
+                <button
+                  key={workspace.id}
+                  onClick={() => setSelectedWorkspace(workspace.id)}
+                  className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all flex items-center gap-2 ${
+                    selectedWorkspace === workspace.id
+                      ? 'border-black bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div 
+                    className="h-3 w-3 rounded"
+                    style={{ backgroundColor: workspace.color || '#000' }}
+                  />
+                  {workspace.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
