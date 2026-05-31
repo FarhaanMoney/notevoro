@@ -22,7 +22,9 @@ const navigationGroups = [
   },
   {
     title: 'STUDY SETS',
-    items: []
+    items: [
+      { id: 'study-sets', icon: Folder, label: 'Study Sets', href: '/workspace' },
+    ]
   },
   {
     title: 'STUDY TOOLS',
@@ -143,7 +145,7 @@ export default function Sidebar({ user, activeView, onViewChange }) {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => onViewChange(item.id)}
+                      onClick={() => item.href ? router.push(item.href) : onViewChange(item.id)}
                       className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${
                         isActive
                           ? 'bg-[#f4f1ff] text-[#6c4cff]'
