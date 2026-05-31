@@ -31,6 +31,11 @@ export async function GET(req: NextRequest) {
         autoRefreshToken: false,
         detectSessionInUrl: false,
       },
+      global: {
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      },
     });
     
     console.log('Supabase client created');
@@ -45,11 +50,15 @@ export async function GET(req: NextRequest) {
     }
     
     // Get user profile
+    console.log('Fetching profile with query: SELECT * FROM profiles WHERE id =', user.id);
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
+    
+    console.log('Profile query result:', profile);
+    console.log('Profile query error:', profileError);
     
     if (profileError) {
       console.error('Profile fetch error:', profileError);
