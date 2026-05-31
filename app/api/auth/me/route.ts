@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,9 +53,10 @@ export async function GET(req: NextRequest) {
     
     if (profileError) {
       console.error('Profile fetch error:', profileError);
-      // Profile doesn't exist yet, create it
+      // Profile doesn't exist yet, create it using admin client
       console.log('Creating profile for user:', user.id);
-      const { error: insertError } = await supabase
+      const admin = supabaseAdmin();
+      const { error: insertError } = await admin
         .from('profiles')
         .insert({
           id: user.id,
@@ -65,6 +67,20 @@ export async function GET(req: NextRequest) {
       
       if (insertError) {
         console.error('Profile creation error:', insertError);
+      } else {
+        console.log('Profile created successfully');
+        // Fetch the newly created profile
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        return NextResponse.json({ 
+          user: {
+            ...user,
+            ...newProfile,
+          }
+        });
       }
     }
 
