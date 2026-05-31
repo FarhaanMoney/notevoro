@@ -189,66 +189,105 @@ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_usage ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for profiles
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 -- RLS Policies for notes
+DROP POLICY IF EXISTS "Users can view own notes" ON notes;
 CREATE POLICY "Users can view own notes" ON notes FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own notes" ON notes;
 CREATE POLICY "Users can insert own notes" ON notes FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own notes" ON notes;
 CREATE POLICY "Users can update own notes" ON notes FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own notes" ON notes;
 CREATE POLICY "Users can delete own notes" ON notes FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for flashcards
+DROP POLICY IF EXISTS "Users can view own flashcards" ON flashcards;
 CREATE POLICY "Users can view own flashcards" ON flashcards FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own flashcards" ON flashcards;
 CREATE POLICY "Users can insert own flashcards" ON flashcards FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own flashcards" ON flashcards;
 CREATE POLICY "Users can update own flashcards" ON flashcards FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own flashcards" ON flashcards;
 CREATE POLICY "Users can delete own flashcards" ON flashcards FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for quizzes
+DROP POLICY IF EXISTS "Users can view own quizzes" ON quizzes;
 CREATE POLICY "Users can view own quizzes" ON quizzes FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own quizzes" ON quizzes;
 CREATE POLICY "Users can insert own quizzes" ON quizzes FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own quizzes" ON quizzes;
 CREATE POLICY "Users can update own quizzes" ON quizzes FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own quizzes" ON quizzes;
 CREATE POLICY "Users can delete own quizzes" ON quizzes FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for quiz attempts
+DROP POLICY IF EXISTS "Users can view own quiz attempts" ON quiz_attempts;
 CREATE POLICY "Users can view own quiz attempts" ON quiz_attempts FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own quiz attempts" ON quiz_attempts;
 CREATE POLICY "Users can insert own quiz attempts" ON quiz_attempts FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own quiz attempts" ON quiz_attempts;
 CREATE POLICY "Users can update own quiz attempts" ON quiz_attempts FOR UPDATE USING (auth.uid() = user_id);
 
 -- RLS Policies for mock tests
+DROP POLICY IF EXISTS "Users can view own mock tests" ON mock_tests;
 CREATE POLICY "Users can view own mock tests" ON mock_tests FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own mock tests" ON mock_tests;
 CREATE POLICY "Users can insert own mock tests" ON mock_tests FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own mock tests" ON mock_tests;
 CREATE POLICY "Users can update own mock tests" ON mock_tests FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own mock tests" ON mock_tests;
 CREATE POLICY "Users can delete own mock tests" ON mock_tests FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for mock test attempts
+DROP POLICY IF EXISTS "Users can view own mock test attempts" ON mock_test_attempts;
 CREATE POLICY "Users can view own mock test attempts" ON mock_test_attempts FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own mock test attempts" ON mock_test_attempts;
 CREATE POLICY "Users can insert own mock test attempts" ON mock_test_attempts FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own mock test attempts" ON mock_test_attempts;
 CREATE POLICY "Users can update own mock test attempts" ON mock_test_attempts FOR UPDATE USING (auth.uid() = user_id);
 
 -- RLS Policies for chat history
+DROP POLICY IF EXISTS "Users can view own chat history" ON chat_history;
 CREATE POLICY "Users can view own chat history" ON chat_history FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own chat history" ON chat_history;
 CREATE POLICY "Users can insert own chat history" ON chat_history FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policies for visual learning
+DROP POLICY IF EXISTS "Users can view own visual learning" ON visual_learning;
 CREATE POLICY "Users can view own visual learning" ON visual_learning FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own visual learning" ON visual_learning;
 CREATE POLICY "Users can insert own visual learning" ON visual_learning FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own visual learning" ON visual_learning;
 CREATE POLICY "Users can update own visual learning" ON visual_learning FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own visual learning" ON visual_learning;
 CREATE POLICY "Users can delete own visual learning" ON visual_learning FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for user progress
+DROP POLICY IF EXISTS "Users can view own progress" ON user_progress;
 CREATE POLICY "Users can view own progress" ON user_progress FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own progress" ON user_progress;
 CREATE POLICY "Users can insert own progress" ON user_progress FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own progress" ON user_progress;
 CREATE POLICY "Users can update own progress" ON user_progress FOR UPDATE USING (auth.uid() = user_id);
 
 -- RLS Policies for subscriptions
+DROP POLICY IF EXISTS "Users can view own subscriptions" ON subscriptions;
 CREATE POLICY "Users can view own subscriptions" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own subscriptions" ON subscriptions;
 CREATE POLICY "Users can insert own subscriptions" ON subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own subscriptions" ON subscriptions;
 CREATE POLICY "Users can update own subscriptions" ON subscriptions FOR UPDATE USING (auth.uid() = user_id);
 
 -- RLS Policies for daily usage
+DROP POLICY IF EXISTS "Users can view own daily usage" ON daily_usage;
 CREATE POLICY "Users can view own daily usage" ON daily_usage FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own daily usage" ON daily_usage;
 CREATE POLICY "Users can insert own daily usage" ON daily_usage FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own daily usage" ON daily_usage;
 CREATE POLICY "Users can update own daily usage" ON daily_usage FOR UPDATE USING (auth.uid() = user_id);
 
 -- Function to automatically create profile on signup
