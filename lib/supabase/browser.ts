@@ -21,6 +21,11 @@ export function supabaseBrowser() {
     realtime: {
       params: { eventsPerSecond: 8 },
     },
+    global: {
+      headers: {
+        apikey: anon
+      }
+    }
   });
 
   return client;
