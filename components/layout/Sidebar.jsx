@@ -4,11 +4,12 @@ import { useRouter } from 'next/navigation';
 import { 
   Home, MessageSquare, NotebookPen, BookOpen, ClipboardList, 
   LayoutDashboard, Settings, Crown, Flame, Trophy,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Folder, Plus
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 const navigationGroups = [
   {
@@ -18,6 +19,10 @@ const navigationGroups = [
       { id: 'chat', icon: MessageSquare, label: 'AI Chat' },
       { id: 'notes', icon: NotebookPen, label: 'Smart Notes' },
     ]
+  },
+  {
+    title: 'STUDY SETS',
+    items: []
   },
   {
     title: 'STUDY TOOLS',
@@ -40,11 +45,34 @@ const navigationGroups = [
 export default function Sidebar({ user, activeView, onViewChange }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
 
   const plan = user?.plan || 'free';
   const isTrialActive = Boolean(user?.is_trial_active);
   const streak = user?.streak || 0;
   const xp = user?.xp || 0;
+
+  useEffect(() => {
+    loadWorkspaces();
+  }, []);
+
+  const loadWorkspaces = async () => {
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/workspaces', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaces(data.workspaces || []);
+      }
+    } catch (error) {
+      console.error('Failed to load workspaces:', error);
+    }
+  };
 
   return (
     <aside 
@@ -74,29 +102,64 @@ export default function Sidebar({ user, activeView, onViewChange }) {
               </div>
             )}
             <div className="space-y-1">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeView === item.id;
-                
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => onViewChange(item.id)}
-                    className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${
-                      isActive
-                        ? 'bg-[#f4f1ff] text-[#6c4cff]'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                    title={collapsed ? item.label : ''}
-                  >
-                    {isActive && !collapsed && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#6c4cff] rounded-r-full" />
-                    )}
-                    <Icon className={`h-4 w-4 shrink-0 ${collapsed ? 'mx-auto' : ''}`} />
-                    {!collapsed && <span className="ml-3">{item.label}</span>}
-                  </button>
-                );
-              })}
+              {group.title === 'WORKSPACES' ? (
+                <>
+                  {workspaces.map((workspace) => (
+                    <button
+                      key={workspace.id}
+                      onClick={() => router.push(`/workspace/${workspace.id}`)}
+                      className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${
+                        activeView === `workspace-${workspace.id}`
+                          ? 'bg-[#f4f1ff] text-[#6c4cff]'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
+                      title={collapsed ? workspace.title : ''}
+                    >
+                      {activeView === `workspace-${workspace.id}` && !collapsed && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#6c4cff] rounded-r-full" />
+                      )}
+                      <div 
+                        className={`h-4 w-4 rounded shrink-0 ${collapsed ? 'mx-auto' : ''}`}
+                        style={{ backgroundColor: workspace.color || '#8b5cf6' }}
+                      />
+                      {!collapsed && <span className="ml-3 truncate">{workspace.title}</span>}
+                    </button>
+                  ))}
+                  {!collapsed && (
+                    <button
+                      onClick={() => router.push('/workspace')}
+                      className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+                    >
+                      <Plus className="h-4 w-4 shrink-0" />
+                      <span className="ml-3">New Study Set</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeView === item.id;
+                  
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => onViewChange(item.id)}
+                      className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${
+                        isActive
+                          ? 'bg-[#f4f1ff] text-[#6c4cff]'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
+                      title={collapsed ? item.label : ''}
+                    >
+                      {isActive && !collapsed && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#6c4cff] rounded-r-full" />
+                      )}
+                      <Icon className={`h-4 w-4 shrink-0 ${collapsed ? 'mx-auto' : ''}`} />
+                      {!collapsed && <span className="ml-3">{item.label}</span>}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         ))}

@@ -135,19 +135,19 @@ export default function WorkspaceListPage({ user }) {
         <div className="border-b border-gray-200 px-8 py-6 bg-white">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-page-title text-gray-900">Workspaces</h1>
+              <h1 className="text-page-title text-gray-900">Study Sets</h1>
               <p className="text-body text-gray-500 mt-1">Organize your study materials into projects.</p>
             </div>
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Workspace
+                  Create Study Set
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle>Create Workspace</DialogTitle>
+                  <DialogTitle>Create Study Set</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div>
@@ -215,7 +215,7 @@ export default function WorkspaceListPage({ user }) {
                   )}
                   <Button onClick={handleCreateWorkspace} disabled={isCreating} className="w-full">
                     {isCreating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isCreating ? 'Creating...' : 'Create Workspace'}
+                    {isCreating ? 'Creating...' : 'Create Study Set'}
                   </Button>
                 </div>
               </DialogContent>
@@ -229,12 +229,12 @@ export default function WorkspaceListPage({ user }) {
             <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
               <Folder className="h-10 w-10 text-purple-500" />
             </div>
-            <h2 className="text-section-title text-gray-900 mb-3">Create Your First Workspace</h2>
+            <h2 className="text-section-title text-gray-900 mb-3">Create Your First Study Set</h2>
             <p className="text-body text-gray-500 mb-8">
               Organize your notes, flashcards, quizzes, and files into study projects.
             </p>
             <Button size="lg" onClick={() => setIsModalOpen(true)}>
-              Create Workspace
+              Create Study Set
             </Button>
           </div>
         </div>
@@ -248,19 +248,19 @@ export default function WorkspaceListPage({ user }) {
       <div className="border-b border-gray-200 px-8 py-6 bg-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-page-title text-gray-900">Workspaces</h1>
+            <h1 className="text-page-title text-gray-900">Study Sets</h1>
             <p className="text-body text-gray-500 mt-1">Organize your study materials into projects.</p>
           </div>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Workspace
+                Create Study Set
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Create Workspace</DialogTitle>
+                <DialogTitle>Create Study Set</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
@@ -282,7 +282,7 @@ export default function WorkspaceListPage({ user }) {
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Description</label>
                   <Textarea
-                    placeholder="What's this workspace about?"
+                    placeholder="What's this study set about?"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}

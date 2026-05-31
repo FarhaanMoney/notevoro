@@ -520,7 +520,7 @@ export default function WorkspaceDetailPage({ user }) {
                   </div>
                   <Button onClick={handleCreateFile} disabled={isGenerating || !uploadedFile} className="w-full">
                     {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Adding...' : 'Add to Workspace'}
+                    {isGenerating ? 'Adding...' : 'Add to Study Set'}
                   </Button>
                 </div>
               </DialogContent>
@@ -612,7 +612,7 @@ export default function WorkspaceDetailPage({ user }) {
                   No {tabs.find(t => t.id === activeTab)?.label} Yet
                 </h2>
                 <p className="text-body text-gray-500 mb-8">
-                  {activeTab === 'notes' && 'Create your first note in this workspace.'}
+                  {activeTab === 'notes' && 'Create your first note in this study set.'}
                   {activeTab === 'flashcards' && 'Generate flashcards from your notes or files.'}
                   {activeTab === 'quizzes' && 'Create a quiz to test your knowledge.'}
                   {activeTab === 'files' && 'Upload files to generate study materials.'}

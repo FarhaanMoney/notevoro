@@ -342,7 +342,7 @@ export default function FlashcardsPage({ user }) {
           </div>
           {workspaces.length > 0 && (
             <div className="mt-4">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Workspace</label>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Study Set</label>
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setSelectedWorkspace(null)}
@@ -485,7 +485,7 @@ export default function FlashcardsPage({ user }) {
           </div>
           {workspaces.length > 0 && (
             <div className="mt-4">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Workspace</label>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Study Set</label>
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setSelectedWorkspace(null)}

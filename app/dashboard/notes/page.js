@@ -244,7 +244,7 @@ export default function NotesPage({ user }) {
           </div>
           {workspaces.length > 0 && (
             <div className="mt-4">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Workspace</label>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Study Set</label>
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setSelectedWorkspace(null)}
@@ -442,7 +442,11 @@ export default function NotesPage({ user }) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {notes.map((note) => (
-                <Card key={note.id} className="premium-card p-6 cursor-pointer hover:shadow-lg">
+                <Card 
+                  key={note.id} 
+                  className="premium-card p-6 cursor-pointer hover:shadow-lg"
+                  onClick={() => router.push(`/dashboard/notes/${note.id}`)}
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
                       <FileText className="h-6 w-6 text-white" />
