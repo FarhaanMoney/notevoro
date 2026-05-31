@@ -1,5 +1,5 @@
 import { generateOnboardingLinkToken } from '../../../../lib/onboarding/onboardingManager.js';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export const dynamic = "force-dynamic";
@@ -13,26 +13,20 @@ export async function POST(request) {
 
     const body = await request.json();
     const whatsappNumber = body?.whatsappNumber?.trim();
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
 
     console.log('Onboarding WhatsApp link request:', {
-      hasToken: !!token,
       whatsappNumber: whatsappNumber ? 'provided' : 'default',
       timestamp: new Date().toISOString()
     });
 
-    if (!token) {
-      return NextResponse.json({ error: 'Missing auth token' }, { status: 401 });
-    }
-
-    const sb = supabaseAdmin();
-    const { data: authUser, error: authError } = await sb.auth.getUser(token);
-    if (authError || !authUser?.user) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       console.error('Onboarding WhatsApp auth failed:', authError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authUser.user.id;
+    const userId = user.id;
     if (!userId) {
       return NextResponse.json({ error: 'Could not resolve user from auth token' }, { status: 401 });
     }

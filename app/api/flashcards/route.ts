@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
 export const dynamic = "force-dynamic";
@@ -19,34 +19,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Topic, note ID, or file is required' }, { status: 400 });
     }
 
-    // Extract token from Authorization header
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    console.log('Token extracted:', token ? 'yes' : 'no');
-    
-    if (!token) {
-      console.log('No token found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (!url || !anon) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-    
-    const supabase = createClient(url, anon, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+    const supabase = await createClient();
     
     console.log('Supabase client created');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     console.log('User:', user);
     console.log('Auth error:', authError);
     
@@ -144,34 +121,11 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     console.log('Flashcards GET route hit');
-    // Extract token from Authorization header
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    console.log('Token extracted:', token ? 'yes' : 'no');
-    
-    if (!token) {
-      console.log('No token found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (!url || !anon) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-    
-    const supabase = createClient(url, anon, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+    const supabase = await createClient();
     
     console.log('Supabase client created');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     console.log('User:', user);
     console.log('Auth error:', authError);
     
@@ -202,34 +156,11 @@ export async function PATCH(req: NextRequest) {
     console.log('Flashcards PATCH route hit');
     const { flashcardId, isCorrect } = await req.json();
 
-    // Extract token from Authorization header
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    console.log('Token extracted:', token ? 'yes' : 'no');
-    
-    if (!token) {
-      console.log('No token found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (!url || !anon) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-    
-    const supabase = createClient(url, anon, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+    const supabase = await createClient();
     
     console.log('Supabase client created');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     console.log('User:', user);
     console.log('Auth error:', authError);
     

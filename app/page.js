@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Upload, Sparkles, FileText, CheckCircle, Play, ArrowRight, Menu, X } from 'lucide-react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -14,10 +14,10 @@ export default function LandingPage() {
   const [demoActive, setDemoActive] = useState(false);
 
   useEffect(() => {
-    const sb = supabaseBrowser();
+    const supabase = createClient();
     
-    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-      if (session?.access_token) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
         router.replace('/dashboard');
       }
     });
@@ -34,11 +34,11 @@ export default function LandingPage() {
   }, [router]);
 
   const handleGetStarted = () => {
-    router.push('/auth');
+    router.push('/login');
   };
 
   const handleLogin = () => {
-    router.push('/auth');
+    router.push('/login');
   };
 
   const runDemo = () => {
