@@ -104,33 +104,32 @@ function App() {
 
   async function refreshUser(t = token) {
     try {
-      // Get current session to ensure we have a valid token
       const sb = supabaseBrowser();
       const { data: { session } } = await sb.auth.getSession();
       
-      if (!session?.access_token) {
+      if (!session) {
         logout();
         return null;
       }
       
-      const r = await fetch('/api/auth/me', { 
-        headers: { Authorization: `Bearer ${session.access_token}` } 
-      });
+      const { data: profile } = await sb
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
       
-      if (r.status === 401) {
+      if (!profile) {
         logout();
         return null;
       }
       
-      if (!r.ok) return null;
-      const d = await r.json();
-      const isOnboardingComplete = d.user?.personalization?.onboarding_completed || d.user?.onboardingStep === 'completed' || Boolean(d.user?.onboardingCompletedAt);
+      const isOnboardingComplete = profile?.personalization?.onboarding_completed || profile?.onboardingStep === 'completed' || Boolean(profile?.onboardingCompletedAt);
       if (!isOnboardingComplete) {
         router.replace('/onboarding');
         return null;
       }
-      setUser(d.user);
-      return d.user;
+      setUser({ ...session.user, ...profile });
+      return { ...session.user, ...profile };
     } catch { return null; }
   }
 
@@ -2049,7 +2048,7 @@ function UpgradeModal({ open, onOpenChange, router }) {
               try {
                 const sb = supabaseBrowser();
                 const { data: { session } } = await sb.auth.getSession();
-                if (!session?.access_token) { toast.error('Please log in to start the trial'); router.push('/auth'); return; }
+                if (!session?.access_token) { toast.error('Please log in to start the trial'); router.push('/login'); return; }
                 const r = await fetch('/api/subscription/start-trial', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },

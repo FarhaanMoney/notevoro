@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import OnboardingShell from '@/components/onboarding/OnboardingShell';
 import QuestionCard from '@/components/onboarding/QuestionCard';
 import { Button } from '@/components/ui/button';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
 const QUESTIONS = [
@@ -36,17 +36,39 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
-      if (!session) return router.replace('/auth');
-      const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${session.access_token}` } });
-      if (r.status === 401) return router.replace('/auth');
-      const d = await r.json();
-      const done = d.user?.personalization?.onboarding_completed || d.user?.onboardingStep === 'completed' || Boolean(d.user?.onboardingCompletedAt);
-      if (done) router.replace('/dashboard');
-    })();
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.replace('/login');
+        return;
+      }
+
+      setUser(session.user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      setProfile(profile);
+
+      const isOnboardingComplete = profile?.personalization?.onboarding_completed || 
+                                   profile?.onboardingStep === 'completed' || 
+                                   Boolean(profile?.onboardingCompletedAt);
+
+      if (isOnboardingComplete) {
+        router.replace('/dashboard');
+      }
+    };
+
+    checkAuth();
   }, [router]);
 
   const handleSelect = (qid, value) => {
@@ -56,7 +78,8 @@ export default function OnboardingPage() {
   const completeOnboarding = async (startTrial = false) => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
       
       let personalizationData = { 
@@ -65,18 +88,18 @@ export default function OnboardingPage() {
         onboarding_completed_at: new Date().toISOString() 
       };
 
-      const res = await fetch('/api/user/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ personalization: personalizationData })
-      });
-      if (!res.ok) throw new Error('Failed to save');
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ personalization: personalizationData })
+        .eq('id', session.user.id);
+
+      if (updateError) throw new Error('Failed to save');
 
       if (startTrial) {
         try {
           const trialRes = await fetch('/api/subscription/start-trial', {
             method: 'POST',
-            headers: { 'Content-Type':'application/json', Authorization: `Bearer ${session.access_token}` },
+            headers: { 'Content-Type':'application/json' },
             body: JSON.stringify({ trial_days: 7 })
           });
           const trialData = await trialRes.json();

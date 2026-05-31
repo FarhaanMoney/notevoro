@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import VisualLearningStudio from '@/components/visual-learning/VisualLearningStudio';
 import { Loader2 } from 'lucide-react';
 
@@ -12,28 +12,32 @@ export default function VisualExplanationPage() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    supabaseBrowser()
-      .auth.getSession()
-      .then(({ data }) => {
-        const session = data?.session;
-        if (!session?.access_token) {
-          router.replace('/auth');
+    const checkAuth = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          router.replace('/login');
           return;
         }
-        return fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((json) => {
-            if (!json?.user) {
-              router.replace('/auth');
-              return;
-            }
-            setUser(json.user);
-          });
-      })
-      .catch(() => router.replace('/auth'))
-      .finally(() => setLoading(false));
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        setUser({ ...session.user, ...profile });
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        router.replace('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, [router]);
 
   if (loading) {

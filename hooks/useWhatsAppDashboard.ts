@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import { useWhatsAppRealtime } from './useWhatsAppRealtime';
 import { toast } from 'sonner';
 
@@ -36,15 +36,9 @@ export function useWhatsAppDashboard() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const [error, setError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
 
-  const authHeaders = useCallback(
-    (accessToken: string) => ({ Authorization: `Bearer ${accessToken}` }),
-    []
-  );
-
-  const loadStatus = useCallback(async (accessToken: string) => {
-    const res = await fetch('/api/whatsapp/status', { headers: authHeaders(accessToken) });
+  const loadStatus = useCallback(async () => {
+    const res = await fetch('/api/whatsapp/status');
     const data = await res.json();
     if (!res.ok || !data?.success) {
       throw new Error(data?.error || 'Unable to load WhatsApp status');
@@ -52,27 +46,26 @@ export function useWhatsAppDashboard() {
     setStatus(data.status);
     setVerified(Boolean(data.verified));
     setError(null);
-  }, [authHeaders]);
+  }, []);
 
-  const loadMessages = useCallback(async (accessToken: string) => {
-    const res = await fetch('/api/whatsapp/messages', { headers: authHeaders(accessToken) });
+  const loadMessages = useCallback(async () => {
+    const res = await fetch('/api/whatsapp/messages');
     const data = await res.json();
     if (res.ok && data?.messages) {
       setMessages(data.messages);
     }
-  }, [authHeaders]);
+  }, []);
 
   const refresh = useCallback(async () => {
-    if (!token) return;
     try {
-      await loadStatus(token);
-      await loadMessages(token);
+      await loadStatus();
+      await loadMessages();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Refresh failed';
       setError(message);
       toast.error(message);
     }
-  }, [token, loadStatus, loadMessages]);
+  }, [loadStatus, loadMessages]);
 
   useWhatsAppRealtime((user?.id as string) || null, {
     onConnectionChange: refresh,
@@ -85,29 +78,25 @@ export function useWhatsAppDashboard() {
 
     async function init() {
       try {
-        const sb = supabaseBrowser();
-        const { data: { session } } = await sb.auth.getSession();
-        if (!session?.access_token) {
-          router.replace('/auth');
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.replace('/login');
           return;
         }
 
         if (cancelled) return;
-        setToken(session.access_token);
 
-        const profileRes = await fetch('/api/auth/me', {
-          headers: authHeaders(session.access_token),
-        });
-        const profileJson = await profileRes.json();
-        if (!profileJson?.user) {
-          router.replace('/auth');
-          return;
-        }
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
 
         if (cancelled) return;
-        setUser(profileJson.user);
-        await loadStatus(session.access_token);
-        await loadMessages(session.access_token);
+        setUser({ ...session.user, ...profile });
+        await loadStatus();
+        await loadMessages();
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to initialize dashboard';
         setError(message);
@@ -121,16 +110,15 @@ export function useWhatsAppDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [router, authHeaders, loadStatus, loadMessages]);
+  }, [router, loadStatus, loadMessages]);
 
   const connect = useCallback(async () => {
-    if (!token) return;
     setConnecting(true);
     setError(null);
     try {
       const res = await fetch('/api/whatsapp/connect', {
         method: 'POST',
-        headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'auto' }),
       });
       const data = await res.json();
@@ -162,15 +150,13 @@ export function useWhatsAppDashboard() {
     } finally {
       setConnecting(false);
     }
-  }, [token, authHeaders, refresh]);
+  }, [refresh]);
 
   const disconnect = useCallback(async () => {
-    if (!token) return;
     setDisconnecting(true);
     try {
       const res = await fetch('/api/whatsapp/disconnect', {
         method: 'POST',
-        headers: authHeaders(token),
       });
       const data = await res.json();
       if (!res.ok || !data?.success) {
@@ -184,7 +170,7 @@ export function useWhatsAppDashboard() {
     } finally {
       setDisconnecting(false);
     }
-  }, [token, authHeaders, refresh]);
+  }, [refresh]);
 
   return {
     user,

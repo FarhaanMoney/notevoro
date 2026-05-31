@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { PLAN_BADGE_COLORS, canUseWhatsApp } from '@/lib/plans';
 import { 
@@ -51,21 +51,23 @@ export default function WhatsAppDashboard() {
 
   const fetchUserAndStatus = async () => {
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/auth');
+        router.push('/login');
         return;
       }
 
-      const [userRes, statusRes] = await Promise.all([
-        fetch('/api/auth/me', { headers: { Authorization: `Bearer ${session.access_token}` } }),
-        fetch('/api/whatsapp/status', { headers: { Authorization: `Bearer ${session.access_token}` } })
-      ]);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
 
-      const userData = await userRes.json();
+      setUser({ ...session.user, ...profile });
+
+      const statusRes = await fetch('/api/whatsapp/status');
       const statusData = await statusRes.json().catch(() => null);
-
-      setUser(userData.user);
 
       if (!statusRes.ok) {
         console.error('WhatsApp status API error:', statusRes.status, statusData);
@@ -90,10 +92,9 @@ export default function WhatsAppDashboard() {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
       const res = await fetch('/api/onboarding/link-whatsapp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       });
       const data = await res.json();
@@ -116,10 +117,8 @@ export default function WhatsAppDashboard() {
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
       const res = await fetch('/api/whatsapp/disconnect', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` }
       });
 
       if (res.ok) {
@@ -165,10 +164,8 @@ export default function WhatsAppDashboard() {
 
   const handleSendTestMessage = async () => {
     try {
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
       const res = await fetch('/api/whatsapp/test', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` }
       });
 
       if (res.ok) {

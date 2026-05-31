@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from 'sonner';
 import { PLAN_ENERGY, PLAN_FEATURES, PLAN_PRICES, PLAN_BADGE_COLORS } from '@/lib/plans';
 import { Coins, Crown, Zap, BookOpen, Sparkles, Check, ArrowLeft } from 'lucide-react';
-import { supabaseBrowser } from '@/lib/supabase/browser';
+import { createClient } from '@/lib/supabase/client';
 
 export default function PremiumPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -24,13 +25,18 @@ export default function PremiumPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabaseBrowser().auth.getSession();
-        if (session?.access_token) {
-          const response = await fetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${session.access_token}` }
-          });
-          const data = await response.json();
-          setUser(data.user);
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          setUser({ ...session.user, ...profile });
+          setProfile(profile);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -90,7 +96,7 @@ export default function PremiumPage() {
     if (!user) {
       console.log('No user found, redirecting to auth');
       toast.error('Please log in to upgrade');
-      router.push('/auth');
+      router.push('/login');
       return;
     }
 
@@ -101,12 +107,12 @@ export default function PremiumPage() {
     }
 
     try {
-      // Get current session token
-      const { data: { session } } = await supabaseBrowser().auth.getSession();
-      if (!session?.access_token) {
-        console.error('No session token found');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No session found');
         toast.error('Please log in to continue');
-        router.push('/auth');
+        router.push('/login');
         return;
       }
 
@@ -116,7 +122,6 @@ export default function PremiumPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ plan: planId })
       });
@@ -242,7 +247,7 @@ export default function PremiumPage() {
                     </Badge>
                   </>
                 ) : (
-                  <Button onClick={() => router.push('/auth')} className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                  <Button onClick={() => router.push('/login')} className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
                     Sign In
                   </Button>
                 )}
