@@ -31,11 +31,6 @@ export async function GET(req: NextRequest) {
         autoRefreshToken: false,
         detectSessionInUrl: false,
       },
-      global: {
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      },
     });
     
     console.log('Supabase client created');
@@ -49,9 +44,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized', details: authError?.message }, { status: 401 });
     }
     
-    // Get user profile
-    console.log('Fetching profile with query: SELECT * FROM profiles WHERE id =', user.id);
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile using admin client to bypass RLS
+    console.log('Fetching profile with admin client (bypasses RLS)');
+    const admin = supabaseAdmin();
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('*')
       .eq('id', user.id)
@@ -64,7 +60,6 @@ export async function GET(req: NextRequest) {
       console.error('Profile fetch error:', profileError);
       // Profile doesn't exist yet, create it using admin client
       console.log('Creating profile for user:', user.id);
-      const admin = supabaseAdmin();
       const { error: insertError } = await admin
         .from('profiles')
         .insert({
@@ -94,7 +89,7 @@ export async function GET(req: NextRequest) {
       } else {
         console.log('Profile created successfully');
         // Fetch the newly created profile
-        const { data: newProfile } = await supabase
+        const { data: newProfile } = await admin
           .from('profiles')
           .select('*')
           .eq('id', user.id)
@@ -109,12 +104,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Also ensure user record exists in users table
-    const admin = supabaseAdmin();
     const { data: existingUser, error: userCheckError } = await admin
       .from('users')
       .select('id')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     
     if (userCheckError || !existingUser) {
       console.log('User record missing in users table, creating it');
