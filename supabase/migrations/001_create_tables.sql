@@ -255,13 +255,65 @@ CREATE POLICY "Users can update own daily usage" ON daily_usage FOR UPDATE USING
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Create profile record
   INSERT INTO public.profiles (id, email, full_name, avatar_url)
   VALUES (
     NEW.id,
     NEW.email,
     NEW.raw_user_meta_data->>'full_name',
     NEW.raw_user_meta_data->>'avatar_url'
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
+  
+  -- Create user record with trial
+  INSERT INTO public.users (
+    id,
+    email,
+    name,
+    avatar,
+    xp,
+    streak,
+    last_active,
+    plan,
+    ai_energy,
+    ai_energy_max,
+    last_energy_regeneration,
+    last_reset_date,
+    trial_start,
+    is_trial_active,
+    daily_reward_date,
+    weekly_reward_claimed,
+    subscription_status,
+    quizzes_taken,
+    correct_answers,
+    total_questions,
+    personalization
+  )
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    NEW.raw_user_meta_data->>'avatar_url',
+    0,
+    0,
+    NOW(),
+    'pro',
+    250,
+    250,
+    NOW(),
+    NOW()::date,
+    NOW(),
+    true,
+    NULL,
+    false,
+    'inactive',
+    0,
+    0,
+    0,
+    NEW.raw_user_meta_data
+  )
+  ON CONFLICT (id) DO NOTHING;
+  
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

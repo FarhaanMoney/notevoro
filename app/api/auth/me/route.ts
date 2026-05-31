@@ -99,6 +99,50 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Also ensure user record exists in users table
+    const admin = supabaseAdmin();
+    const { data: existingUser, error: userCheckError } = await admin
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+    
+    if (userCheckError || !existingUser) {
+      console.log('User record missing in users table, creating it');
+      const now = new Date().toISOString();
+      const { error: userInsertError } = await admin
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0],
+          avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+          xp: 0,
+          streak: 0,
+          last_active: now,
+          plan: 'pro',
+          ai_energy: 250,
+          ai_energy_max: 250,
+          last_energy_regeneration: now,
+          last_reset_date: now.slice(0, 10),
+          trial_start: now,
+          is_trial_active: true,
+          daily_reward_date: null,
+          weekly_reward_claimed: false,
+          subscription_status: 'inactive',
+          quizzes_taken: 0,
+          correct_answers: 0,
+          total_questions: 0,
+          personalization: user.user_metadata || {},
+        });
+      
+      if (userInsertError) {
+        console.error('User record creation error:', userInsertError);
+      } else {
+        console.log('User record created successfully');
+      }
+    }
+
     console.log('User authenticated in auth/me:', user.id, user.email);
 
     return NextResponse.json({ 
