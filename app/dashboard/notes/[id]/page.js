@@ -20,10 +20,10 @@ import { createClient } from '@/lib/supabase/client';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
-import Underline from '@tiptap/extension-underline';
-import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
-import Table from '@tiptap/extension-table';
+import UnderlineExtension from '@tiptap/extension-underline';
+import LinkExtension from '@tiptap/extension-link';
+import ImageExtension from '@tiptap/extension-image';
+import TableExtension from '@tiptap/extension-table';
 
 export default function NotesEditorPage({ user }) {
   const params = useParams();
@@ -57,10 +57,10 @@ export default function NotesEditorPage({ user }) {
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
-      Underline,
-      Link,
-      Image,
-      Table,
+      UnderlineExtension,
+      LinkExtension,
+      ImageExtension,
+      TableExtension,
     ],
     content: '',
     onUpdate: ({ editor }) => {
