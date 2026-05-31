@@ -67,6 +67,21 @@ export async function GET(req: NextRequest) {
       
       if (insertError) {
         console.error('Profile creation error:', insertError);
+        if (insertError.code === '23505') {
+          // Profile already exists, fetch it with admin client
+          console.log('Profile already exists, fetching with admin client');
+          const { data: existingProfile } = await admin
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          return NextResponse.json({ 
+            user: {
+              ...user,
+              ...existingProfile,
+            }
+          });
+        }
       } else {
         console.log('Profile created successfully');
         // Fetch the newly created profile
