@@ -13,33 +13,33 @@ import { createClient } from '@/lib/supabase/client';
 
 const navigationGroups = [
   {
-    title: 'WORKSPACE',
-    items: [
-      { id: 'home', icon: Home, label: 'Home' },
-      { id: 'chat', icon: MessageSquare, label: 'AI Chat' },
-      { id: 'notes', icon: NotebookPen, label: 'Smart Notes' },
-    ]
-  },
-  {
-    title: 'STUDY SETS',
+    title: 'WORKSPACES',
     items: [
       { id: 'study-sets', icon: Folder, label: 'Study Sets', href: '/workspace' },
     ]
   },
   {
-    title: 'STUDY TOOLS',
+    title: 'LEARNING TOOLS',
     items: [
-      { id: 'flashcards', icon: BookOpen, label: 'Flashcards' },
-      { id: 'quizzes', icon: ClipboardList, label: 'Quizzes' },
-      { id: 'mock-tests', icon: ClipboardList, label: 'Mock Tests' },
-      { id: 'visual-learning', icon: LayoutDashboard, label: 'Visual Learning' },
+      { id: 'notes', icon: NotebookPen, label: 'Smart Notes', href: '/dashboard/notes' },
+      { id: 'flashcards', icon: BookOpen, label: 'Flashcards', href: '/dashboard/flashcards' },
+      { id: 'quizzes', icon: ClipboardList, label: 'Quizzes', href: '/dashboard/quizzes' },
+      { id: 'mock-tests', icon: ClipboardList, label: 'Mock Tests', href: '/dashboard/mock-tests' },
+      { id: 'study-plan', icon: LayoutDashboard, label: 'Study Plan', href: '/dashboard/study-plan' },
+    ]
+  },
+  {
+    title: 'AI',
+    items: [
+      { id: 'chat', icon: MessageSquare, label: 'AI Chat', href: '/dashboard/chat' },
+      { id: 'whatsapp', icon: MessageSquare, label: 'WhatsApp AI', href: '/dashboard/whatsapp' },
     ]
   },
   {
     title: 'ACCOUNT',
     items: [
-      { id: 'progress', icon: Trophy, label: 'Progress' },
-      { id: 'settings', icon: Settings, label: 'Settings' },
+      { id: 'progress', icon: Trophy, label: 'Progress', href: '/dashboard/progress' },
+      { id: 'settings', icon: Settings, label: 'Settings', href: '/dashboard/settings' },
     ]
   },
 ];

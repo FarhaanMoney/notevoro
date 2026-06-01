@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Folder, ArrowLeft, Plus, FileText, BookOpen, ClipboardList, Upload, BarChart3, MessageSquare, Loader2, Clock } from 'lucide-react';
+import { Folder, ArrowLeft, Plus, FileText, BookOpen, ClipboardList, Upload, BarChart3, MessageSquare, Loader2, Clock, Sparkles, TrendingUp, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const tabs = [
@@ -388,147 +388,84 @@ export default function WorkspaceDetailPage({ user }) {
               )}
             </div>
           </div>
-          {activeTab === 'notes' && (
-            <Dialog open={isNoteModalOpen} onOpenChange={setIsNoteModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Note
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create Note</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                    <Input
-                      placeholder="Enter a topic..."
-                      value={noteTopic}
-                      onChange={(e) => setNoteTopic(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Or paste text</label>
-                    <Textarea
-                      placeholder="Paste your text here..."
-                      value={noteText}
-                      onChange={(e) => setNoteText(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                  <Button onClick={handleCreateNote} disabled={isGenerating} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Generating...' : 'Generate Note'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-          {activeTab === 'flashcards' && (
-            <Dialog open={isFlashcardModalOpen} onOpenChange={setIsFlashcardModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Generate Flashcards
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Generate Flashcards</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                    <Input
-                      placeholder="Enter a topic..."
-                      value={flashcardTopic}
-                      onChange={(e) => setFlashcardTopic(e.target.value)}
-                    />
-                  </div>
-                  <Button onClick={handleCreateFlashcard} disabled={isGenerating} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Generating...' : 'Generate Flashcards'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-          {activeTab === 'quizzes' && (
-            <Dialog open={isQuizModalOpen} onOpenChange={setIsQuizModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Quiz
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create Quiz</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                    <Input
-                      placeholder="Enter a topic..."
-                      value={quizTopic}
-                      onChange={(e) => setQuizTopic(e.target.value)}
-                    />
-                  </div>
-                  <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Generating...' : 'Generate Quiz'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-          {activeTab === 'files' && (
-            <Dialog open={isFileModalOpen} onOpenChange={setIsFileModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Upload File
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Upload File</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">File</label>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx,.ppt,.pptx"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                    />
-                    {isUploading && (
-                      <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Uploading...
-                      </p>
-                    )}
-                    {uploadedFile && (
-                      <p className="text-sm text-green-600 mt-2">
-                        ✓ {uploadedFile.name} uploaded
-                      </p>
-                    )}
-                  </div>
-                  <Button onClick={handleCreateFile} disabled={isGenerating || !uploadedFile} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Adding...' : 'Add to Study Set'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Progress</p>
+              <p className="text-lg font-semibold text-gray-900">32%</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Last Studied</p>
+              <p className="text-sm font-medium text-gray-900">2 hours ago</p>
+            </div>
+            <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Assistant
+            </Button>
+          </div>
         </div>
 
-        {/* Tabs */}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{resources.notes.length}</p>
+                <p className="text-sm text-gray-500">Notes</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
+                <BookOpen className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{resources.flashcards.length}</p>
+                <p className="text-sm text-gray-500">Flashcards</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
+                <ClipboardList className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{resources.quizzes.length}</p>
+                <p className="text-sm text-gray-500">Quizzes</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
+                <Upload className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{resources.files.length}</p>
+                <p className="text-sm text-gray-500">Files</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                <Clock className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">4.5h</p>
+                <p className="text-sm text-gray-500">Study Time</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 px-8 bg-white">
         <div className="flex gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -536,10 +473,10 @@ export default function WorkspaceDetailPage({ user }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all ${
                   activeTab === tab.id
-                    ? 'bg-black text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-purple-50 text-purple-700 font-medium'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -554,116 +491,235 @@ export default function WorkspaceDetailPage({ user }) {
       <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           {activeTab === 'insights' ? (
-            /* Insights Tab */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="premium-card p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                    <FileText className="h-5 w-5 text-white" />
+            /* Insights Tab - Show recent activity */
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h2>
+              <div className="space-y-4">
+                <Card className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Generated 30 flashcards</p>
+                      <p className="text-sm text-gray-500">2 hours ago</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Notes</p>
-                    <p className="text-2xl font-bold text-gray-900">{resources.notes.length}</p>
+                </Card>
+                <Card className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <ClipboardList className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Completed Quiz 4</p>
+                      <p className="text-sm text-gray-500">Score: 85% • 3 hours ago</p>
+                    </div>
                   </div>
-                </div>
-              </Card>
-              <Card className="premium-card p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
-                    <BookOpen className="h-5 w-5 text-white" />
+                </Card>
+                <Card className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Upload className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Uploaded Economics.pdf</p>
+                      <p className="text-sm text-gray-500">5 hours ago</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Flashcards</p>
-                    <p className="text-2xl font-bold text-gray-900">{resources.flashcards.length}</p>
+                </Card>
+                <Card className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                      <Sparkles className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">AI updated notes</p>
+                      <p className="text-sm text-gray-500">Yesterday</p>
+                    </div>
                   </div>
-                </div>
-              </Card>
-              <Card className="premium-card p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
-                    <ClipboardList className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Quizzes</p>
-                    <p className="text-2xl font-bold text-gray-900">{resources.quizzes.length}</p>
-                  </div>
-                </div>
-              </Card>
-              <Card className="premium-card p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
-                    <Upload className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Files</p>
-                    <p className="text-2xl font-bold text-gray-900">{resources.files.length}</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          ) : !hasResources ? (
-            /* Empty State */
-            <div className="flex items-center justify-center py-16">
-              <div className="text-center max-w-md">
-                <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
-                  <ActiveIcon className="h-10 w-10 text-gray-400" />
-                </div>
-                <h2 className="text-section-title text-gray-900 mb-3">
-                  No {tabs.find(t => t.id === activeTab)?.label} Yet
-                </h2>
-                <p className="text-body text-gray-500 mb-8">
-                  {activeTab === 'notes' && 'Create your first note in this study set.'}
-                  {activeTab === 'flashcards' && 'Generate flashcards from your notes or files.'}
-                  {activeTab === 'quizzes' && 'Create a quiz to test your knowledge.'}
-                  {activeTab === 'files' && 'Upload files to generate study materials.'}
-                  {activeTab === 'insights' && 'Complete some activities to see insights.'}
-                </p>
-                {activeTab === 'notes' && (
-                  <Button size="lg" onClick={() => setIsNoteModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Note
-                  </Button>
-                )}
-                {activeTab === 'flashcards' && (
-                  <Button size="lg" onClick={() => setIsFlashcardModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Generate Flashcards
-                  </Button>
-                )}
-                {activeTab === 'quizzes' && (
-                  <Button size="lg" onClick={() => setIsQuizModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Quiz
-                  </Button>
-                )}
-                {activeTab === 'files' && (
-                  <Button size="lg" onClick={() => setIsFileModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Upload File
-                  </Button>
-                )}
+                </Card>
               </div>
             </div>
           ) : (
-            /* Resource List */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {resources[activeTab].map((resource) => (
-                <Card key={resource.id} className="premium-card p-6 cursor-pointer hover:shadow-lg">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                      <ActiveIcon className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(resource.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <h3 className="text-card-title text-gray-900 mb-2">{resource.title || resource.topic || resource.filename}</h3>
-                  {resource.summary && (
-                    <p className="text-body text-gray-500 line-clamp-3">{resource.summary}</p>
-                  )}
+            /* Other tabs - show existing content with create buttons */
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 capitalize">{activeTab}</h2>
+                {activeTab === 'notes' && (
+                  <Dialog open={isNoteModalOpen} onOpenChange={setIsNoteModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Note
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Create Note</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+                          <Input
+                            placeholder="Enter a topic..."
+                            value={noteTopic}
+                            onChange={(e) => setNoteTopic(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Or paste text</label>
+                          <Textarea
+                            placeholder="Paste your text here..."
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            rows={4}
+                          />
+                        </div>
+                        <Button onClick={handleCreateNote} disabled={isGenerating} className="w-full">
+                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                          {isGenerating ? 'Generating...' : 'Generate Note'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                {activeTab === 'flashcards' && (
+                  <Dialog open={isFlashcardModalOpen} onOpenChange={setIsFlashcardModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Generate Flashcards
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Generate Flashcards</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+                          <Input
+                            placeholder="Enter a topic..."
+                            value={flashcardTopic}
+                            onChange={(e) => setFlashcardTopic(e.target.value)}
+                          />
+                        </div>
+                        <Button onClick={handleCreateFlashcard} disabled={isGenerating} className="w-full">
+                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                          {isGenerating ? 'Generating...' : 'Generate Flashcards'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                {activeTab === 'quizzes' && (
+                  <Dialog open={isQuizModalOpen} onOpenChange={setIsQuizModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Quiz
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Create Quiz</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+                          <Input
+                            placeholder="Enter a topic..."
+                            value={quizTopic}
+                            onChange={(e) => setQuizTopic(e.target.value)}
+                          />
+                        </div>
+                        <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
+                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                          {isGenerating ? 'Generating...' : 'Generate Quiz'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                {activeTab === 'files' && (
+                  <Dialog open={isFileModalOpen} onOpenChange={setIsFileModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Upload File
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Upload File</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">File</label>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx,.ppt,.pptx"
+                            onChange={handleFileUpload}
+                            disabled={isUploading}
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                          />
+                          {isUploading && (
+                            <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Uploading...
+                            </p>
+                          )}
+                          {uploadedFile && (
+                            <p className="text-sm text-green-600 mt-2">
+                              ✓ {uploadedFile.name} uploaded
+                            </p>
+                          )}
+                        </div>
+                        <Button onClick={handleCreateFile} disabled={isGenerating || !uploadedFile} className="w-full">
+                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                          {isGenerating ? 'Adding...' : 'Add to Study Set'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+
+              {/* Resource Grid */}
+              {hasResources ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {resources[activeTab]?.map((item) => (
+                    <Card key={item.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                          <ActiveIcon className="h-6 w-6 text-white" />
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900 mb-2">{item.title || item.topic || item.filename}</h3>
+                      <p className="text-sm text-gray-500 line-clamp-2">{item.summary || item.description || ''}</p>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-12 text-center">
+                  <ActiveIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No {activeTab} yet</h3>
+                  <p className="text-gray-500 mb-6">Create your first {activeTab.slice(0, -1)} to get started</p>
+                  <Button onClick={() => {
+                    if (activeTab === 'notes') setIsNoteModalOpen(true);
+                    if (activeTab === 'flashcards') setIsFlashcardModalOpen(true);
+                    if (activeTab === 'quizzes') setIsQuizModalOpen(true);
+                    if (activeTab === 'files') setIsFileModalOpen(true);
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create {activeTab.slice(0, -1).charAt(0).toUpperCase() + activeTab.slice(0, -1).slice(1)}
+                  </Button>
                 </Card>
-              ))}
+              )}
             </div>
           )}
         </div>
