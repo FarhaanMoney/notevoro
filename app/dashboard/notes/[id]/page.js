@@ -14,7 +14,8 @@ import {
   Bold, Italic, Underline, Strikethrough, List, ListOrdered,
   CheckSquare, Quote, Code, AlignLeft, AlignCenter, AlignRight,
   Undo, Redo, Link, Image, Table, X, ChevronRight, ChevronDown,
-  FileUp, Camera, Type, Heading1, Heading2, Heading3, BookOpen, ClipboardList
+  FileUp, Camera, Type, Heading1, Heading2, Heading3, BookOpen, ClipboardList,
+  Palette, Highlighter, Minus, Plus as PlusIcon
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -24,6 +25,7 @@ import UnderlineExtension from '@tiptap/extension-underline';
 import LinkExtension from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
 import TableExtension from '@tiptap/extension-table';
+import { toast } from 'sonner';
 
 export default function NotesEditorPage({ user }) {
   const params = useParams();
@@ -50,6 +52,11 @@ export default function NotesEditorPage({ user }) {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
+  const [fontFamily, setFontFamily] = useState('sans');
+  const [fontSize, setFontSize] = useState('16');
+  const [textColor, setTextColor] = useState('#000000');
+  const [highlightColor, setHighlightColor] = useState('#ffff00');
+  const [workspace, setWorkspace] = useState(null);
 
   const editor = useEditor({
     extensions: [
@@ -105,6 +112,17 @@ export default function NotesEditorPage({ user }) {
         setNote(data.note);
         setTitle(data.note.title || '');
         setContent(data.note.content || '');
+        
+        // Load workspace information if note has a workspace
+        if (data.note.workspace_id) {
+          const workspaceResponse = await fetch(`/api/workspaces/${data.note.workspace_id}`, {
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+          });
+          if (workspaceResponse.ok) {
+            const workspaceData = await workspaceResponse.json();
+            setWorkspace(workspaceData.workspace);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load note:', error);
@@ -131,9 +149,11 @@ export default function NotesEditorPage({ user }) {
       if (response.ok) {
         const data = await response.json();
         setNote(data.note);
+        toast.success('Note saved successfully');
       }
     } catch (error) {
       console.error('Failed to save note:', error);
+      toast.error('Failed to save note');
     } finally {
       setSaving(false);
     }
@@ -158,7 +178,13 @@ export default function NotesEditorPage({ user }) {
           context: {
             noteTitle: title,
             noteContent: content,
-            noteId: params.id
+            noteId: params.id,
+            workspace: workspace ? {
+              id: workspace.id,
+              title: workspace.title,
+              subject: workspace.subject,
+              description: workspace.description
+            } : null
           }
         }),
       });
@@ -252,6 +278,7 @@ export default function NotesEditorPage({ user }) {
     setContent(previewChanges.new);
     setShowPreviewPanel(false);
     saveNote();
+    toast.success('Changes applied successfully');
   };
 
   const handleFileUpload = async (e) => {
@@ -285,6 +312,7 @@ export default function NotesEditorPage({ user }) {
     const link = shareLink || `https://notevoro.app/notes/${params.id}`;
     navigator.clipboard.writeText(link);
     setShareLink(link);
+    toast.success('Link copied to clipboard');
   };
 
   const downloadNote = (format) => {
@@ -298,6 +326,7 @@ export default function NotesEditorPage({ user }) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast.success(`Note downloaded as ${format.toUpperCase()}`);
   };
 
   if (loading) {
@@ -382,7 +411,53 @@ export default function NotesEditorPage({ user }) {
             </Button>
           </div>
           <div className="w-px h-6 bg-gray-200" />
-          <Button variant="ghost" size="sm"><Type className="h-4 w-4" /></Button>
+          
+          {/* Font Family */}
+          <select 
+            value={fontFamily}
+            onChange={(e) => setFontFamily(e.target.value)}
+            className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
+          >
+            <option value="sans">Sans Serif</option>
+            <option value="serif">Serif</option>
+            <option value="mono">Monospace</option>
+          </select>
+          
+          {/* Font Size */}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setFontSize(Math.max(12, parseInt(fontSize) - 2))}>
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-sm w-8 text-center">{fontSize}px</span>
+            <Button variant="ghost" size="sm" onClick={() => setFontSize(Math.min(32, parseInt(fontSize) + 2))}>
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="w-px h-6 bg-gray-200" />
+          
+          {/* Text Color */}
+          <div className="relative">
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => setTextColor(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer border-0"
+            />
+            <Palette className="h-4 w-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0" />
+          </div>
+          
+          {/* Highlight Color */}
+          <div className="relative">
+            <input
+              type="color"
+              value={highlightColor}
+              onChange={(e) => setHighlightColor(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer border-0"
+            />
+            <Highlighter className="h-4 w-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0" />
+          </div>
+          
           <div className="w-px h-6 bg-gray-200" />
           <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></Button>
           <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></Button>

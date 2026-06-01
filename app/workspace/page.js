@@ -354,11 +354,11 @@ export default function WorkspaceListPage({ user }) {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-in">
               {workspaces.map((workspace) => (
                 <Card 
                   key={workspace.id} 
-                  className="premium-card p-6 cursor-pointer hover:shadow-lg"
+                  className="premium-card p-6 cursor-pointer card-hover card-press"
                   onClick={() => handleWorkspaceClick(workspace.id)}
                 >
                   <div className="flex items-start justify-between mb-4">

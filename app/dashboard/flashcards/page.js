@@ -6,8 +6,9 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, Plus, CheckCircle, Loader2, RotateCw, ChevronLeft, ChevronRight, X, Folder } from 'lucide-react';
+import { BookOpen, Plus, CheckCircle, Loader2, RotateCw, ChevronLeft, ChevronRight, X, Folder, Clock, TrendingUp, Award, Edit2, Trash2, Upload } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 export default function FlashcardsPage({ user }) {
   const [flashcards, setFlashcards] = useState([]);
@@ -106,9 +107,11 @@ export default function FlashcardsPage({ user }) {
       setUploadedFile(null);
       setIsStudying(true);
       setCurrentIndex(flashcards.length);
+      toast.success('Flashcards created successfully');
     } catch (error) {
       console.error('Flashcard creation error:', error);
       setError(error.message);
+      toast.error('Failed to create flashcards');
     } finally {
       setIsGenerating(false);
     }
@@ -522,6 +525,41 @@ export default function FlashcardsPage({ user }) {
 
       <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
         <div className="max-w-6xl mx-auto">
+          {/* Recently Studied Section */}
+          {flashcards.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Recently Studied</h2>
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                <Card className="p-4 hover:shadow-lg transition-shadow min-w-[200px]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
+                      <Award className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Economics</p>
+                      <p className="text-sm text-gray-500">85% mastery</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">2 hours ago</p>
+                </Card>
+                <Card className="p-4 hover:shadow-lg transition-shadow min-w-[200px]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
+                      <Award className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Math</p>
+                      <p className="text-sm text-gray-500">72% mastery</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">Yesterday</p>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* Flashcard Decks Grid */}
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">All Decks</h2>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -536,18 +574,75 @@ export default function FlashcardsPage({ user }) {
                 </Card>
               ))}
             </div>
+          ) : flashcards.length === 0 ? (
+            <Card className="p-12 text-center">
+              <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No flashcards yet</h3>
+              <p className="text-gray-500 mb-6">Create your first deck to start studying</p>
+              <div className="flex gap-3 justify-center">
+                <Button onClick={() => setIsModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Generate with AI
+                </Button>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from Notes
+                </Button>
+              </div>
+            </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-in">
               {flashcards.map((flashcard, index) => (
-                <Card key={flashcard.id} className="premium-card p-6 cursor-pointer hover:shadow-lg">
+                <Card key={flashcard.id} className="p-6 card-hover card-press">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                      <BookOpen className="h-6 w-6 text-white" />
+                    <div className="relative">
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                        <BookOpen className="h-8 w-8 text-white" />
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white flex items-center justify-center shadow-md">
+                        <span className="text-xs font-bold text-purple-600">{Math.round((flashcard.mastery_level / 5) * 100)}%</span>
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-400">Mastery: {flashcard.mastery_level}/5</span>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-body text-gray-700 line-clamp-2 mb-4">{flashcard.front}</p>
-                  <p className="text-sm text-gray-500">Reviewed {flashcard.review_count} times</p>
+                  <h3 className="font-semibold text-gray-900 mb-2">{flashcard.front?.substring(0, 30) || 'Untitled Deck'}</h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Folder className="h-4 w-4" />
+                      <span>Study Set</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <BookOpen className="h-4 w-4" />
+                      <span>{flashcard.review_count || 0} cards</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <TrendingUp className="h-4 w-4" />
+                      <span>Mastery: {flashcard.mastery_level || 0}/5</span>
+                    </div>
+                    {flashcard.next_review_at && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Clock className="h-4 w-4" />
+                        <span>Next: {new Date(flashcard.next_review_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleStartStudying()} className="flex-1">
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Study
+                    </Button>
+                    <Button variant="outline" onClick={() => handleStartStudying()} className="flex-1">
+                      <RotateCw className="h-4 w-4 mr-2" />
+                      Test
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>

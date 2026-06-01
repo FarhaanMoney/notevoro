@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { NotebookPen, Plus, ArrowRight, Loader2, FileText, Folder } from 'lucide-react';
+import { NotebookPen, Plus, ArrowRight, Loader2, FileText, Folder, Upload } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeModal from '@/components/UpgradeModal';
 
@@ -439,12 +439,28 @@ export default function NotesPage({ user }) {
                 </Card>
               ))}
             </div>
+          ) : notes.length === 0 ? (
+            <Card className="p-12 text-center">
+              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No notes yet</h3>
+              <p className="text-gray-500 mb-6">Create your first note to start studying</p>
+              <div className="flex gap-3 justify-center">
+                <Button onClick={() => setIsModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Generate with AI
+                </Button>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from File
+                </Button>
+              </div>
+            </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-in">
               {notes.map((note) => (
                 <Card 
                   key={note.id} 
-                  className="premium-card p-6 cursor-pointer hover:shadow-lg"
+                  className="premium-card p-6 cursor-pointer card-hover card-press"
                   onClick={() => router.push(`/dashboard/notes/${note.id}`)}
                 >
                   <div className="flex items-start justify-between mb-4">

@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder, TrendingUp, Award, Flame, Edit2, Trash2, Upload } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 export default function QuizzesPage({ user }) {
   const [quizzes, setQuizzes] = useState([]);
@@ -123,9 +124,11 @@ export default function QuizzesPage({ user }) {
       setDifficulty('medium');
       setQuestionCount('5');
       setUploadedFile(null);
+      toast.success('Quiz created successfully');
     } catch (error) {
       console.error('Quiz creation error:', error);
       setError(error.message);
+      toast.error('Failed to create quiz');
     } finally {
       setIsGenerating(false);
     }
@@ -611,6 +614,54 @@ export default function QuizzesPage({ user }) {
 
       <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
         <div className="max-w-6xl mx-auto">
+          {/* Performance Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">78%</p>
+                  <p className="text-sm text-gray-500">Avg Score</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
+                  <Award className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">95%</p>
+                  <p className="text-sm text-gray-500">Best Score</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
+                  <ClipboardList className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{quizzes.length}</p>
+                  <p className="text-sm text-gray-500">Total Quizzes</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
+                  <Flame className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">5</p>
+                  <p className="text-sm text-gray-500">Day Streak</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -625,21 +676,69 @@ export default function QuizzesPage({ user }) {
                 </Card>
               ))}
             </div>
+          ) : quizzes.length === 0 ? (
+            <Card className="p-12 text-center">
+              <ClipboardList className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No quizzes yet</h3>
+              <p className="text-gray-500 mb-6">Create your first quiz to test your knowledge</p>
+              <div className="flex gap-3 justify-center">
+                <Button onClick={() => setIsModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Generate with AI
+                </Button>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from Notes
+                </Button>
+              </div>
+            </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-in">
               {quizzes.map((quiz) => (
-                <Card key={quiz.id} className="premium-card p-6 cursor-pointer hover:shadow-lg">
+                <Card key={quiz.id} className="p-6 card-hover card-press">
                   <div className="flex items-start justify-between mb-4">
                     <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
                       <ClipboardList className="h-6 w-6 text-white" />
                     </div>
-                    <span className="text-xs text-gray-400 capitalize">{quiz.difficulty}</span>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <h3 className="text-card-title text-gray-900 mb-2">{quiz.title}</h3>
-                  <p className="text-body text-gray-500 mb-4">{quiz.questions.length} questions</p>
+                  <h3 className="font-semibold text-gray-900 mb-2">{quiz.title}</h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Folder className="h-4 w-4" />
+                      <span>Study Set</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <ClipboardList className="h-4 w-4" />
+                      <span>{quiz.questions?.length || 5} questions</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Clock className="h-4 w-4" />
+                      <span className="capitalize">{quiz.difficulty || 'medium'}</span>
+                    </div>
+                    {quiz.lastScore && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Award className="h-4 w-4" />
+                        <span>Last score: {quiz.lastScore}%</span>
+                      </div>
+                    )}
+                    {quiz.lastAttempt && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Clock className="h-4 w-4" />
+                        <span>Last: {new Date(quiz.lastAttempt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
                   <Button onClick={() => handleStartQuiz(quiz)} className="w-full">
                     <Play className="h-4 w-4 mr-2" />
-                    Start Quiz
+                    {quiz.lastAttempt ? 'Continue Quiz' : 'Start Quiz'}
                   </Button>
                 </Card>
               ))}
