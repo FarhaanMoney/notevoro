@@ -13,7 +13,9 @@ function getOpenAI() {
 export async function POST(req: NextRequest) {
   try {
     console.log('Quizzes POST route hit');
-    const { topic, difficulty, questionCount, fileUrl } = await req.json();
+    const { topic, difficulty, questionCount, fileUrl, workspaceId } = await req.json();
+
+    console.log('Quiz creation payload:', { topic, difficulty, questionCount, fileUrl, workspaceId });
 
     if (!topic && !fileUrl) {
       return NextResponse.json({ error: 'Topic or file is required' }, { status: 400 });
@@ -127,12 +129,14 @@ The correct_answer should be the index (0-3) of the correct option.`;
         difficulty: diff,
         questions: quizData.questions,
         file_url: fileUrl || null,
+        workspace_id: workspaceId || null,
       })
       .select()
       .single();
 
     if (insertError) {
-      throw new Error('Failed to save quiz');
+      console.error('Database insert error:', insertError);
+      throw new Error(`Database insert failed: ${insertError.message}`);
     }
 
     // Update daily usage
@@ -160,7 +164,7 @@ The correct_answer should be the index (0-3) of the correct option.`;
     return NextResponse.json({ quiz });
   } catch (error) {
     console.error('Quizzes API error:', error);
-    return NextResponse.json({ error: 'Failed to generate quiz' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to generate quiz' }, { status: 500 });
   }
 }
 

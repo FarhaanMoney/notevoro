@@ -12,7 +12,10 @@ function getOpenAI() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { topic, difficulty, sections, fileUrl } = await req.json();
+    console.log('Mock tests POST route hit');
+    const { topic, difficulty, sections, fileUrl, workspaceId } = await req.json();
+
+    console.log('Mock test creation payload:', { topic, difficulty, sections, fileUrl, workspaceId });
 
     if (!topic && !fileUrl) {
       return NextResponse.json({ error: 'Topic or file is required' }, { status: 400 });
@@ -138,12 +141,14 @@ Return the response in JSON format with this structure:
         difficulty: difficulty || 'medium',
         sections: testData.sections,
         file_url: fileUrl || null,
+        workspace_id: workspaceId || null,
       })
       .select()
       .single();
 
     if (insertError) {
-      throw new Error('Failed to save mock test');
+      console.error('Database insert error:', insertError);
+      throw new Error(`Database insert failed: ${insertError.message}`);
     }
 
     // Update daily usage
@@ -178,7 +183,7 @@ Return the response in JSON format with this structure:
     return NextResponse.json({ mockTest });
   } catch (error) {
     console.error('Mock test generation error:', error);
-    return NextResponse.json({ error: 'Failed to generate mock test' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to generate mock test' }, { status: 500 });
   }
 }
 

@@ -13,7 +13,9 @@ function getOpenAI() {
 export async function POST(req: NextRequest) {
   try {
     console.log('Notes POST route hit');
-    const { topic, text, sourceType, fileUrl } = await req.json();
+    const { topic, text, sourceType, fileUrl, workspaceId } = await req.json();
+
+    console.log('Notes creation payload:', { topic, text, sourceType, fileUrl, workspaceId });
 
     if (!topic && !text && !fileUrl) {
       return NextResponse.json({ error: 'Topic, text, or file is required' }, { status: 400 });
@@ -109,13 +111,14 @@ export async function POST(req: NextRequest) {
         summary: notesData.summary || '',
         source_type: sourceType || 'topic',
         source_url: fileUrl || null,
+        workspace_id: workspaceId || null,
       })
       .select()
       .single();
 
     if (insertError) {
       console.error('Database insert error:', insertError);
-      throw new Error('Failed to save notes');
+      throw new Error(`Database insert failed: ${insertError.message}`);
     }
 
     // Update daily usage

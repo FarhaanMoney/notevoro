@@ -13,7 +13,9 @@ function getOpenAI() {
 export async function POST(req: NextRequest) {
   try {
     console.log('Flashcards POST route hit');
-    const { topic, noteId, fileUrl } = await req.json();
+    const { topic, noteId, fileUrl, workspaceId } = await req.json();
+
+    console.log('Flashcards creation payload:', { topic, noteId, fileUrl, workspaceId });
 
     if (!topic && !noteId && !fileUrl) {
       return NextResponse.json({ error: 'Topic, note ID, or file is required' }, { status: 400 });
@@ -102,19 +104,22 @@ export async function POST(req: NextRequest) {
           mastery_level: 0,
           review_count: 0,
           file_url: fileUrl || null,
+          workspace_id: workspaceId || null,
         })
         .select()
         .single();
 
       if (!insertError && flashcard) {
         savedFlashcards.push(flashcard);
+      } else if (insertError) {
+        console.error('Flashcard insert error:', insertError);
       }
     }
 
     return NextResponse.json({ flashcards: savedFlashcards });
   } catch (error) {
     console.error('Flashcards API error:', error);
-    return NextResponse.json({ error: 'Failed to generate flashcards' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to generate flashcards' }, { status: 500 });
   }
 }
 
