@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS notes (
   definitions JSONB,
   source_type TEXT CHECK (source_type IN ('topic', 'text', 'pdf', 'image')),
   source_url TEXT,
+  workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS flashcards (
   mastery_level INTEGER DEFAULT 0 CHECK (mastery_level >= 0 AND mastery_level <= 5),
   next_review_at TIMESTAMP WITH TIME ZONE,
   review_count INTEGER DEFAULT 0,
+  file_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -55,6 +57,7 @@ CREATE TABLE IF NOT EXISTS quizzes (
   topic TEXT NOT NULL,
   difficulty TEXT CHECK (difficulty IN ('easy', 'medium', 'hard')),
   questions JSONB NOT NULL,
+  file_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
