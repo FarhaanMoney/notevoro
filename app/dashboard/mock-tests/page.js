@@ -451,29 +451,7 @@ export default function MockTestsPage({ user }) {
             </Dialog>
           </div>
         </div>
-
-        {/* Toolbar */}
-        <div className="border-b border-gray-200 px-6 py-3 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="flex-1" />
-            <Input
-              placeholder="Search tests..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64"
-            />
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Recent</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="difficulty">Difficulty</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+      </div>
 
         {/* Compact Empty State */}
         <div className="flex-1 flex items-center justify-center px-6">
@@ -585,6 +563,7 @@ export default function MockTestsPage({ user }) {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
       </div>
 
       {/* Toolbar */}

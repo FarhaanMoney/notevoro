@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder, TrendingUp, Award, Flame, Edit2, Trash2, Upload } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder, TrendingUp, Award, Flame, Edit2, Trash2, Upload, Sparkles } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
+import AISidebar from '@/components/AISidebar';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 

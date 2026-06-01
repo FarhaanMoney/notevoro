@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Plus, CheckCircle, Loader2, RotateCw, ChevronLeft, ChevronRight, X, Folder, Clock, TrendingUp, Award, Edit2, Trash2, Upload, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -291,69 +292,47 @@ export default function FlashcardsPage({ user }) {
                   <DialogHeader>
                     <DialogTitle>Create AI Flashcards</DialogTitle>
                   </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                    <Input
-                      placeholder="Enter a topic..."
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                    />
-                    {isUploading && (
-                      <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Uploading...
-                      </p>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+                      <Input
+                        placeholder="Enter a topic..."
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                      />
+                      {isUploading && (
+                        <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading...
+                        </p>
+                      )}
+                      {uploadedFile && (
+                        <p className="text-sm text-green-600 mt-2">
+                          ✓ {uploadedFile.name} uploaded
+                        </p>
+                      )}
+                    </div>
+                    {error && (
+                      <p className="text-red-500 text-sm">{error}</p>
                     )}
-                    {uploadedFile && (
-                      <p className="text-sm text-green-600 mt-2">
-                        ✓ {uploadedFile.name} uploaded
-                      </p>
-                    )}
+                    <Button onClick={handleCreateFlashcards} disabled={isGenerating} className="w-full">
+                      {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                      {isGenerating ? 'Generating...' : 'Generate Flashcards'}
+                    </Button>
                   </div>
-                  {error && (
-                    <p className="text-red-500 text-sm">{error}</p>
-                  )}
-                  <Button onClick={handleCreateFlashcards} disabled={isGenerating} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Generating...' : 'Generate Flashcards'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Toolbar */}
-        <div className="border-b border-gray-200 px-6 py-3 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="flex-1" />
-            <Input
-              placeholder="Search decks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64"
-            />
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Recent</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="mastery">Mastery</SelectItem>
-              </SelectContent>
-            </Select>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </div>
 

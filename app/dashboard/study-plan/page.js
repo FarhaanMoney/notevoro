@@ -205,7 +205,7 @@ export default function StudyPlanPage({ user }) {
 
           {/* Today's Tasks Section */}
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Tasks</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Today&apos;s Tasks</h2>
             <div className="space-y-3">
               {sampleTasks.map((task) => (
                 <Card key={task.id} className="p-4 hover:shadow-lg transition-shadow">
