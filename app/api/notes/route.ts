@@ -107,11 +107,8 @@ export async function POST(req: NextRequest) {
         title,
         content: text || topic || '',
         summary: notesData.summary || '',
-        key_concepts: notesData.key_concepts || [],
-        important_points: notesData.important_points || [],
-        definitions: notesData.definitions || [],
         source_type: sourceType || 'topic',
-        file_url: fileUrl || null,
+        source_url: fileUrl || null,
       })
       .select()
       .single();
