@@ -378,10 +378,10 @@ export default function MockTestsPage({ user }) {
                     Create Test
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create AI Mock Test</DialogTitle>
-                </DialogHeader>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Create AI Mock Test</DialogTitle>
+                  </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
@@ -513,10 +513,10 @@ export default function MockTestsPage({ user }) {
                   Create
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Create AI Mock Test</DialogTitle>
-              </DialogHeader>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Create AI Mock Test</DialogTitle>
+                </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>

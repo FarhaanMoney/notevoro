@@ -287,10 +287,10 @@ export default function FlashcardsPage({ user }) {
                     Create Flashcards
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create AI Flashcards</DialogTitle>
-                </DialogHeader>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Create AI Flashcards</DialogTitle>
+                  </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
