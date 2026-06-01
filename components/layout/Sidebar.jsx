@@ -21,25 +21,25 @@ const navigationGroups = [
   {
     title: 'LEARNING TOOLS',
     items: [
-      { id: 'notes', icon: NotebookPen, label: 'Smart Notes', href: '/dashboard/notes' },
-      { id: 'flashcards', icon: BookOpen, label: 'Flashcards', href: '/dashboard/flashcards' },
-      { id: 'quizzes', icon: ClipboardList, label: 'Quizzes', href: '/dashboard/quizzes' },
-      { id: 'mock-tests', icon: ClipboardList, label: 'Mock Tests', href: '/dashboard/mock-tests' },
-      { id: 'study-plan', icon: LayoutDashboard, label: 'Study Plan', href: '/dashboard/study-plan' },
+      { id: 'notes', icon: NotebookPen, label: 'Smart Notes' },
+      { id: 'flashcards', icon: BookOpen, label: 'Flashcards' },
+      { id: 'quizzes', icon: ClipboardList, label: 'Quizzes' },
+      { id: 'mock-tests', icon: ClipboardList, label: 'Mock Tests' },
+      { id: 'study-plan', icon: LayoutDashboard, label: 'Study Plan' },
     ]
   },
   {
     title: 'AI',
     items: [
-      { id: 'chat', icon: MessageSquare, label: 'AI Chat', href: '/dashboard/chat' },
-      { id: 'whatsapp', icon: MessageSquare, label: 'WhatsApp AI', href: '/dashboard/whatsapp' },
+      { id: 'chat', icon: MessageSquare, label: 'AI Chat' },
+      { id: 'whatsapp', icon: MessageSquare, label: 'WhatsApp AI' },
     ]
   },
   {
     title: 'ACCOUNT',
     items: [
-      { id: 'progress', icon: Trophy, label: 'Progress', href: '/dashboard/progress' },
-      { id: 'settings', icon: Settings, label: 'Settings', href: '/dashboard/settings' },
+      { id: 'progress', icon: Trophy, label: 'Progress' },
+      { id: 'settings', icon: Settings, label: 'Settings' },
     ]
   },
 ];
