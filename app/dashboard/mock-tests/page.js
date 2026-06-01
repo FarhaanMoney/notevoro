@@ -7,9 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Clock, Play, ChevronLeft, ChevronRight, X, Loader2, Sparkles } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Clock, Play, ChevronLeft, ChevronRight, X, Loader2, Sparkles, FileText, Zap, Upload, Copy, Share2, Target, Award, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import AISidebar from '@/components/AISidebar';
+import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
+import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 
 export default function MockTestsPage({ user }) {
   const [mockTests, setMockTests] = useState([]);
@@ -239,6 +241,15 @@ export default function MockTestsPage({ user }) {
 
   const hasMockTests = mockTests.length > 0;
 
+  // Calculate statistics for dashboard
+  const stats = {
+    totalItems: mockTests.length,
+    createdThisWeek: 0, // Would need to calculate from created_at
+    averageScore: mockTests.length > 0 ? Math.round(mockTests.reduce((acc, t) => acc + (t.score || 0), 0) / mockTests.length) : 0,
+    bestScore: mockTests.length > 0 ? Math.max(...mockTests.map(t => t.score || 0)) : 0,
+    completionRate: mockTests.length > 0 ? Math.round((mockTests.filter(t => t.completed).length / mockTests.length) * 100) : 0,
+  };
+
   // Active test view
   if (activeTest && !showResults) {
     const section = activeTest.sections[currentSection];
@@ -389,29 +400,78 @@ export default function MockTestsPage({ user }) {
   if (!hasMockTests) {
     return (
       <div className="flex-1 min-h-0 flex flex-col bg-white">
-        {/* Compact Header */}
-        <div className="border-b border-gray-200 px-6 py-4 bg-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Mock Tests</h1>
-              <p className="text-sm text-gray-500 mt-1">Practice with full-length AI-powered exams.</p>
+        <WorkspaceTopBar
+          workspaceName={selectedWorkspace?.title}
+          featureName="Mock Tests"
+          onSearch={(query) => setSearchQuery(query)}
+          showExport={false}
+          showFullscreen={false}
+        />
+        
+        <FeatureDashboard
+          featureType="mock-tests"
+          stats={stats}
+        />
+
+        {/* Enhanced Empty State */}
+        <div className="flex-1 flex items-center justify-center px-6 bg-gray-50">
+          <div className="text-center max-w-2xl">
+            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
+              <ClipboardList className="h-10 w-10 text-purple-500" />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                AI Assistant
-              </Button>
-              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Test
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>Create AI Mock Test</DialogTitle>
-                  </DialogHeader>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Practice with Full-Length Exams</h2>
+            <p className="text-gray-500 mb-8">
+              Create AI-powered mock tests from your notes, uploaded files, or any topic. 
+              Simulate real exam conditions and track your progress over time.
+            </p>
+            
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Zap className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From Topic</h3>
+                <p className="text-xs text-gray-500">Generate from any subject</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <FileText className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From Notes</h3>
+                <p className="text-xs text-gray-500">Use your existing notes</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Upload className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From File</h3>
+                <p className="text-xs text-gray-500">Upload PDF, DOCX, TXT</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Sparkles className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">AI Generate</h3>
+                <p className="text-xs text-gray-500">Let AI create for you</p>
+              </button>
+            </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="px-8">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create Mock Test
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Create AI Mock Test</DialogTitle>
+                </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
@@ -482,259 +542,210 @@ export default function MockTestsPage({ user }) {
           </div>
         </div>
       </div>
-
-        {/* Compact Empty State */}
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center max-w-sm">
-            <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No tests yet</h3>
-            <p className="text-sm text-gray-500 mb-4">Create your first AI-powered mock test.</p>
-            <Button onClick={() => setIsModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Test
-            </Button>
-          </div>
-        </div>
-      </div>
     );
   }
 
   // List view
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white">
-      {/* Compact Header */}
+      <WorkspaceTopBar
+        workspaceName={selectedWorkspace?.title}
+        featureName="Mock Tests"
+        onSearch={(query) => setSearchQuery(query)}
+        showExport={false}
+        showFullscreen={false}
+      />
+      
+      <FeatureDashboard
+        featureType="mock-tests"
+        stats={stats}
+      />
+
+      {/* Quick Actions Bar */}
       <div className="border-b border-gray-200 px-6 py-4 bg-white">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Mock Tests</h1>
-            <p className="text-sm text-gray-500 mt-1">Practice with full-length AI-powered exams.</p>
-          </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Mock Test
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
               <Sparkles className="h-4 w-4 mr-2" />
               AI Assistant
             </Button>
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create AI Mock Test</DialogTitle>
-                </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                  <Input
-                    placeholder="Enter a topic..."
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
-                  <Select value={difficulty} onValueChange={setDifficulty}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Sections</label>
-                  <Select value={sections} onValueChange={setSections}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2">2 Sections</SelectItem>
-                      <SelectItem value="3">3 Sections</SelectItem>
-                      <SelectItem value="4">4 Sections</SelectItem>
-                      <SelectItem value="5">5 Sections</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                  />
-                  {isUploading && (
-                    <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Uploading...
-                    </p>
-                  )}
-                  {uploadedFile && (
-                    <p className="text-sm text-green-600 mt-2">
-                      ✓ {uploadedFile.name} uploaded
-                    </p>
-                  )}
-                </div>
-                {error && (
-                  <p className="text-red-500 text-sm">{error}</p>
-                )}
-                <Button onClick={handleCreateMockTest} disabled={isGenerating} className="w-full">
-                  {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  {isGenerating ? 'Generating...' : 'Generate Mock Test'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="border-b border-gray-200 px-6 py-3 bg-white">
-        <div className="flex items-center gap-4">
-          <div className="flex-1" />
-          <Input
-            placeholder="Search tests..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64"
-          />
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Recent</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="difficulty">Difficulty</SelectItem>
-            </SelectContent>
-          </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-32 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recent</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="score">Score</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          {/* Performance Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                  <ClipboardList className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">82%</p>
-                  <p className="text-sm text-gray-500">Avg Score</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">45m</p>
-                  <p className="text-sm text-gray-500">Avg Time</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
-                  <Play className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{mockTests.length}</p>
-                  <p className="text-sm text-gray-500">Total Tests</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">3</p>
-                  <p className="text-sm text-gray-500">Completed</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Recent Tests Section */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Tests</h2>
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="p-4">
-                    <Skeleton className="h-10 w-10 rounded-lg mb-3" />
-                    <Skeleton className="h-5 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2 mb-3" />
-                    <Skeleton className="h-8 w-full" />
-                  </Card>
-                ))}
-              </div>
-            ) : mockTests.length === 0 ? (
-              <Card className="p-6 text-center">
-                <ClipboardList className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">No tests yet</h3>
-                <p className="text-xs text-gray-500 mb-3">Create your first AI-powered mock test.</p>
-                <Button onClick={() => setIsModalOpen(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Test
-                </Button>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-in">
-                {mockTests.slice(0, 6).map((test) => (
-                  <Card key={test.id} className="p-4 card-hover card-press">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                        <ClipboardList className="h-5 w-5 text-white" />
+        <div className="max-w-7xl mx-auto">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="p-4">
+                  <Skeleton className="h-10 w-10 rounded-lg mb-3" />
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2 mb-3" />
+                  <Skeleton className="h-8 w-full" />
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {mockTests.map((test) => (
+                <Card key={test.id} className="p-4 hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                        <ClipboardList className="h-6 w-6 text-white" />
                       </div>
-                      <span className="text-xs text-gray-400 capitalize">{test.difficulty}</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">{test.title}</h3>
-                    <div className="space-y-1 mb-3">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <ClipboardList className="h-3 w-3" />
-                        <span>{test.sections.length} sections</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Play className="h-3 w-3" />
-                        <span>{test.sections.reduce((sum, s) => sum + s.questions.length, 0)} questions</span>
+                      <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white flex items-center justify-center shadow-md border border-gray-200">
+                        <span className="text-xs font-bold text-purple-600">{test.sections?.length || 3}</span>
                       </div>
                     </div>
-                    <Button onClick={() => handleStartTest(test)} className="w-full" size="sm">
-                      <Play className="h-3 w-3 mr-2" />
-                      Start Test
+                    <div className="flex gap-1">
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                        <Share2 className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors">
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{test.title || 'Untitled Mock Test'}</h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Folder className="h-4 w-4" />
+                      <span>{test.topic || 'General'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Target className="h-4 w-4" />
+                      <span>Difficulty: {test.difficulty || 'medium'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <ClipboardList className="h-4 w-4" />
+                      <span>{test.sections?.length || 3} sections</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Clock className="h-4 w-4" />
+                      <span>Last attempt: Today</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleStartTest(test)} className="flex-1" size="sm">
+                      <Play className="h-4 w-4 mr-2" />
+                      Start
                     </Button>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+                    <Button variant="outline" onClick={() => handleStartTest(test)} className="flex-1" size="sm">
+                      <Award className="h-4 w-4 mr-2" />
+                      Review
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+      
       <AISidebar
         isOpen={isAISidebarOpen}
         onClose={() => setIsAISidebarOpen(false)}
         context={{
           tool: 'Mock Tests',
-          studySet: selectedWorkspace,
           workspace: selectedWorkspace
         }}
       />
+      
+      {/* Create Dialog */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create AI Mock Test</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+              <Input
+                placeholder="Enter a topic..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
+              <Select value={difficulty} onValueChange={setDifficulty}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Sections</label>
+              <Select value={sections} onValueChange={setSections}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 Sections</SelectItem>
+                  <SelectItem value="3">3 Sections</SelectItem>
+                  <SelectItem value="4">4 Sections</SelectItem>
+                  <SelectItem value="5">5 Sections</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              {isUploading && (
+                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </p>
+              )}
+              {uploadedFile && (
+                <p className="text-sm text-green-600 mt-2">
+                  ✓ {uploadedFile.name} uploaded
+                </p>
+              )}
+            </div>
+            {error && (
+              <p className="text-red-500 text-sm">{error}</p>
+            )}
+            <Button onClick={handleCreateMockTest} disabled={isGenerating} className="w-full">
+              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              {isGenerating ? 'Generating...' : 'Generate Mock Test'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

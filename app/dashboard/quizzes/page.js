@@ -7,11 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder, TrendingUp, Award, Flame, Edit2, Trash2, Upload, Sparkles } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder, TrendingUp, Award, Flame, Edit2, Trash2, Upload, Sparkles, FileText, Zap, Copy, Share2, Target } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
 import AISidebar from '@/components/AISidebar';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
+import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 
 export default function QuizzesPage({ user }) {
   const [quizzes, setQuizzes] = useState([]);
@@ -223,6 +225,15 @@ export default function QuizzesPage({ user }) {
 
   const hasQuizzes = quizzes.length > 0;
 
+  // Calculate statistics for dashboard
+  const stats = {
+    totalItems: quizzes.length,
+    createdThisWeek: 0, // Would need to calculate from created_at
+    averageScore: quizzes.length > 0 ? Math.round(quizzes.reduce((acc, q) => acc + (q.score || 0), 0) / quizzes.length) : 0,
+    bestScore: quizzes.length > 0 ? Math.max(...quizzes.map(q => q.score || 0)) : 0,
+    totalQuestions: quizzes.reduce((acc, q) => acc + (q.questions?.length || 0), 0),
+  };
+
   if (activeQuiz && !showResults) {
     const question = activeQuiz.questions[currentQuestion];
     const progress = ((currentQuestion + 1) / activeQuiz.questions.length) * 100;
@@ -343,111 +354,181 @@ export default function QuizzesPage({ user }) {
   if (!hasQuizzes) {
     return (
       <div className="flex-1 min-h-0 flex flex-col bg-white">
-        {/* Compact Header */}
-        <div className="border-b border-gray-200 px-6 py-4 bg-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Quizzes</h1>
-              <p className="text-sm text-gray-500 mt-1">Create, organize and practice quizzes from your study materials.</p>
+        <WorkspaceTopBar
+          workspaceName={selectedWorkspace?.title}
+          featureName="Quizzes"
+          onSearch={(query) => setSearchQuery(query)}
+          showExport={false}
+          showFullscreen={false}
+        />
+        
+        <FeatureDashboard
+          featureType="quizzes"
+          stats={stats}
+        />
+
+        {/* Enhanced Empty State */}
+        <div className="flex-1 flex items-center justify-center px-6 bg-gray-50">
+          <div className="text-center max-w-2xl">
+            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
+              <ClipboardList className="h-10 w-10 text-purple-500" />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                AI Assistant
-              </Button>
-              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Quiz
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>Create AI Quiz</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                      <Input
-                        placeholder="Enter a topic..."
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
-                      <Select value={difficulty} onValueChange={setDifficulty}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="easy">Easy</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="hard">Hard</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Questions</label>
-                      <Select value={questionCount} onValueChange={setQuestionCount}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="3">3 Questions</SelectItem>
-                          <SelectItem value="5">5 Questions</SelectItem>
-                          <SelectItem value="10">10 Questions</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                        onChange={handleFileUpload}
-                        disabled={isUploading}
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                      />
-                      {isUploading && (
-                        <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Uploading...
-                        </p>
-                      )}
-                      {uploadedFile && (
-                        <p className="text-sm text-green-600 mt-2">
-                          ✓ {uploadedFile.name} uploaded
-                        </p>
-                      )}
-                    </div>
-                    {error && (
-                      <p className="text-red-500 text-sm">{error}</p>
-                    )}
-                    <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
-                      {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                      {isGenerating ? 'Generating...' : 'Generate Quiz'}
-                    </Button>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Test Your Knowledge</h2>
+            <p className="text-gray-500 mb-8">
+              Create AI-powered quizzes from your notes, uploaded files, or any topic. 
+              Track your progress and improve your scores with spaced repetition.
+            </p>
+            
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Zap className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From Topic</h3>
+                <p className="text-xs text-gray-500">Generate from any subject</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <FileText className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From Notes</h3>
+                <p className="text-xs text-gray-500">Use your existing notes</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Upload className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From File</h3>
+                <p className="text-xs text-gray-500">Upload PDF, DOCX, TXT</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Sparkles className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">AI Generate</h3>
+                <p className="text-xs text-gray-500">Let AI create for you</p>
+              </button>
+            </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="px-8">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create Quiz
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Create AI Quiz</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+                    <Input
+                      placeholder="Enter a topic..."
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                    />
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
+                    <Select value={difficulty} onValueChange={setDifficulty}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="easy">Easy</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Questions</label>
+                    <Select value={questionCount} onValueChange={setQuestionCount}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 Questions</SelectItem>
+                        <SelectItem value="5">5 Questions</SelectItem>
+                        <SelectItem value="10">10 Questions</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
+                      onChange={handleFileUpload}
+                      disabled={isUploading}
+                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                    />
+                    {isUploading && (
+                      <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading...
+                      </p>
+                    )}
+                    {uploadedFile && (
+                      <p className="text-sm text-green-600 mt-2">
+                        ✓ {uploadedFile.name} uploaded
+                      </p>
+                    )}
+                  </div>
+                  {error && (
+                    <p className="text-red-500 text-sm">{error}</p>
+                  )}
+                  <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
+                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                    {isGenerating ? 'Generating...' : 'Generate Quiz'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Toolbar */}
-        <div className="border-b border-gray-200 px-6 py-3 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="flex-1" />
-            <Input
-              placeholder="Search quizzes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64"
-            />
+  return (
+    <div className="flex-1 min-h-0 flex flex-col bg-white">
+      <WorkspaceTopBar
+        workspaceName={selectedWorkspace?.title}
+        featureName="Quizzes"
+        onSearch={(query) => setSearchQuery(query)}
+        showExport={false}
+        showFullscreen={false}
+      />
+      
+      <FeatureDashboard
+        featureType="quizzes"
+        stats={stats}
+      />
+
+      {/* Quick Actions Bar */}
+      <div className="border-b border-gray-200 px-6 py-4 bg-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Quiz
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Assistant
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32 h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -458,285 +539,172 @@ export default function QuizzesPage({ user }) {
             </Select>
           </div>
         </div>
-
-        {/* Compact Empty State */}
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center max-w-sm">
-            <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No quizzes yet</h3>
-            <p className="text-sm text-gray-500 mb-4">Create your first AI-generated quiz.</p>
-            <Button onClick={() => setIsModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Quiz
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 min-h-0 flex flex-col bg-white">
-      {/* Compact Header */}
-      <div className="border-b border-gray-200 px-6 py-4 bg-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quizzes</h1>
-            <p className="text-sm text-gray-500 mt-1">Create, organize and practice quizzes from your study materials.</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI Assistant
-            </Button>
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Quiz
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create AI Quiz</DialogTitle>
-                </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                  <Input
-                    placeholder="Enter a topic..."
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
-                  <Select value={difficulty} onValueChange={setDifficulty}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Questions</label>
-                  <Select value={questionCount} onValueChange={setQuestionCount}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3">3 Questions</SelectItem>
-                      <SelectItem value="5">5 Questions</SelectItem>
-                      <SelectItem value="10">10 Questions</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                  />
-                  {isUploading && (
-                    <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Uploading...
-                    </p>
-                  )}
-                  {uploadedFile && (
-                    <p className="text-sm text-green-600 mt-2">
-                      ✓ {uploadedFile.name} uploaded
-                    </p>
-                  )}
-                </div>
-                {error && (
-                  <p className="text-red-500 text-sm">{error}</p>
-                )}
-                <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
-                  {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  {isGenerating ? 'Generating...' : 'Generate Quiz'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-          </div>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="border-b border-gray-200 px-6 py-3 bg-white">
-        <div className="flex items-center gap-4">
-          <div className="flex-1" />
-          <Input
-            placeholder="Search quizzes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64"
-          />
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Recent</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="difficulty">Difficulty</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          {/* Performance Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">78%</p>
-                  <p className="text-sm text-gray-500">Avg Score</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
-                  <Award className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">95%</p>
-                  <p className="text-sm text-gray-500">Best Score</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
-                  <ClipboardList className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{quizzes.length}</p>
-                  <p className="text-sm text-gray-500">Total Quizzes</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
-                  <Flame className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">5</p>
-                  <p className="text-sm text-gray-500">Day Streak</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Recent Quizzes Section */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Quizzes</h2>
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="p-4">
-                    <Skeleton className="h-10 w-10 rounded-lg mb-3" />
-                    <Skeleton className="h-5 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2 mb-3" />
-                    <Skeleton className="h-8 w-full" />
-                  </Card>
-                ))}
-              </div>
-            ) : quizzes.length === 0 ? (
-              <Card className="p-6 text-center">
-                <ClipboardList className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">No quizzes yet</h3>
-                <p className="text-xs text-gray-500 mb-3">Create your first AI-generated quiz.</p>
-                <Button onClick={() => setIsModalOpen(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Quiz
-                </Button>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-in">
-                {quizzes.slice(0, 6).map((quiz) => (
-                  <Card key={quiz.id} className="p-4 card-hover card-press">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                        <ClipboardList className="h-5 w-5 text-white" />
+        <div className="max-w-7xl mx-auto">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="p-4">
+                  <Skeleton className="h-10 w-10 rounded-lg mb-3" />
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2 mb-3" />
+                  <Skeleton className="h-8 w-full" />
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {quizzes.map((quiz) => (
+                <Card key={quiz.id} className="p-4 hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                        <ClipboardList className="h-6 w-6 text-white" />
                       </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700">
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                      <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white flex items-center justify-center shadow-md border border-gray-200">
+                        <span className="text-xs font-bold text-purple-600">{quiz.questions?.length || 0}</span>
                       </div>
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">{quiz.title}</h3>
-                    <div className="space-y-1 mb-3">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Folder className="h-3 w-3" />
-                        <span>Study Set</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <ClipboardList className="h-3 w-3" />
-                        <span>{quiz.questions?.length || 5} questions</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        <span className="capitalize">{quiz.difficulty || 'medium'}</span>
-                      </div>
-                      {quiz.lastScore && (
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Award className="h-3 w-3" />
-                          <span>Last score: {quiz.lastScore}%</span>
-                        </div>
-                      )}
-                      {quiz.lastAttempt && (
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Clock className="h-3 w-3" />
-                          <span>Last: {new Date(quiz.lastAttempt).toLocaleDateString()}</span>
-                        </div>
-                      )}
+                    <div className="flex gap-1">
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                        <Edit2 className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                        <Share2 className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors">
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </button>
                     </div>
-                    <Button onClick={() => handleStartQuiz(quiz)} className="w-full" size="sm">
-                      <Play className="h-3 w-3 mr-2" />
-                      {quiz.lastAttempt ? 'Continue' : 'Start'}
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{quiz.title || 'Untitled Quiz'}</h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Folder className="h-4 w-4" />
+                      <span>{quiz.topic || 'General'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Target className="h-4 w-4" />
+                      <span>Difficulty: {quiz.difficulty || 'medium'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <ClipboardList className="h-4 w-4" />
+                      <span>{quiz.questions?.length || 0} questions</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Clock className="h-4 w-4" />
+                      <span>Last attempt: Today</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleStartQuiz(quiz)} className="flex-1" size="sm">
+                      <Play className="h-4 w-4 mr-2" />
+                      Start
                     </Button>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+                    <Button variant="outline" onClick={() => handleStartQuiz(quiz)} className="flex-1" size="sm">
+                      <Award className="h-4 w-4 mr-2" />
+                      Review
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      <UpgradeModal 
-        isOpen={showUpgradeModal} 
-        onClose={() => setShowUpgradeModal(false)}
-        feature="Quizzes"
-      />
+      
       <AISidebar
         isOpen={isAISidebarOpen}
         onClose={() => setIsAISidebarOpen(false)}
         context={{
           tool: 'Quizzes',
-          studySet: selectedWorkspace,
           workspace: selectedWorkspace
         }}
+      />
+      
+      {/* Create Dialog */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create AI Quiz</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+              <Input
+                placeholder="Enter a topic..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
+              <Select value={difficulty} onValueChange={setDifficulty}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Questions</label>
+              <Select value={questionCount} onValueChange={setQuestionCount}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3 Questions</SelectItem>
+                  <SelectItem value="5">5 Questions</SelectItem>
+                  <SelectItem value="10">10 Questions</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              {isUploading && (
+                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </p>
+              )}
+              {uploadedFile && (
+                <p className="text-sm text-green-600 mt-2">
+                  ✓ {uploadedFile.name} uploaded
+                </p>
+              )}
+            </div>
+            {error && (
+              <p className="text-red-500 text-sm">{error}</p>
+            )}
+            <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
+              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              {isGenerating ? 'Generating...' : 'Generate Quiz'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="Quizzes"
       />
     </div>
   );

@@ -7,9 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { NotebookPen, Plus, ArrowRight, Loader2, FileText, Folder, Upload } from 'lucide-react';
+import { NotebookPen, Plus, ArrowRight, Loader2, FileText, Folder, Upload, Sparkles, Zap, Copy, Share2, Clock, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeModal from '@/components/UpgradeModal';
+import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
+import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 
 const suggestedTopics = [
   'Photosynthesis',
@@ -180,20 +182,82 @@ export default function NotesPage({ user }) {
 
   const hasNotes = notes.length > 0;
 
+  // Calculate statistics for dashboard
+  const stats = {
+    totalItems: notes.length,
+    createdThisWeek: 0, // Would need to calculate from created_at
+    studyTime: '0h',
+    aiActivity: 0,
+  };
+
   if (!hasNotes) {
     return (
       <div className="flex-1 min-h-0 flex flex-col bg-white">
-        {/* Header */}
-        <div className="border-b border-gray-200 px-8 py-6 bg-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-page-title text-gray-900">Smart Notes</h1>
-              <p className="text-body text-gray-500 mt-1">Generate structured study notes from any topic.</p>
+        <WorkspaceTopBar
+          workspaceName={selectedWorkspace?.title}
+          featureName="Notes"
+          onSearch={(query) => setSearchQuery(query)}
+          showExport={false}
+          showFullscreen={false}
+        />
+        
+        <FeatureDashboard
+          featureType="notes"
+          stats={stats}
+        />
+
+        {/* Enhanced Empty State */}
+        <div className="flex-1 flex items-center justify-center px-6 bg-gray-50">
+          <div className="text-center max-w-2xl">
+            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
+              <NotebookPen className="h-10 w-10 text-purple-500" />
             </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Create Smart Study Notes</h2>
+            <p className="text-gray-500 mb-8">
+              Generate AI-powered structured study notes from any topic, text, or uploaded file. 
+              Organize your learning with summaries, key concepts, and definitions.
+            </p>
+            
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Zap className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From Topic</h3>
+                <p className="text-xs text-gray-500">Generate from any subject</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <FileText className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From Text</h3>
+                <p className="text-xs text-gray-500">Paste your content</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Upload className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">From File</h3>
+                <p className="text-xs text-gray-500">Upload PDF, DOCX, TXT</p>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Sparkles className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">AI Generate</h3>
+                <p className="text-xs text-gray-500">Let AI create for you</p>
+              </button>
+            </div>
+
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button size="lg" className="px-8">
+                  <Plus className="h-5 w-5 mr-2" />
                   Create Note
                 </Button>
               </DialogTrigger>
@@ -251,75 +315,6 @@ export default function NotesPage({ user }) {
               </DialogContent>
             </Dialog>
           </div>
-          {workspaces.length > 0 && (
-            <div className="mt-4">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Study Set</label>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => setSelectedWorkspace(null)}
-                  className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
-                    !selectedWorkspace
-                      ? 'border-black bg-gray-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  All Notes
-                </button>
-                {workspaces.map((workspace) => (
-                  <button
-                    key={workspace.id}
-                    onClick={() => setSelectedWorkspace(workspace.id)}
-                    className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all flex items-center gap-2 ${
-                      selectedWorkspace === workspace.id
-                        ? 'border-black bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div 
-                      className="h-3 w-3 rounded"
-                      style={{ backgroundColor: workspace.color || '#000' }}
-                    />
-                    {workspace.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Empty State */}
-        <div className="flex-1 flex items-center justify-center px-8">
-          <div className="text-center max-w-md">
-            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
-              <NotebookPen className="h-10 w-10 text-purple-500" />
-            </div>
-            <h2 className="text-section-title text-gray-900 mb-3">Create AI Notes</h2>
-            <p className="text-body text-gray-500 mb-8">
-              Generate structured study notes from any topic, PDF, image, or document.
-            </p>
-            <Button size="lg" onClick={() => setIsModalOpen(true)}>
-              Create Notes
-            </Button>
-          </div>
-        </div>
-
-        {/* Suggested Topics */}
-        <div className="px-8 pb-8">
-          <Card className="premium-card p-8">
-            <h3 className="text-card-title text-gray-900 mb-4">Suggested Topics</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {suggestedTopics.map((suggestedTopic) => (
-                <button
-                  key={suggestedTopic}
-                  onClick={() => handleTopicClick(suggestedTopic)}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-                >
-                  <span className="text-body text-gray-700">{suggestedTopic}</span>
-                  <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                </button>
-              ))}
-            </div>
-          </Card>
         </div>
       </div>
     );
@@ -327,172 +322,162 @@ export default function NotesPage({ user }) {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white">
-      {/* Header */}
-      <div className="border-b border-gray-200 px-8 py-6 bg-white">
+      <WorkspaceTopBar
+        workspaceName={selectedWorkspace?.title}
+        featureName="Notes"
+        onSearch={(query) => setSearchQuery(query)}
+        showExport={false}
+        showFullscreen={false}
+      />
+      
+      <FeatureDashboard
+        featureType="notes"
+        stats={stats}
+      />
+
+      {/* Quick Actions Bar */}
+      <div className="border-b border-gray-200 px-6 py-4 bg-white">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-page-title text-gray-900">Smart Notes</h1>
-            <p className="text-body text-gray-500 mt-1">Generate structured study notes from any topic.</p>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Note
+            </Button>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create New
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Create AI Notes</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                  <Input
-                    placeholder="Enter a topic..."
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Or paste text</label>
-                  <Textarea
-                    placeholder="Paste your text here..."
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                  />
-                  {isUploading && (
-                    <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Uploading...
-                    </p>
-                  )}
-                  {uploadedFile && (
-                    <p className="text-sm text-green-600 mt-2">
-                      ✓ {uploadedFile.name} uploaded
-                    </p>
-                  )}
-                </div>
-                {error && (
-                  <p className="text-red-500 text-sm">{error}</p>
-                )}
-                <Button onClick={handleCreateNote} disabled={isGenerating} className="w-full">
-                  {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  {isGenerating ? 'Generating...' : 'Generate Notes'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-32 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recent</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        {workspaces.length > 0 && (
-          <div className="mt-4">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Workspace</label>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setSelectedWorkspace(null)}
-                className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
-                  !selectedWorkspace
-                    ? 'border-black bg-gray-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                All Notes
-              </button>
-              {workspaces.map((workspace) => (
-                <button
-                  key={workspace.id}
-                  onClick={() => setSelectedWorkspace(workspace.id)}
-                  className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all flex items-center gap-2 ${
-                    selectedWorkspace === workspace.id
-                      ? 'border-black bg-gray-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div 
-                    className="h-3 w-3 rounded"
-                    style={{ backgroundColor: workspace.color || '#000' }}
-                  />
-                  {workspace.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i} className="premium-card p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <Skeleton className="h-12 w-12 rounded-lg" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-2/3" />
+                <Card key={i} className="p-4">
+                  <Skeleton className="h-10 w-10 rounded-lg mb-3" />
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2 mb-3" />
+                  <Skeleton className="h-8 w-full" />
                 </Card>
               ))}
             </div>
-          ) : notes.length === 0 ? (
-            <Card className="p-12 text-center">
-              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No notes yet</h3>
-              <p className="text-gray-500 mb-6">Create your first note to start studying</p>
-              <div className="flex gap-3 justify-center">
-                <Button onClick={() => setIsModalOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Generate with AI
-                </Button>
-                <Button variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import from File
-                </Button>
-              </div>
-            </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {notes.map((note) => (
-                <Card 
-                  key={note.id} 
-                  className="premium-card p-6 cursor-pointer card-hover card-press"
-                  onClick={() => router.push(`/dashboard/notes/${note.id}`)}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                      <FileText className="h-6 w-6 text-white" />
+                <Card key={note.id} className="p-4 hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                        <NotebookPen className="h-6 w-6 text-white" />
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-400">
-                      {new Date(note.created_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex gap-1">
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                        <Share2 className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors">
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-card-title text-gray-900 mb-2">{note.title}</h3>
-                  <p className="text-body text-gray-500 line-clamp-3">{note.summary}</p>
+                  <h3 className="font-semibold text-gray-900 mb-2">{note.title || 'Untitled Note'}</h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Folder className="h-4 w-4" />
+                      <span>{note.topic || 'General'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Clock className="h-4 w-4" />
+                      <span>Last edited: Today</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => window.location.href = `/dashboard/notes/${note.id}`} className="flex-1" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Open
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>
           )}
         </div>
       </div>
-
-      <UpgradeModal 
-        isOpen={showUpgradeModal} 
+      
+      {/* Create Dialog */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create AI Notes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+              <Input
+                placeholder="Enter a topic..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Or paste text</label>
+              <Textarea
+                placeholder="Paste your text here..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              {isUploading && (
+                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </p>
+              )}
+              {uploadedFile && (
+                <p className="text-sm text-green-600 mt-2">
+                  ✓ {uploadedFile.name} uploaded
+                </p>
+              )}
+            </div>
+            {error && (
+              <p className="text-red-500 text-sm">{error}</p>
+            )}
+            <Button onClick={handleCreateNote} disabled={isGenerating} className="w-full">
+              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              {isGenerating ? 'Generating...' : 'Generate Notes'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <UpgradeModal
+        isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        feature="Smart Notes"
+        feature="Notes"
       />
     </div>
   );
