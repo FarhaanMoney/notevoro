@@ -20,13 +20,13 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient();
-    
+
     console.log('Supabase client created');
-    
+
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     console.log('User:', user);
     console.log('Auth error:', authError);
-    
+
     if (authError || !user) {
       console.log('Unauthorized - user missing or invalid');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -57,33 +57,46 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate notes using AI
-    let prompt = '';
-    if (fileUrl) {
-      prompt = `Generate comprehensive study notes from the uploaded file at: ${fileUrl}\n\nTopic: ${topic || 'File content'}\n\nReturn the response in JSON format with: summary, key_concepts (array), important_points (array), definitions (array of objects with term and definition).`;
-    } else if (text) {
-      prompt = `Generate comprehensive study notes from the following text:\n\n${text}\n\nReturn the response in JSON format with: summary, key_concepts (array), important_points (array), definitions (array of objects with term and definition).`;
-    } else {
-      prompt = `Generate comprehensive study notes about: ${topic}\n\nReturn the response in JSON format with: summary, key_concepts (array), important_points (array), definitions (array of objects with term and definition).`;
+    let notesData;
+    try {
+      let prompt = '';
+      if (fileUrl) {
+        prompt = `Generate comprehensive study notes from the uploaded file at: ${fileUrl}\n\nTopic: ${topic || 'File content'}\n\nReturn the response in JSON format with: summary, key_concepts (array), important_points (array), definitions (array of objects with term and definition).`;
+      } else if (text) {
+        prompt = `Generate comprehensive study notes from the following text:\n\n${text}\n\nReturn the response in JSON format with: summary, key_concepts (array), important_points (array), definitions (array of objects with term and definition).`;
+      } else {
+        prompt = `Generate comprehensive study notes about: ${topic}\n\nReturn the response in JSON format with: summary, key_concepts (array), important_points (array), definitions (array of objects with term and definition).`;
+      }
+
+      const completion = await getOpenAI().chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert educational content creator. Generate structured, comprehensive study notes. Always return valid JSON.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('Failed to generate notes');
+      }
+
+      notesData = JSON.parse(content);
+    } catch (aiError) {
+      console.error('AI generation error:', aiError);
+      // Fallback: create a basic note without AI generation
+      notesData = {
+        summary: topic || text || 'Note created',
+        key_concepts: [],
+        important_points: [],
+        definitions: []
+      };
     }
 
-    const completion = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert educational content creator. Generate structured, comprehensive study notes. Always return valid JSON.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('Failed to generate notes');
-    }
-
-    const notesData = JSON.parse(content);
     const title = topic || 'Untitled Notes';
 
     // Save notes to database
@@ -92,7 +105,7 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: user.id,
         title,
-        content: text || topic,
+        content: text || topic || '',
         summary: notesData.summary || '',
         key_concepts: notesData.key_concepts || [],
         important_points: notesData.important_points || [],
@@ -104,6 +117,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertError) {
+      console.error('Database insert error:', insertError);
       throw new Error('Failed to save notes');
     }
 
@@ -132,7 +146,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ note });
   } catch (error) {
     console.error('Notes API error:', error);
-    return NextResponse.json({ error: 'Failed to generate notes' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to generate notes' }, { status: 500 });
   }
 }
 
