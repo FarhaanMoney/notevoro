@@ -29,31 +29,14 @@ export default function QuizzesPage({ user }) {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [workspaces, setWorkspaces] = useState([]);
-  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
 
   useEffect(() => {
     loadQuizzes();
-    loadWorkspaces();
   }, []);
-
-  const loadWorkspaces = async () => {
-    try {
-      const sb = createClient();
-      const { data: { session } } = await sb.auth.getSession();
-      
-      const response = await fetch('/api/workspaces', {
-        headers: { Authorization: `Bearer ${session?.access_token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setWorkspaces(data.workspaces || []);
-      }
-    } catch (error) {
-      console.error('Failed to load workspaces:', error);
-    }
-  };
 
   const loadQuizzes = async () => {
     setIsLoading(true);
@@ -328,11 +311,12 @@ export default function QuizzesPage({ user }) {
   if (!hasQuizzes) {
     return (
       <div className="flex-1 min-h-0 flex flex-col bg-white">
-        <div className="border-b border-gray-200 px-8 py-6 bg-white">
+        {/* Compact Header */}
+        <div className="border-b border-gray-200 px-6 py-4 bg-white">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-page-title text-gray-900">Quizzes</h1>
-              <p className="text-body text-gray-500 mt-1">Test your knowledge with AI-generated questions.</p>
+              <h1 className="text-2xl font-bold text-gray-900">Quizzes</h1>
+              <p className="text-sm text-gray-500 mt-1">Create, organize and practice quizzes from your study materials.</p>
             </div>
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
@@ -412,79 +396,42 @@ export default function QuizzesPage({ user }) {
               </DialogContent>
             </Dialog>
           </div>
-          {workspaces.length > 0 && (
-            <div className="mt-4">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Study Set</label>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => setSelectedWorkspace(null)}
-                  className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
-                    !selectedWorkspace
-                      ? 'border-black bg-gray-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  All Quizzes
-                </button>
-                {workspaces.map((workspace) => (
-                  <button
-                    key={workspace.id}
-                    onClick={() => setSelectedWorkspace(workspace.id)}
-                    className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all flex items-center gap-2 ${
-                      selectedWorkspace === workspace.id
-                        ? 'border-black bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div 
-                      className="h-3 w-3 rounded"
-                      style={{ backgroundColor: workspace.color || '#000' }}
-                    />
-                    {workspace.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-8">
-          <div className="text-center max-w-md">
-            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
-              <ClipboardList className="h-10 w-10 text-purple-500" />
-            </div>
-            <h2 className="text-section-title text-gray-900 mb-3">Quiz Generator</h2>
-            <p className="text-body text-gray-500 mb-8">
-              Create quizzes with AI-generated questions on any topic.
-            </p>
-            <Button size="lg" onClick={() => setIsModalOpen(true)}>
-              Create Quiz
-            </Button>
+        {/* Toolbar */}
+        <div className="border-b border-gray-200 px-6 py-3 bg-white">
+          <div className="flex items-center gap-4">
+            <div className="flex-1" />
+            <Input
+              placeholder="Search quizzes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-64"
+            />
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recent</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="difficulty">Difficulty</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="px-8 pb-8">
-          <Card className="premium-card p-8">
-            <h3 className="text-card-title text-gray-900 mb-4">Why Create Quizzes?</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Test your knowledge</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Identify knowledge gaps</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Track your progress</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Improve retention</p>
-              </div>
-            </div>
-          </Card>
+        {/* Compact Empty State */}
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="text-center max-w-sm">
+            <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No quizzes yet</h3>
+            <p className="text-sm text-gray-500 mb-4">Create your first AI-generated quiz.</p>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Quiz
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -492,19 +439,25 @@ export default function QuizzesPage({ user }) {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white">
-      <div className="border-b border-gray-200 px-8 py-6 bg-white">
+      {/* Compact Header */}
+      <div className="border-b border-gray-200 px-6 py-4 bg-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-page-title text-gray-900">Quizzes</h1>
-            <p className="text-body text-gray-500 mt-1">Test your knowledge with AI-generated questions.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Quizzes</h1>
+            <p className="text-sm text-gray-500 mt-1">Create, organize and practice quizzes from your study materials.</p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create New
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Assistant
+            </Button>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Quiz
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Create AI Quiz</DialogTitle>
@@ -576,46 +529,36 @@ export default function QuizzesPage({ user }) {
             </DialogContent>
           </Dialog>
         </div>
-        {workspaces.length > 0 && (
-          <div className="mt-4">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Workspace</label>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setSelectedWorkspace(null)}
-                className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
-                  !selectedWorkspace
-                    ? 'border-black bg-gray-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                All Quizzes
-              </button>
-              {workspaces.map((workspace) => (
-                <button
-                  key={workspace.id}
-                  onClick={() => setSelectedWorkspace(workspace.id)}
-                  className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all flex items-center gap-2 ${
-                    selectedWorkspace === workspace.id
-                      ? 'border-black bg-gray-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div 
-                    className="h-3 w-3 rounded"
-                    style={{ backgroundColor: workspace.color || '#000' }}
-                  />
-                  {workspace.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
+      {/* Toolbar */}
+      <div className="border-b border-gray-200 px-6 py-3 bg-white">
+        <div className="flex items-center gap-4">
+          <div className="flex-1" />
+          <Input
+            placeholder="Search quizzes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-64"
+          />
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Recent</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="difficulty">Difficulty</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           {/* Performance Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card className="p-4 hover:shadow-lg transition-shadow">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
@@ -662,88 +605,83 @@ export default function QuizzesPage({ user }) {
             </Card>
           </div>
 
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i} className="premium-card p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <Skeleton className="h-12 w-12 rounded-lg" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2 mb-4" />
-                  <Skeleton className="h-10 w-full" />
-                </Card>
-              ))}
-            </div>
-          ) : quizzes.length === 0 ? (
-            <Card className="p-12 text-center">
-              <ClipboardList className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No quizzes yet</h3>
-              <p className="text-gray-500 mb-6">Create your first quiz to test your knowledge</p>
-              <div className="flex gap-3 justify-center">
-                <Button onClick={() => setIsModalOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Generate with AI
-                </Button>
-                <Button variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import from Notes
-                </Button>
+          {/* Recent Quizzes Section */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Quizzes</h2>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="p-4">
+                    <Skeleton className="h-10 w-10 rounded-lg mb-3" />
+                    <Skeleton className="h-5 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2 mb-3" />
+                    <Skeleton className="h-8 w-full" />
+                  </Card>
+                ))}
               </div>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-in">
-              {quizzes.map((quiz) => (
-                <Card key={quiz.id} className="p-6 card-hover card-press">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                      <ClipboardList className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">{quiz.title}</h3>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Folder className="h-4 w-4" />
-                      <span>Study Set</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <ClipboardList className="h-4 w-4" />
-                      <span>{quiz.questions?.length || 5} questions</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Clock className="h-4 w-4" />
-                      <span className="capitalize">{quiz.difficulty || 'medium'}</span>
-                    </div>
-                    {quiz.lastScore && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Award className="h-4 w-4" />
-                        <span>Last score: {quiz.lastScore}%</span>
+            ) : quizzes.length === 0 ? (
+              <Card className="p-6 text-center">
+                <ClipboardList className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">No quizzes yet</h3>
+                <p className="text-xs text-gray-500 mb-3">Create your first AI-generated quiz.</p>
+                <Button onClick={() => setIsModalOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Quiz
+                </Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-in">
+                {quizzes.slice(0, 6).map((quiz) => (
+                  <Card key={quiz.id} className="p-4 card-hover card-press">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                        <ClipboardList className="h-5 w-5 text-white" />
                       </div>
-                    )}
-                    {quiz.lastAttempt && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="h-4 w-4" />
-                        <span>Last: {new Date(quiz.lastAttempt).toLocaleDateString()}</span>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                  <Button onClick={() => handleStartQuiz(quiz)} className="w-full">
-                    <Play className="h-4 w-4 mr-2" />
-                    {quiz.lastAttempt ? 'Continue Quiz' : 'Start Quiz'}
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">{quiz.title}</h3>
+                    <div className="space-y-1 mb-3">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Folder className="h-3 w-3" />
+                        <span>Study Set</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <ClipboardList className="h-3 w-3" />
+                        <span>{quiz.questions?.length || 5} questions</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Clock className="h-3 w-3" />
+                        <span className="capitalize">{quiz.difficulty || 'medium'}</span>
+                      </div>
+                      {quiz.lastScore && (
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Award className="h-3 w-3" />
+                          <span>Last score: {quiz.lastScore}%</span>
+                        </div>
+                      )}
+                      {quiz.lastAttempt && (
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Clock className="h-3 w-3" />
+                          <span>Last: {new Date(quiz.lastAttempt).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                    <Button onClick={() => handleStartQuiz(quiz)} className="w-full" size="sm">
+                      <Play className="h-3 w-3 mr-2" />
+                      {quiz.lastAttempt ? 'Continue' : 'Start'}
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -751,6 +689,15 @@ export default function QuizzesPage({ user }) {
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)}
         feature="Quizzes"
+      />
+      <AISidebar
+        isOpen={isAISidebarOpen}
+        onClose={() => setIsAISidebarOpen(false)}
+        context={{
+          tool: 'Quizzes',
+          studySet: selectedWorkspace,
+          workspace: selectedWorkspace
+        }}
       />
     </div>
   );

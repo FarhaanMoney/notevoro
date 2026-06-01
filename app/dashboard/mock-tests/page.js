@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Clock, Play, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Clock, Play, ChevronLeft, ChevronRight, X, Loader2, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import AISidebar from '@/components/AISidebar';
 
 export default function MockTestsPage({ user }) {
   const [mockTests, setMockTests] = useState([]);
@@ -29,6 +30,9 @@ export default function MockTestsPage({ user }) {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
+  const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
 
   useEffect(() => {
     loadMockTests();
@@ -355,19 +359,25 @@ export default function MockTestsPage({ user }) {
   if (!hasMockTests) {
     return (
       <div className="flex-1 min-h-0 flex flex-col bg-white">
-        <div className="border-b border-gray-200 px-8 py-6 bg-white">
+        {/* Compact Header */}
+        <div className="border-b border-gray-200 px-6 py-4 bg-white">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-page-title text-gray-900">Mock Tests</h1>
-              <p className="text-body text-gray-500 mt-1">Create full-length AI-powered practice exams.</p>
+              <h1 className="text-2xl font-bold text-gray-900">Mock Tests</h1>
+              <p className="text-sm text-gray-500 mt-1">Practice with full-length AI-powered exams.</p>
             </div>
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Mock Test
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                AI Assistant
+              </Button>
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Test
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>Create AI Mock Test</DialogTitle>
@@ -442,43 +452,40 @@ export default function MockTestsPage({ user }) {
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-8">
-          <div className="text-center max-w-md">
-            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
-              <ClipboardList className="h-10 w-10 text-purple-500" />
-            </div>
-            <h2 className="text-section-title text-gray-900 mb-3">Generate Mock Tests</h2>
-            <p className="text-body text-gray-500 mb-8">
-              Create full-length AI-powered practice exams.
-            </p>
-            <Button size="lg" onClick={() => setIsModalOpen(true)}>
-              Create Mock Test
-            </Button>
+        {/* Toolbar */}
+        <div className="border-b border-gray-200 px-6 py-3 bg-white">
+          <div className="flex items-center gap-4">
+            <div className="flex-1" />
+            <Input
+              placeholder="Search tests..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-64"
+            />
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recent</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="difficulty">Difficulty</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="px-8 pb-8">
-          <Card className="premium-card p-8">
-            <h3 className="text-card-title text-gray-900 mb-4">Features</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Timer</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Auto grading</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Analytics</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                <p className="text-body text-gray-600">Performance tracking</p>
-              </div>
-            </div>
-          </Card>
+        {/* Compact Empty State */}
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="text-center max-w-sm">
+            <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No tests yet</h3>
+            <p className="text-sm text-gray-500 mb-4">Create your first AI-powered mock test.</p>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Test
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -487,19 +494,25 @@ export default function MockTestsPage({ user }) {
   // List view
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white">
-      <div className="border-b border-gray-200 px-8 py-6 bg-white">
+      {/* Compact Header */}
+      <div className="border-b border-gray-200 px-6 py-4 bg-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-page-title text-gray-900">Mock Tests</h1>
-            <p className="text-body text-gray-500 mt-1">Create full-length AI-powered practice exams.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Mock Tests</h1>
+            <p className="text-sm text-gray-500 mt-1">Practice with full-length AI-powered exams.</p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create New
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Assistant
+            </Button>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Create AI Mock Test</DialogTitle>
@@ -574,44 +587,145 @@ export default function MockTestsPage({ user }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-8 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i} className="premium-card p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <Skeleton className="h-12 w-12 rounded-lg" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2 mb-4" />
-                  <Skeleton className="h-10 w-full" />
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockTests.map((test) => (
-                <Card key={test.id} className="premium-card p-6 cursor-pointer hover:shadow-lg">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                      <ClipboardList className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs text-gray-400 capitalize">{test.difficulty}</span>
-                  </div>
-                  <h3 className="text-card-title text-gray-900 mb-2">{test.title}</h3>
-                  <p className="text-body text-gray-500 mb-4">{test.sections.length} sections • {test.sections.reduce((sum, s) => sum + s.questions.length, 0)} questions</p>
-                  <Button onClick={() => handleStartTest(test)} className="w-full">
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Test
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
+      {/* Toolbar */}
+      <div className="border-b border-gray-200 px-6 py-3 bg-white">
+        <div className="flex items-center gap-4">
+          <div className="flex-1" />
+          <Input
+            placeholder="Search tests..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-64"
+          />
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Recent</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="difficulty">Difficulty</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          {/* Performance Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                  <ClipboardList className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">82%</p>
+                  <p className="text-sm text-gray-500">Avg Score</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">45m</p>
+                  <p className="text-sm text-gray-500">Avg Time</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
+                  <Play className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{mockTests.length}</p>
+                  <p className="text-sm text-gray-500">Total Tests</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">3</p>
+                  <p className="text-sm text-gray-500">Completed</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Recent Tests Section */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Tests</h2>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="p-4">
+                    <Skeleton className="h-10 w-10 rounded-lg mb-3" />
+                    <Skeleton className="h-5 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2 mb-3" />
+                    <Skeleton className="h-8 w-full" />
+                  </Card>
+                ))}
+              </div>
+            ) : mockTests.length === 0 ? (
+              <Card className="p-6 text-center">
+                <ClipboardList className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">No tests yet</h3>
+                <p className="text-xs text-gray-500 mb-3">Create your first AI-powered mock test.</p>
+                <Button onClick={() => setIsModalOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Test
+                </Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-in">
+                {mockTests.slice(0, 6).map((test) => (
+                  <Card key={test.id} className="p-4 card-hover card-press">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                        <ClipboardList className="h-5 w-5 text-white" />
+                      </div>
+                      <span className="text-xs text-gray-400 capitalize">{test.difficulty}</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">{test.title}</h3>
+                    <div className="space-y-1 mb-3">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <ClipboardList className="h-3 w-3" />
+                        <span>{test.sections.length} sections</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Play className="h-3 w-3" />
+                        <span>{test.sections.reduce((sum, s) => sum + s.questions.length, 0)} questions</span>
+                      </div>
+                    </div>
+                    <Button onClick={() => handleStartTest(test)} className="w-full" size="sm">
+                      <Play className="h-3 w-3 mr-2" />
+                      Start Test
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <AISidebar
+        isOpen={isAISidebarOpen}
+        onClose={() => setIsAISidebarOpen(false)}
+        context={{
+          tool: 'Mock Tests',
+          studySet: selectedWorkspace,
+          workspace: selectedWorkspace
+        }}
+      />
     </div>
   );
 }
