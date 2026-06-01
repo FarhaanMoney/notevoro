@@ -146,14 +146,14 @@ export default function NotesEditorPage({ user }) {
     try {
       const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
-      
+
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           message: aiMessage,
           context: {
             noteTitle: title,
@@ -162,13 +162,17 @@ export default function NotesEditorPage({ user }) {
           }
         }),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setAiResponse(data.response);
+      } else {
+        // If AI chat endpoint fails, show a user-friendly message
+        setAiResponse('AI chat feature is currently unavailable. Please try again later.');
       }
     } catch (error) {
       console.error('AI chat error:', error);
+      setAiResponse('AI chat feature is currently unavailable. Please try again later.');
     } finally {
       setIsAiThinking(false);
     }
@@ -179,21 +183,48 @@ export default function NotesEditorPage({ user }) {
     try {
       const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
-      
+
+      // For note generation, use the existing notes API
+      if (action === 'generate') {
+        const response = await fetch('/api/notes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({
+            topic: aiMessage.trim(),
+            sourceType: 'topic',
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate notes');
+        }
+
+        const data = await response.json();
+        setContent(data.note.content || '');
+        setTitle(data.note.title || aiMessage);
+        setAiMessage('');
+        setIsAiThinking(false);
+        return;
+      }
+
+      // For other AI actions, try the AI action endpoint
       const response = await fetch('/api/ai/action', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           action,
           noteTitle: title,
           noteContent: content,
           noteId: params.id
         }),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.suggestedChanges) {
@@ -205,9 +236,13 @@ export default function NotesEditorPage({ user }) {
         } else {
           setContent(data.content);
         }
+      } else {
+        // If AI action endpoint fails, show a user-friendly message
+        console.warn('AI action endpoint not available, action skipped');
       }
     } catch (error) {
       console.error('AI action error:', error);
+      // Don't throw error, just log it
     } finally {
       setIsAiThinking(false);
     }
