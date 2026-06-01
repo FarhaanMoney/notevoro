@@ -27,9 +27,12 @@ export default function FlashcardsPage({ user }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
 
   useEffect(() => {
     loadFlashcards();
+    loadWorkspaces();
   }, []);
 
   const loadFlashcards = async () => {
@@ -58,11 +61,33 @@ export default function FlashcardsPage({ user }) {
     }
   };
 
+  const loadWorkspaces = async () => {
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/workspaces', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaces(data);
+        console.log('Flashcards page: Loaded workspaces:', data);
+      }
+    } catch (error) {
+      console.error('Flashcards page: Failed to load workspaces:', error);
+    }
+  };
+
   const handleCreateFlashcards = async () => {
     if (!topic.trim()) {
       setError('Please enter a topic');
       return;
     }
+
+    console.log('Flashcards page: Selected workspace:', selectedWorkspace);
+    console.log('Flashcards page: Creating flashcards with topic:', topic.trim());
 
     setIsGenerating(true);
     setError(null);
@@ -70,13 +95,22 @@ export default function FlashcardsPage({ user }) {
     try {
       const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
+      
+      const payload = {
+        topic: topic.trim(),
+        fileUrl: uploadedFile?.url,
+        workspaceId: selectedWorkspace?.id,
+      };
+      
+      console.log('Flashcards page: Flashcards creation payload:', payload);
+      
       const response = await fetch('/api/flashcards', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
-        body: JSON.stringify({ topic: topic.trim(), fileUrl: uploadedFile?.url }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

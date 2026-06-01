@@ -22,6 +22,31 @@ export default function VisualLearningPage({ user }) {
   const [sortBy, setSortBy] = useState('recent');
   const [visualProjects, setVisualProjects] = useState([]);
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+
+  useEffect(() => {
+    loadWorkspaces();
+  }, []);
+
+  const loadWorkspaces = async () => {
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/workspaces', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaces(data);
+        console.log('Visual learning page: Loaded workspaces:', data);
+      }
+    } catch (error) {
+      console.error('Visual learning page: Failed to load workspaces:', error);
+    }
+  };
 
   const handleGenerateVisual = () => {
     // TODO: Implement visual learning generation

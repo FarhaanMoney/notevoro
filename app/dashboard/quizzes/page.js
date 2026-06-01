@@ -34,9 +34,12 @@ export default function QuizzesPage({ user }) {
   const [sortBy, setSortBy] = useState('recent');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
 
   useEffect(() => {
     loadQuizzes();
+    loadWorkspaces();
   }, []);
 
   const loadQuizzes = async () => {
@@ -65,11 +68,33 @@ export default function QuizzesPage({ user }) {
     }
   };
 
+  const loadWorkspaces = async () => {
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/workspaces', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaces(data);
+        console.log('Quizzes page: Loaded workspaces:', data);
+      }
+    } catch (error) {
+      console.error('Quizzes page: Failed to load workspaces:', error);
+    }
+  };
+
   const handleCreateQuiz = async () => {
     if (!topic.trim()) {
       setError('Please enter a topic');
       return;
     }
+
+    console.log('Quizzes page: Selected workspace:', selectedWorkspace);
+    console.log('Quizzes page: Creating quiz with topic:', topic.trim());
 
     setIsGenerating(true);
     setError(null);
@@ -77,18 +102,24 @@ export default function QuizzesPage({ user }) {
     try {
       const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
+      
+      const payload = {
+        topic: topic.trim(),
+        difficulty,
+        questionCount: parseInt(questionCount),
+        fileUrl: uploadedFile?.url,
+        workspaceId: selectedWorkspace?.id,
+      };
+      
+      console.log('Quizzes page: Quiz creation payload:', payload);
+      
       const response = await fetch('/api/quizzes', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
-        body: JSON.stringify({ 
-          topic: topic.trim(),
-          difficulty,
-          questionCount: parseInt(questionCount),
-          fileUrl: uploadedFile?.url,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

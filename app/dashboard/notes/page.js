@@ -87,24 +87,33 @@ export default function NotesPage({ user }) {
       return;
     }
 
+    console.log('Notes page: Selected workspace:', selectedWorkspace);
+    console.log('Notes page: Creating note with topic:', topic.trim());
+
     setIsGenerating(true);
     setError(null);
 
     try {
       const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
+      
+      const payload = {
+        topic: topic.trim(),
+        text: text.trim(),
+        sourceType: uploadedFile ? 'file' : (text.trim() ? 'text' : 'topic'),
+        fileUrl: uploadedFile?.url,
+        workspaceId: selectedWorkspace?.id,
+      };
+      
+      console.log('Notes page: Note creation payload:', payload);
+      
       const response = await fetch('/api/notes', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`
         },
-        body: JSON.stringify({ 
-          topic: topic.trim(),
-          text: text.trim(),
-          sourceType: uploadedFile ? 'file' : (text.trim() ? 'text' : 'topic'),
-          fileUrl: uploadedFile?.url,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

@@ -33,9 +33,12 @@ export default function MockTestsPage({ user }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
 
   useEffect(() => {
     loadMockTests();
+    loadWorkspaces();
   }, []);
 
   useEffect(() => {
@@ -68,28 +71,55 @@ export default function MockTestsPage({ user }) {
     }
   };
 
+  const loadWorkspaces = async () => {
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/workspaces', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaces(data);
+        console.log('Mock tests page: Loaded workspaces:', data);
+      }
+    } catch (error) {
+      console.error('Mock tests page: Failed to load workspaces:', error);
+    }
+  };
+
   const handleCreateMockTest = async () => {
     if (!topic.trim()) {
       setError('Please enter a topic');
       return;
     }
 
+    console.log('Mock tests page: Selected workspace:', selectedWorkspace);
+    console.log('Mock tests page: Creating mock test with topic:', topic.trim());
+
     setIsGenerating(true);
     setError(null);
 
     try {
+      const payload = {
+        topic: topic.trim(),
+        difficulty,
+        sections: parseInt(sections),
+        fileUrl: uploadedFile?.url,
+        workspaceId: selectedWorkspace?.id,
+      };
+      
+      console.log('Mock tests page: Mock test creation payload:', payload);
+      
       const response = await fetch('/api/mock-tests', {
         method: 'POST',
         credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          topic: topic.trim(),
-          difficulty,
-          sections: parseInt(sections),
-          fileUrl: uploadedFile?.url,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
