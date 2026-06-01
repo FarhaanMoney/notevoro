@@ -318,83 +318,89 @@ export default function QuizzesPage({ user }) {
               <h1 className="text-2xl font-bold text-gray-900">Quizzes</h1>
               <p className="text-sm text-gray-500 mt-1">Create, organize and practice quizzes from your study materials.</p>
             </div>
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Quiz
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create AI Quiz</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                    <Input
-                      placeholder="Enter a topic..."
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
-                    <Select value={difficulty} onValueChange={setDifficulty}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="easy">Easy</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Questions</label>
-                    <Select value={questionCount} onValueChange={setQuestionCount}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="3">3 Questions</SelectItem>
-                        <SelectItem value="5">5 Questions</SelectItem>
-                        <SelectItem value="10">10 Questions</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                    />
-                    {isUploading && (
-                      <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Uploading...
-                      </p>
-                    )}
-                    {uploadedFile && (
-                      <p className="text-sm text-green-600 mt-2">
-                        ✓ {uploadedFile.name} uploaded
-                      </p>
-                    )}
-                  </div>
-                  {error && (
-                    <p className="text-red-500 text-sm">{error}</p>
-                  )}
-                  <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Generating...' : 'Generate Quiz'}
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                AI Assistant
+              </Button>
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Quiz
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Create AI Quiz</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+                      <Input
+                        placeholder="Enter a topic..."
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
+                      <Select value={difficulty} onValueChange={setDifficulty}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="easy">Easy</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="hard">Hard</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Questions</label>
+                      <Select value={questionCount} onValueChange={setQuestionCount}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">3 Questions</SelectItem>
+                          <SelectItem value="5">5 Questions</SelectItem>
+                          <SelectItem value="10">10 Questions</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                      />
+                      {isUploading && (
+                        <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading...
+                        </p>
+                      )}
+                      {uploadedFile && (
+                        <p className="text-sm text-green-600 mt-2">
+                          ✓ {uploadedFile.name} uploaded
+                        </p>
+                      )}
+                    </div>
+                    {error && (
+                      <p className="text-red-500 text-sm">{error}</p>
+                    )}
+                    <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
+                      {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                      {isGenerating ? 'Generating...' : 'Generate Quiz'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </div>
 
@@ -458,10 +464,10 @@ export default function QuizzesPage({ user }) {
                   Create Quiz
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Create AI Quiz</DialogTitle>
-              </DialogHeader>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Create AI Quiz</DialogTitle>
+                </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
@@ -528,6 +534,7 @@ export default function QuizzesPage({ user }) {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </div>
 
