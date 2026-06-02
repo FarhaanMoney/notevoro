@@ -34,6 +34,7 @@ export default function NotesEditorPage({ user }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [activeTab, setActiveTab] = useState('editor');
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(true);
   const [aiMessage, setAiMessage] = useState('');
@@ -634,7 +635,7 @@ export default function NotesEditorPage({ user }) {
                 rows={4}
                 className="mb-3"
               />
-              <Button onClick={handleAIChat} disabled={isAiThinking || !aiMessage.trim()} className="w-full">
+              <Button onClick={handleAIMessage} disabled={isAiThinking || !aiMessage.trim()} className="w-full">
                 {isAiThinking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
                 Send
               </Button>
@@ -648,192 +649,32 @@ export default function NotesEditorPage({ user }) {
           </div>
         </div>
       )}
-          <div className="flex gap-1 mr-4">
-            <Button
-              variant={activeTab === 'editor' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('editor')}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Editor
-            </Button>
-            <Button
-              variant={activeTab === 'flashcards' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('flashcards')}
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              Flashcards
-            </Button>
-            <Button
-              variant={activeTab === 'quiz' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('quiz')}
-            >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Quiz
-            </Button>
-          </div>
-          <div className="w-px h-6 bg-gray-200" />
-          
-          {/* Font Family */}
-          <select 
-            value={fontFamily}
-            onChange={(e) => setFontFamily(e.target.value)}
-            className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
-          >
-            <option value="sans">Sans Serif</option>
-            <option value="serif">Serif</option>
-            <option value="mono">Monospace</option>
-          </select>
-          
-          {/* Font Size */}
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setFontSize(Math.max(12, parseInt(fontSize) - 2))}>
-              <Minus className="h-4 w-4" />
-            </Button>
-            <span className="text-sm w-8 text-center">{fontSize}px</span>
-            <Button variant="ghost" size="sm" onClick={() => setFontSize(Math.min(32, parseInt(fontSize) + 2))}>
-              <PlusIcon className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <div className="w-px h-6 bg-gray-200" />
-          
-          {/* Text Color */}
-          <div className="relative">
-            <input
-              type="color"
-              value={textColor}
-              onChange={(e) => setTextColor(e.target.value)}
-              className="w-8 h-8 rounded cursor-pointer border-0"
-            />
-            <Palette className="h-4 w-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0" />
-          </div>
-          
-          {/* Highlight Color */}
-          <div className="relative">
-            <input
-              type="color"
-              value={highlightColor}
-              onChange={(e) => setHighlightColor(e.target.value)}
-              className="w-8 h-8 rounded cursor-pointer border-0"
-            />
-            <Highlighter className="h-4 w-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0" />
-          </div>
-          
-          <div className="w-px h-6 bg-gray-200" />
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleUnderline().run()}><Underline className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleStrike().run()}><Strikethrough className="h-4 w-4" /></Button>
-          <div className="w-px h-6 bg-gray-200" />
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}><Heading3 className="h-4 w-4" /></Button>
-          <div className="w-px h-6 bg-gray-200" />
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBulletList().run()}><List className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleOrderedList().run()}><ListOrdered className="h-4 w-4" /></Button>
-          <div className="w-px h-6 bg-gray-200" />
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBlockquote().run()}><Quote className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleCodeBlock().run()}><Code className="h-4 w-4" /></Button>
-          <div className="w-px h-6 bg-gray-200" />
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().setTextAlign('left').run()}><AlignLeft className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().setTextAlign('center').run()}><AlignCenter className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().setTextAlign('right').run()}><AlignRight className="h-4 w-4" /></Button>
-          <div className="w-px h-6 bg-gray-200" />
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().undo().run()}><Undo className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().redo().run()}><Redo className="h-4 w-4" /></Button>
-        </div>
+
+      {/* Mobile AI Sidebar Toggle */}
+      <div className="md:hidden fixed bottom-4 right-4 z-20">
+        <Button
+          onClick={() => setIsAISidebarOpen(!isAISidebarOpen)}
+          className="rounded-full shadow-lg"
+          size="icon"
+        >
+          <Sparkles className="h-5 w-5" />
+        </Button>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Center Editor */}
-        <div className="flex-1 overflow-y-auto bg-white">
-          <div className="max-w-4xl mx-auto px-4 md:px-8 py-4 md:py-8">
-            {activeTab === 'editor' && (
-              <div className="min-h-[400px] md:min-h-[600px]">
-                {editor && (
-                  <EditorContent editor={editor} className="prose prose-sm md:prose-lg max-w-none focus:outline-none" />
-                )}
-              </div>
-            )}
-            {activeTab === 'flashcards' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900">Flashcards</h2>
-                  <Button onClick={() => handleAIAction('flashcards')} size="sm">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate from Note
-                  </Button>
-                </div>
-                {flashcards.length === 0 ? (
-                  <div className="text-center py-12">
-                    <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No flashcards yet. Generate them from your note!</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {flashcards.map((card, index) => (
-                      <Card key={index} className="p-4 md:p-6">
-                        <p className="font-semibold text-gray-900 mb-2">{card.front}</p>
-                        <p className="text-gray-600">{card.back}</p>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {activeTab === 'quiz' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900">Quiz</h2>
-                  <Button onClick={() => handleAIAction('quiz')} size="sm">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate from Note
-                  </Button>
-                </div>
-                {quizzes.length === 0 ? (
-                  <div className="text-center py-12">
-                    <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No quiz yet. Generate it from your note!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {quizzes.map((quiz, index) => (
-                      <Card key={index} className="p-4 md:p-6">
-                        <p className="font-semibold text-gray-900 mb-4">{quiz.question}</p>
-                        <div className="space-y-2">
-                          {quiz.options.map((option, optIndex) => (
-                            <button
-                              key={optIndex}
-                              className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right AI Sidebar */}
-        {isAISidebarOpen && (
-          <div className="hidden md:flex w-80 border-l border-gray-200 bg-gray-50 flex-col">
-            <div className="p-4 border-b border-gray-200">
+      {/* Mobile AI Sidebar Modal */}
+      {isAISidebarOpen && (
+        <div className="md:hidden fixed inset-0 z-30 bg-black/50 flex items-end justify-center">
+          <div className="bg-white w-full max-h-[80vh] rounded-t-2xl overflow-hidden">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-purple-500" />
                 AI Assistant
               </h3>
+              <Button variant="ghost" size="icon" onClick={() => setIsAISidebarOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="p-4 overflow-y-auto max-h-[70vh]">
               <div className="space-y-2 mb-6">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                   Quick Actions
@@ -845,13 +686,11 @@ export default function NotesEditorPage({ user }) {
                   { icon: FileText, label: 'Expand Content', action: 'expand' },
                   { icon: NotebookPen, label: 'Create Flashcards', action: 'flashcards' },
                   { icon: FileText, label: 'Create Quiz', action: 'quiz' },
-                  { icon: FileText, label: 'Find Mistakes', action: 'mistakes' },
-                  { icon: FileText, label: 'Improve Writing', action: 'improve' },
                 ].map((item) => (
                   <button
                     key={item.action}
                     onClick={() => handleAIAction(item.action)}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all text-left"
                   >
                     <item.icon className="h-4 w-4 text-gray-500" />
                     <span className="text-sm text-gray-700">{item.label}</span>
@@ -883,95 +722,14 @@ export default function NotesEditorPage({ user }) {
               </div>
 
               {aiResponse && (
-                <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                   <p className="text-sm text-gray-700">{aiResponse}</p>
                 </div>
               )}
             </div>
           </div>
-        )}
-
-        {/* Mobile AI Sidebar Toggle */}
-        <div className="md:hidden fixed bottom-4 right-4 z-20">
-          <Button
-            onClick={() => setIsAISidebarOpen(!isAISidebarOpen)}
-            className="rounded-full shadow-lg"
-            size="icon"
-          >
-            <Sparkles className="h-5 w-5" />
-          </Button>
         </div>
-
-        {/* Mobile AI Sidebar Modal */}
-        {isAISidebarOpen && (
-          <div className="md:hidden fixed inset-0 z-30 bg-black/50 flex items-end justify-center">
-            <div className="bg-white w-full max-h-[80vh] rounded-t-2xl overflow-hidden">
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-purple-500" />
-                  AI Assistant
-                </h3>
-                <Button variant="ghost" size="icon" onClick={() => setIsAISidebarOpen(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="p-4 overflow-y-auto max-h-[70vh]">
-                <div className="space-y-2 mb-6">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                    Quick Actions
-                  </p>
-                  {[
-                    { icon: FileText, label: 'Summarize Note', action: 'summarize' },
-                    { icon: MessageSquare, label: 'Explain Difficult Parts', action: 'explain' },
-                    { icon: FileText, label: 'Simplify Content', action: 'simplify' },
-                    { icon: FileText, label: 'Expand Content', action: 'expand' },
-                    { icon: NotebookPen, label: 'Create Flashcards', action: 'flashcards' },
-                    { icon: FileText, label: 'Create Quiz', action: 'quiz' },
-                  ].map((item) => (
-                    <button
-                      key={item.action}
-                      onClick={() => handleAIAction(item.action)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all text-left"
-                    >
-                      <item.icon className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-700">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                    Ask AI
-                  </p>
-                  <div className="space-y-2">
-                    <Textarea
-                      value={aiMessage}
-                      onChange={(e) => setAiMessage(e.target.value)}
-                      placeholder="Ask AI to help with your notes..."
-                      rows={3}
-                      className="text-sm"
-                    />
-                    <Button
-                      onClick={handleAIMessage}
-                      disabled={isAiThinking || !aiMessage.trim()}
-                      className="w-full"
-                    >
-                      {isAiThinking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <MessageSquare className="h-4 w-4 mr-2" />}
-                      {isAiThinking ? 'Thinking...' : 'Send'}
-                    </Button>
-                  </div>
-                </div>
-
-                {aiResponse && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-700">{aiResponse}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* AI Edit Preview Panel */}
       {showPreviewPanel && (
