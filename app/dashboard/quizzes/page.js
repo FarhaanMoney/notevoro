@@ -1,36 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Loader2, Play, Clock, Folder, TrendingUp, Award, Flame, Edit2, Trash2, Upload, Sparkles, FileText, Zap, Copy, Share2, Target } from 'lucide-react';
-import UpgradeModal from '@/components/UpgradeModal';
+import { ClipboardList, Plus, CheckCircle, Play, Clock, Folder, Edit2, Trash2, Copy, Share2, Target } from 'lucide-react';
 import AISidebar from '@/components/AISidebar';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
-import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 
 export default function QuizzesPage({ user }) {
+  const router = useRouter();
   const [quizzes, setQuizzes] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState(null);
-  const [topic, setTopic] = useState('');
-  const [difficulty, setDifficulty] = useState('medium');
-  const [questionCount, setQuestionCount] = useState('5');
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
@@ -86,68 +75,6 @@ export default function QuizzesPage({ user }) {
       }
     } catch (error) {
       console.error('Quizzes page: Failed to load workspaces:', error);
-    }
-  };
-
-  const handleCreateQuiz = async () => {
-    if (!topic.trim()) {
-      setError('Please enter a topic');
-      return;
-    }
-
-    console.log('Quizzes page: Selected workspace:', selectedWorkspace);
-    console.log('Quizzes page: Creating quiz with topic:', topic.trim());
-
-    setIsGenerating(true);
-    setError(null);
-
-    try {
-      const sb = createClient();
-      const { data: { session } } = await sb.auth.getSession();
-      
-      const payload = {
-        topic: topic.trim(),
-        difficulty,
-        questionCount: parseInt(questionCount),
-        fileUrl: uploadedFile?.url,
-        workspaceId: selectedWorkspace?.id,
-      };
-      
-      console.log('Quizzes page: Quiz creation payload:', payload);
-      
-      const response = await fetch('/api/quizzes', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 429) {
-          setShowUpgradeModal(true);
-          setIsGenerating(false);
-          return;
-        }
-        throw new Error(errorData.error || 'Failed to create quiz');
-      }
-
-      const data = await response.json();
-      setQuizzes([data.quiz, ...quizzes]);
-      setIsModalOpen(false);
-      setTopic('');
-      setDifficulty('medium');
-      setQuestionCount('5');
-      setUploadedFile(null);
-      toast.success('Quiz created successfully');
-    } catch (error) {
-      console.error('Quiz creation error:', error);
-      setError(error.message);
-      toast.error('Failed to create quiz');
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -366,7 +293,7 @@ export default function QuizzesPage({ user }) {
         <div className="border-b border-gray-200 px-6 py-3 bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Button onClick={() => router.push('/dashboard/quizzes/create')} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Quiz
               </Button>
@@ -393,7 +320,7 @@ export default function QuizzesPage({ user }) {
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No quizzes yet</h2>
             <p className="text-sm text-gray-500 mb-4">Create your first quiz to get started</p>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={() => router.push('/dashboard/quizzes/create')}>
               <Plus className="h-4 w-4 mr-2" />
               Create Quiz
             </Button>
@@ -417,7 +344,7 @@ export default function QuizzesPage({ user }) {
       <div className="border-b border-gray-200 px-6 py-3 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button onClick={() => setIsModalOpen(true)} size="sm">
+            <Button onClick={() => router.push('/dashboard/quizzes/create')} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Create Quiz
             </Button>
@@ -526,85 +453,6 @@ export default function QuizzesPage({ user }) {
           tool: 'Quizzes',
           workspace: selectedWorkspace
         }}
-      />
-      
-      {/* Create Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create AI Quiz</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-              <Input
-                placeholder="Enter a topic..."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
-              <Select value={difficulty} onValueChange={setDifficulty}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Questions</label>
-              <Select value={questionCount} onValueChange={setQuestionCount}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3">3 Questions</SelectItem>
-                  <SelectItem value="5">5 Questions</SelectItem>
-                  <SelectItem value="10">10 Questions</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-              />
-              {isUploading && (
-                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Uploading...
-                </p>
-              )}
-              {uploadedFile && (
-                <p className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFile.name} uploaded
-                </p>
-              )}
-            </div>
-            {error && (
-              <p className="text-red-500 text-sm">{error}</p>
-            )}
-            <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
-              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-              {isGenerating ? 'Generating...' : 'Generate Quiz'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      <UpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        feature="Quizzes"
       />
     </div>
   );

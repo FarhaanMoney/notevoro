@@ -1,26 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Clock, Play, ChevronLeft, ChevronRight, X, Loader2, Sparkles, FileText, Zap, Upload, Copy, Share2, Target, Award, TrendingUp, Trash2, Folder } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Clock, Play, ChevronLeft, ChevronRight, X, Copy, Share2, Target, Award, Trash2, Folder } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import AISidebar from '@/components/AISidebar';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
-import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 
 export default function MockTestsPage({ user }) {
+  const router = useRouter();
   const [mockTests, setMockTests] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState(null);
-  const [topic, setTopic] = useState('');
-  const [difficulty, setDifficulty] = useState('medium');
-  const [sections, setSections] = useState('3');
   const [activeTest, setActiveTest] = useState(null);
   const [currentSection, setCurrentSection] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -30,8 +23,6 @@ export default function MockTestsPage({ user }) {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
@@ -89,58 +80,6 @@ export default function MockTestsPage({ user }) {
       }
     } catch (error) {
       console.error('Mock tests page: Failed to load workspaces:', error);
-    }
-  };
-
-  const handleCreateMockTest = async () => {
-    if (!topic.trim()) {
-      setError('Please enter a topic');
-      return;
-    }
-
-    console.log('Mock tests page: Selected workspace:', selectedWorkspace);
-    console.log('Mock tests page: Creating mock test with topic:', topic.trim());
-
-    setIsGenerating(true);
-    setError(null);
-
-    try {
-      const payload = {
-        topic: topic.trim(),
-        difficulty,
-        sections: parseInt(sections),
-        fileUrl: uploadedFile?.url,
-        workspaceId: selectedWorkspace?.id,
-      };
-      
-      console.log('Mock tests page: Mock test creation payload:', payload);
-      
-      const response = await fetch('/api/mock-tests', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create mock test');
-      }
-
-      const data = await response.json();
-      setMockTests([data.mockTest, ...mockTests]);
-      setIsModalOpen(false);
-      setTopic('');
-      setDifficulty('medium');
-      setSections('3');
-      setUploadedFile(null);
-    } catch (error) {
-      console.error('Mock test creation error:', error);
-      setError(error.message);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -412,7 +351,7 @@ export default function MockTestsPage({ user }) {
         <div className="border-b border-gray-200 px-6 py-3 bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Button onClick={() => router.push('/dashboard/mock-tests/create')} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Mock Test
               </Button>
@@ -439,7 +378,7 @@ export default function MockTestsPage({ user }) {
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No mock tests yet</h2>
             <p className="text-sm text-gray-500 mb-4">Create your first mock test to get started</p>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={() => router.push('/dashboard/mock-tests/create')}>
               <Plus className="h-4 w-4 mr-2" />
               Create Mock Test
             </Button>
@@ -464,7 +403,7 @@ export default function MockTestsPage({ user }) {
       <div className="border-b border-gray-200 px-6 py-3 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button onClick={() => setIsModalOpen(true)} size="sm">
+            <Button onClick={() => router.push('/dashboard/mock-tests/create')} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Create Mock Test
             </Button>
@@ -571,80 +510,6 @@ export default function MockTestsPage({ user }) {
           workspace: selectedWorkspace
         }}
       />
-      
-      {/* Create Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create AI Mock Test</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-              <Input
-                placeholder="Enter a topic..."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
-              <Select value={difficulty} onValueChange={setDifficulty}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Sections</label>
-              <Select value={sections} onValueChange={setSections}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">2 Sections</SelectItem>
-                  <SelectItem value="3">3 Sections</SelectItem>
-                  <SelectItem value="4">4 Sections</SelectItem>
-                  <SelectItem value="5">5 Sections</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-              />
-              {isUploading && (
-                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Uploading...
-                </p>
-              )}
-              {uploadedFile && (
-                <p className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFile.name} uploaded
-                </p>
-              )}
-            </div>
-            {error && (
-              <p className="text-red-500 text-sm">{error}</p>
-            )}
-            <Button onClick={handleCreateMockTest} disabled={isGenerating} className="w-full">
-              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-              {isGenerating ? 'Generating...' : 'Generate Mock Test'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

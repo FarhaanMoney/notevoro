@@ -1,30 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, Plus, CheckCircle, Loader2, RotateCw, ChevronLeft, ChevronRight, X, Folder, Clock, TrendingUp, Award, Edit2, Trash2, Upload, Sparkles, FileText, Zap, Copy, Share2 } from 'lucide-react';
+import { BookOpen, Plus, CheckCircle, RotateCw, ChevronLeft, ChevronRight, X, Folder, Clock, Edit2, Trash2, Copy, Share2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import AISidebar from '@/components/AISidebar';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
-import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 
 export default function FlashcardsPage({ user }) {
+  const router = useRouter();
   const [flashcards, setFlashcards] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState(null);
-  const [topic, setTopic] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isStudying, setIsStudying] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
@@ -79,61 +72,6 @@ export default function FlashcardsPage({ user }) {
       }
     } catch (error) {
       console.error('Flashcards page: Failed to load workspaces:', error);
-    }
-  };
-
-  const handleCreateFlashcards = async () => {
-    if (!topic.trim()) {
-      setError('Please enter a topic');
-      return;
-    }
-
-    console.log('Flashcards page: Selected workspace:', selectedWorkspace);
-    console.log('Flashcards page: Creating flashcards with topic:', topic.trim());
-
-    setIsGenerating(true);
-    setError(null);
-
-    try {
-      const sb = createClient();
-      const { data: { session } } = await sb.auth.getSession();
-      
-      const payload = {
-        topic: topic.trim(),
-        fileUrl: uploadedFile?.url,
-        workspaceId: selectedWorkspace?.id,
-      };
-      
-      console.log('Flashcards page: Flashcards creation payload:', payload);
-      
-      const response = await fetch('/api/flashcards', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create flashcards');
-      }
-
-      const data = await response.json();
-      setFlashcards([...flashcards, ...data.flashcards]);
-      setIsModalOpen(false);
-      setTopic('');
-      setUploadedFile(null);
-      setIsStudying(true);
-      setCurrentIndex(flashcards.length);
-      toast.success('Flashcards created successfully');
-    } catch (error) {
-      console.error('Flashcard creation error:', error);
-      setError(error.message);
-      toast.error('Failed to create flashcards');
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -326,7 +264,7 @@ export default function FlashcardsPage({ user }) {
         <div className="border-b border-gray-200 px-6 py-3 bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Button onClick={() => router.push('/dashboard/flashcards/create')} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Flashcards
               </Button>
@@ -354,7 +292,7 @@ export default function FlashcardsPage({ user }) {
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No flashcards yet</h2>
             <p className="text-sm text-gray-500 mb-4">Create your first flashcard set to get started</p>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={() => router.push('/dashboard/flashcards/create')}>
               <Plus className="h-4 w-4 mr-2" />
               Create Flashcards
             </Button>
@@ -378,7 +316,7 @@ export default function FlashcardsPage({ user }) {
       <div className="border-b border-gray-200 px-6 py-3 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button onClick={() => setIsModalOpen(true)} size="sm">
+            <Button onClick={() => router.push('/dashboard/flashcards/create')} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Create Flashcards
             </Button>
@@ -489,53 +427,6 @@ export default function FlashcardsPage({ user }) {
           workspace: selectedWorkspace
         }}
       />
-      
-      {/* Create Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create AI Flashcards</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-              <Input
-                placeholder="Enter a topic..."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-              />
-              {isUploading && (
-                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Uploading...
-                </p>
-              )}
-              {uploadedFile && (
-                <p className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFile.name} uploaded
-                </p>
-              )}
-            </div>
-            {error && (
-              <p className="text-red-500 text-sm">{error}</p>
-            )}
-            <Button onClick={handleCreateFlashcards} disabled={isGenerating} className="w-full">
-              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-              {isGenerating ? 'Generating...' : 'Generate Flashcards'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

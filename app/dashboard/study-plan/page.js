@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle, Clock, Plus, Sparkles, Target, TrendingUp, BookOpen, Play, Zap, Upload, FileText, Folder, Award, Flame, Trash2 } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Plus, Target, TrendingUp, BookOpen, Play, Folder, Award, Flame, Trash2, Sparkles } from 'lucide-react';
 import AISidebar from '@/components/AISidebar';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
-import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 import { createClient } from '@/lib/supabase/client';
 
 export default function StudyPlanPage({ user }) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
@@ -95,7 +96,7 @@ export default function StudyPlanPage({ user }) {
         <div className="border-b border-gray-200 px-6 py-3 bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button onClick={() => setHasStudyPlan(true)} size="sm">
+              <Button onClick={() => router.push('/dashboard/study-plan/create')} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Study Plan
               </Button>
@@ -123,7 +124,7 @@ export default function StudyPlanPage({ user }) {
             </div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No study plan yet</h2>
             <p className="text-sm text-gray-500 mb-4">Create your first study plan to get started</p>
-            <Button onClick={() => setHasStudyPlan(true)}>
+            <Button onClick={() => router.push('/dashboard/study-plan/create')}>
               <Plus className="h-4 w-4 mr-2" />
               Create Study Plan
             </Button>
