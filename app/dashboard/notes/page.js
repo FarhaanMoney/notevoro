@@ -348,67 +348,6 @@ export default function NotesPage({ user }) {
                 <p className="text-xs text-gray-500">Let AI create for you</p>
               </button>
             </div>
-
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="px-8">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Create Note
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create AI Notes</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                    <Input
-                      placeholder="Enter a topic..."
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Or paste text</label>
-                    <Textarea
-                      placeholder="Paste your text here..."
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                    />
-                    {isUploading && (
-                      <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Uploading...
-                      </p>
-                    )}
-                    {uploadedFile && (
-                      <p className="text-sm text-green-600 mt-2">
-                        ✓ {uploadedFile.name} uploaded
-                      </p>
-                    )}
-                  </div>
-                  {error && (
-                    <p className="text-red-500 text-sm">{error}</p>
-                  )}
-                  <Button onClick={handleCreateNote} disabled={isGenerating} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Generating...' : 'Generate Notes'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
       </div>
