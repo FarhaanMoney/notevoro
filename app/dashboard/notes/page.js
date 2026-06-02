@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { NotebookPen, Plus, ArrowRight, Loader2, FileText, Folder, Upload, Sparkles, Zap, Copy, Share2, Clock, TrendingUp } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NotebookPen, Plus, ArrowRight, Loader2, FileText, Folder, Upload, Sparkles, Zap, Copy, Share2, Clock, TrendingUp, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeModal from '@/components/UpgradeModal';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';

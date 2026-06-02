@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle, Clock, Plus, Sparkles, Target, TrendingUp, BookOpen, Play, Zap, Upload, FileText, Folder, Award, Flame } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Plus, Sparkles, Target, TrendingUp, BookOpen, Play, Zap, Upload, FileText, Folder, Award, Flame, Trash2 } from 'lucide-react';
 import AISidebar from '@/components/AISidebar';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
 import FeatureDashboard from '@/components/workspace/FeatureDashboard';
