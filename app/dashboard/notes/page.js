@@ -295,59 +295,42 @@ export default function NotesPage({ user }) {
           showExport={false}
           showFullscreen={false}
         />
-        
-        <FeatureDashboard
-          featureType="notes"
-          stats={stats}
-        />
 
-        {/* Enhanced Empty State */}
+        {/* Compact Toolbar */}
+        <div className="border-b border-gray-200 px-6 py-3 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setIsModalOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Note
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Recent</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Simple Empty State */}
         <div className="flex-1 flex items-center justify-center px-6 bg-gray-50">
-          <div className="text-center max-w-2xl">
-            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
-              <NotebookPen className="h-10 w-10 text-purple-500" />
+          <div className="text-center">
+            <div className="h-16 w-16 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4">
+              <NotebookPen className="h-8 w-8 text-purple-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Create Smart Study Notes</h2>
-            <p className="text-gray-500 mb-8">
-              Generate AI-powered structured study notes from any topic, text, or uploaded file. 
-              Organize your learning with summaries, key concepts, and definitions.
-            </p>
-            
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <Zap className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">From Topic</h3>
-                <p className="text-xs text-gray-500">Generate from any subject</p>
-              </button>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <FileText className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">From Text</h3>
-                <p className="text-xs text-gray-500">Paste your content</p>
-              </button>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <Upload className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">From File</h3>
-                <p className="text-xs text-gray-500">Upload PDF, DOCX, TXT</p>
-              </button>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <Sparkles className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">AI Generate</h3>
-                <p className="text-xs text-gray-500">Let AI create for you</p>
-              </button>
-            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">No notes yet</h2>
+            <p className="text-sm text-gray-500 mb-4">Create your first note to get started</p>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Note
+            </Button>
           </div>
         </div>
       </div>
@@ -363,14 +346,9 @@ export default function NotesPage({ user }) {
         showExport={false}
         showFullscreen={false}
       />
-      
-      <FeatureDashboard
-        featureType="notes"
-        stats={stats}
-      />
 
-      {/* Quick Actions Bar */}
-      <div className="border-b border-gray-200 px-6 py-4 bg-white">
+      {/* Compact Toolbar */}
+      <div className="border-b border-gray-200 px-6 py-3 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button onClick={() => setIsModalOpen(true)} size="sm">
@@ -392,8 +370,8 @@ export default function NotesPage({ user }) {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

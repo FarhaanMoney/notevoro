@@ -407,138 +407,42 @@ export default function MockTestsPage({ user }) {
           showExport={false}
           showFullscreen={false}
         />
-        
-        <FeatureDashboard
-          featureType="mock-tests"
-          stats={stats}
-        />
 
-        {/* Enhanced Empty State */}
+        {/* Compact Toolbar */}
+        <div className="border-b border-gray-200 px-6 py-3 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setIsModalOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Mock Test
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Recent</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Simple Empty State */}
         <div className="flex-1 flex items-center justify-center px-6 bg-gray-50">
-          <div className="text-center max-w-2xl">
-            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
-              <ClipboardList className="h-10 w-10 text-purple-500" />
+          <div className="text-center">
+            <div className="h-16 w-16 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4">
+              <ClipboardList className="h-8 w-8 text-purple-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Practice with Full-Length Exams</h2>
-            <p className="text-gray-500 mb-8">
-              Create AI-powered mock tests from your notes, uploaded files, or any topic. 
-              Simulate real exam conditions and track your progress over time.
-            </p>
-            
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <Zap className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">From Topic</h3>
-                <p className="text-xs text-gray-500">Generate from any subject</p>
-              </button>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <FileText className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">From Notes</h3>
-                <p className="text-xs text-gray-500">Use your existing notes</p>
-              </button>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <Upload className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">From File</h3>
-                <p className="text-xs text-gray-500">Upload PDF, DOCX, TXT</p>
-              </button>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-              >
-                <Sparkles className="h-6 w-6 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-gray-900 mb-1">AI Generate</h3>
-                <p className="text-xs text-gray-500">Let AI create for you</p>
-              </button>
-            </div>
-
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="px-8">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Create Mock Test
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create AI Mock Test</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                    <Input
-                      placeholder="Enter a topic..."
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Difficulty</label>
-                    <Select value={difficulty} onValueChange={setDifficulty}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="easy">Easy</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Number of Sections</label>
-                    <Select value={sections} onValueChange={setSections}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2">2 Sections</SelectItem>
-                        <SelectItem value="3">3 Sections</SelectItem>
-                        <SelectItem value="4">4 Sections</SelectItem>
-                        <SelectItem value="5">5 Sections</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                    />
-                    {isUploading && (
-                      <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Uploading...
-                      </p>
-                    )}
-                    {uploadedFile && (
-                      <p className="text-sm text-green-600 mt-2">
-                        ✓ {uploadedFile.name} uploaded
-                      </p>
-                    )}
-                  </div>
-                  {error && (
-                    <p className="text-red-500 text-sm">{error}</p>
-                  )}
-                  <Button onClick={handleCreateMockTest} disabled={isGenerating} className="w-full">
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                    {isGenerating ? 'Generating...' : 'Generate Mock Test'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">No mock tests yet</h2>
+            <p className="text-sm text-gray-500 mb-4">Create your first mock test to get started</p>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Mock Test
+            </Button>
           </div>
         </div>
       </div>
@@ -555,14 +459,9 @@ export default function MockTestsPage({ user }) {
         showExport={false}
         showFullscreen={false}
       />
-      
-      <FeatureDashboard
-        featureType="mock-tests"
-        stats={stats}
-      />
 
-      {/* Quick Actions Bar */}
-      <div className="border-b border-gray-200 px-6 py-4 bg-white">
+      {/* Compact Toolbar */}
+      <div className="border-b border-gray-200 px-6 py-3 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button onClick={() => setIsModalOpen(true)} size="sm">
@@ -589,8 +488,8 @@ export default function MockTestsPage({ user }) {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
