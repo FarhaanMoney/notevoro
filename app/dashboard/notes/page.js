@@ -411,7 +411,15 @@ export default function NotesPage({ user }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => router.push(`/dashboard/notes/${note.id}`)} className="flex-1" size="sm">
+                    <Button onClick={() => {
+                      console.log('Notes page: Clicked note with ID:', note.id);
+                      console.log('Notes page: Note object:', note);
+                      if (!note.id) {
+                        console.error('Notes page: Note ID is missing!');
+                        return;
+                      }
+                      router.push(`/dashboard/notes/${note.id}`);
+                    }} className="flex-1" size="sm">
                       <FileText className="h-4 w-4 mr-2" />
                       Open
                     </Button>
