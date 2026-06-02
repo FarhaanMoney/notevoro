@@ -118,12 +118,17 @@ export default function NotesEditorPage({ user }) {
         
         // Load workspace information if note has a workspace
         if (data.note.workspace_id) {
-          const workspaceResponse = await fetch(`/api/workspaces/${data.note.workspace_id}`, {
-            headers: { Authorization: `Bearer ${session?.access_token}` }
-          });
-          if (workspaceResponse.ok) {
-            const workspaceData = await workspaceResponse.json();
-            setWorkspace(workspaceData.workspace);
+          try {
+            const workspaceResponse = await fetch(`/api/workspaces/${data.note.workspace_id}`, {
+              headers: { Authorization: `Bearer ${session?.access_token}` }
+            });
+            if (workspaceResponse.ok) {
+              const workspaceData = await workspaceResponse.json();
+              setWorkspace(workspaceData.workspace);
+            }
+          } catch (workspaceError) {
+            console.error('Failed to load workspace:', workspaceError);
+            // Continue without workspace - don't fail the entire note load
           }
         }
       }

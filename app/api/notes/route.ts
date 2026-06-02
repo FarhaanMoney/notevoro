@@ -19,12 +19,15 @@ export async function POST(req: NextRequest) {
 
     // Handle blank note creation
     if (sourceType === 'scratch') {
+      console.log('Notes API: Creating blank note');
       if (!title) {
+        console.error('Notes API: Title is required for blank notes');
         return NextResponse.json({ error: 'Title is required for blank notes' }, { status: 400 });
       }
 
       const supabase = await createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('Notes API: Auth result for blank note:', { user: !!user, authError });
 
       if (authError || !user) {
         console.log('Unauthorized - user missing or invalid');
@@ -37,11 +40,13 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           title: title || 'Untitled Note',
           content: content || '',
-          source_type: 'scratch',
+          source_type: 'text', // Use 'text' for scratch notes as it's a valid source_type
           workspace_id: workspaceId || null,
         })
         .select()
         .single();
+
+      console.log('Notes API: Blank note insert result:', { note, insertError });
 
       if (insertError) {
         console.error('Database insert error:', insertError);
@@ -52,6 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!topic && !text && !fileUrl) {
+      console.error('Notes API: Topic, text, or file is required');
       return NextResponse.json({ error: 'Topic, text, or file is required' }, { status: 400 });
     }
 
@@ -135,6 +141,21 @@ export async function POST(req: NextRequest) {
 
     const noteTitle = title || topic || 'Untitled Notes';
 
+    // Determine source_type based on sourceType
+    let finalSourceType = sourceType || 'topic';
+    if (sourceType === 'file') {
+      // Determine if it's a PDF or image based on fileUrl
+      if (fileUrl?.toLowerCase().includes('.pdf')) {
+        finalSourceType = 'pdf';
+      } else if (fileUrl?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+        finalSourceType = 'image';
+      } else {
+        finalSourceType = 'pdf'; // Default to pdf for other file types
+      }
+    }
+
+    console.log('Notes API: Final source_type:', finalSourceType);
+
     // Save notes to database
     const { data: note, error: insertError } = await supabase
       .from('notes')
@@ -143,7 +164,7 @@ export async function POST(req: NextRequest) {
         title: noteTitle,
         content: text || topic || '',
         summary: notesData.summary || '',
-        source_type: sourceType || 'topic',
+        source_type: finalSourceType,
         source_url: fileUrl || null,
         workspace_id: workspaceId || null,
       })

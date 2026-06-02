@@ -107,7 +107,7 @@ export default function NotesPage({ user }) {
           title: 'Untitled Note',
           content: '',
           sourceType: 'scratch',
-          workspaceId: selectedWorkspace?.id,
+          workspaceId: selectedWorkspace?.id || null,
         }),
       });
 
@@ -145,7 +145,7 @@ export default function NotesPage({ user }) {
       const payload = {
         topic: topic.trim(),
         sourceType: 'topic',
-        workspaceId: selectedWorkspace?.id,
+        workspaceId: selectedWorkspace?.id || null,
       };
       
       console.log('Notes page: Topic note creation payload:', payload);
@@ -199,7 +199,7 @@ export default function NotesPage({ user }) {
       const payload = {
         fileUrl: uploadedFile.url,
         sourceType: 'file',
-        workspaceId: selectedWorkspace?.id,
+        workspaceId: selectedWorkspace?.id || null,
       };
       
       console.log('Notes page: File note creation payload:', payload);
