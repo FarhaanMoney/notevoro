@@ -34,6 +34,8 @@ export default function NotesPage({ user }) {
   const [isLoading, setIsLoading] = useState(false);
   const [workspaces, setWorkspaces] = useState([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
 
   useEffect(() => {
     loadNotes();
