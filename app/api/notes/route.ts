@@ -13,9 +13,43 @@ function getOpenAI() {
 export async function POST(req: NextRequest) {
   try {
     console.log('Notes POST route hit');
-    const { topic, text, sourceType, fileUrl, workspaceId } = await req.json();
+    const { topic, text, sourceType, fileUrl, workspaceId, title, content } = await req.json();
 
-    console.log('Notes creation payload:', { topic, text, sourceType, fileUrl, workspaceId });
+    console.log('Notes creation payload:', { topic, text, sourceType, fileUrl, workspaceId, title, content });
+
+    // Handle blank note creation
+    if (sourceType === 'scratch') {
+      if (!title) {
+        return NextResponse.json({ error: 'Title is required for blank notes' }, { status: 400 });
+      }
+
+      const supabase = await createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        console.log('Unauthorized - user missing or invalid');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { data: note, error: insertError } = await supabase
+        .from('notes')
+        .insert({
+          user_id: user.id,
+          title: title || 'Untitled Note',
+          content: content || '',
+          source_type: 'scratch',
+          workspace_id: workspaceId || null,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Database insert error:', insertError);
+        throw new Error(`Database insert failed: ${insertError.message}`);
+      }
+
+      return NextResponse.json({ note });
+    }
 
     if (!topic && !text && !fileUrl) {
       return NextResponse.json({ error: 'Topic, text, or file is required' }, { status: 400 });
@@ -99,14 +133,14 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const title = topic || 'Untitled Notes';
+    const noteTitle = title || topic || 'Untitled Notes';
 
     // Save notes to database
     const { data: note, error: insertError } = await supabase
       .from('notes')
       .insert({
         user_id: user.id,
-        title,
+        title: noteTitle,
         content: text || topic || '',
         summary: notesData.summary || '',
         source_type: sourceType || 'topic',

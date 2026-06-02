@@ -38,6 +38,7 @@ export default function NotesPage({ user }) {
   const [selectedWorkspace, setSelectedWorkspace] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
+  const [creationOption, setCreationOption] = useState(null);
 
   useEffect(() => {
     loadNotes();
@@ -88,14 +89,51 @@ export default function NotesPage({ user }) {
     }
   };
 
-  const handleCreateNote = async () => {
-    if (!topic.trim() && !text.trim()) {
-      setError('Please enter a topic or paste text');
+  const handleCreateBlankNote = async () => {
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          title: 'Untitled Note',
+          content: '',
+          sourceType: 'scratch',
+          workspaceId: selectedWorkspace?.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create note');
+      }
+
+      const data = await response.json();
+      setNotes([data.note, ...notes]);
+      setIsModalOpen(false);
+      setCreationOption(null);
+      router.push(`/dashboard/notes/${data.note.id}`);
+    } catch (error) {
+      console.error('Blank note creation error:', error);
+      setError(error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCreateTopicNote = async () => {
+    if (!topic.trim()) {
+      setError('Please enter a topic');
       return;
     }
-
-    console.log('Notes page: Selected workspace:', selectedWorkspace);
-    console.log('Notes page: Creating note with topic:', topic.trim());
 
     setIsGenerating(true);
     setError(null);
@@ -106,13 +144,11 @@ export default function NotesPage({ user }) {
       
       const payload = {
         topic: topic.trim(),
-        text: text.trim(),
-        sourceType: uploadedFile ? 'file' : (text.trim() ? 'text' : 'topic'),
-        fileUrl: uploadedFile?.url,
+        sourceType: 'topic',
         workspaceId: selectedWorkspace?.id,
       };
       
-      console.log('Notes page: Note creation payload:', payload);
+      console.log('Notes page: Topic note creation payload:', payload);
       
       const response = await fetch('/api/notes', {
         method: 'POST',
@@ -136,11 +172,65 @@ export default function NotesPage({ user }) {
       const data = await response.json();
       setNotes([data.note, ...notes]);
       setIsModalOpen(false);
+      setCreationOption(null);
       setTopic('');
-      setText('');
-      setUploadedFile(null);
+      router.push(`/dashboard/notes/${data.note.id}`);
     } catch (error) {
-      console.error('Note creation error:', error);
+      console.error('Topic note creation error:', error);
+      setError(error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCreateFileNote = async () => {
+    if (!uploadedFile) {
+      setError('Please upload a file');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const payload = {
+        fileUrl: uploadedFile.url,
+        sourceType: 'file',
+        workspaceId: selectedWorkspace?.id,
+      };
+      
+      console.log('Notes page: File note creation payload:', payload);
+      
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 429) {
+          setShowUpgradeModal(true);
+          setIsGenerating(false);
+          return;
+        }
+        throw new Error(errorData.error || 'Failed to create note');
+      }
+
+      const data = await response.json();
+      setNotes([data.note, ...notes]);
+      setIsModalOpen(false);
+      setCreationOption(null);
+      setUploadedFile(null);
+      router.push(`/dashboard/notes/${data.note.id}`);
+    } catch (error) {
+      console.error('File note creation error:', error);
       setError(error.message);
     } finally {
       setIsGenerating(false);
@@ -411,15 +501,7 @@ export default function NotesPage({ user }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => {
-                      console.log('Notes page: Clicked note with ID:', note.id);
-                      console.log('Notes page: Note object:', note);
-                      if (!note.id) {
-                        console.error('Notes page: Note ID is missing!');
-                        return;
-                      }
-                      router.push(`/dashboard/notes/${note.id}`);
-                    }} className="flex-1" size="sm">
+                    <Button onClick={() => router.push(`/dashboard/notes/${note.id}`)} className="flex-1" size="sm">
                       <FileText className="h-4 w-4 mr-2" />
                       Open
                     </Button>
@@ -433,56 +515,106 @@ export default function NotesPage({ user }) {
       
       {/* Create Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create AI Notes</DialogTitle>
+            <DialogTitle>Create New Note</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-              <Input
-                placeholder="Enter a topic..."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Or paste text</label>
-              <Textarea
-                placeholder="Paste your text here..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                rows={4}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Or upload a file (PDF, Image)</label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-              />
-              {isUploading && (
-                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Uploading...
-                </p>
-              )}
-              {uploadedFile && (
-                <p className="text-sm text-green-600 mt-2">
-                  ✓ {uploadedFile.name} uploaded
-                </p>
-              )}
-            </div>
-            {error && (
-              <p className="text-red-500 text-sm">{error}</p>
-            )}
-            <Button onClick={handleCreateNote} disabled={isGenerating} className="w-full">
-              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-              {isGenerating ? 'Generating...' : 'Generate Notes'}
-            </Button>
+            {!creationOption ? (
+              <div className="grid grid-cols-1 gap-4">
+                <button
+                  onClick={() => setCreationOption('scratch')}
+                  className="p-6 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                >
+                  <FileText className="h-8 w-8 text-purple-500 mb-3" />
+                  <h3 className="font-semibold text-gray-900 mb-1">Start From Scratch</h3>
+                  <p className="text-sm text-gray-500">Create a completely empty document</p>
+                </button>
+                <button
+                  onClick={() => setCreationOption('topic')}
+                  className="p-6 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                >
+                  <Sparkles className="h-8 w-8 text-purple-500 mb-3" />
+                  <h3 className="font-semibold text-gray-900 mb-1">Enter a Topic</h3>
+                  <p className="text-sm text-gray-500">Type any topic and AI generates complete study notes</p>
+                </button>
+                <button
+                  onClick={() => setCreationOption('file')}
+                  className="p-6 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                >
+                  <Upload className="h-8 w-8 text-purple-500 mb-3" />
+                  <h3 className="font-semibold text-gray-900 mb-1">Upload File / Image</h3>
+                  <p className="text-sm text-gray-500">Upload PDFs, documents, slides, images, screenshots, handwritten notes</p>
+                </button>
+              </div>
+            ) : creationOption === 'scratch' ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Create a blank document to start writing from scratch.</p>
+                <Button onClick={handleCreateBlankNote} disabled={isGenerating} className="w-full">
+                  {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                  {isGenerating ? 'Creating...' : 'Create Blank Note'}
+                </Button>
+                <Button variant="outline" onClick={() => setCreationOption(null)} className="w-full">
+                  Back
+                </Button>
+              </div>
+            ) : creationOption === 'topic' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
+                  <Input
+                    placeholder="Enter a topic (e.g., Photosynthesis, World War 2, JavaScript Functions)"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                  />
+                </div>
+                {error && (
+                  <p className="text-red-500 text-sm">{error}</p>
+                )}
+                <Button onClick={handleCreateTopicNote} disabled={isGenerating || !topic.trim()} className="w-full">
+                  {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  {isGenerating ? 'Generating...' : 'Generate Notes'}
+                </Button>
+                <Button variant="outline" onClick={() => setCreationOption(null)} className="w-full">
+                  Back
+                </Button>
+              </div>
+            ) : creationOption === 'file' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Upload File</label>
+                  <p className="text-xs text-gray-500 mb-2">Supported: PDF, DOCX, TXT, PNG, JPG, JPEG, WEBP</p>
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                  />
+                  {isUploading && (
+                    <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading...
+                    </p>
+                  )}
+                  {uploadedFile && (
+                    <p className="text-sm text-green-600 mt-2">
+                      ✓ {uploadedFile.name} uploaded
+                    </p>
+                  )}
+                </div>
+                {error && (
+                  <p className="text-red-500 text-sm">{error}</p>
+                )}
+                <Button onClick={handleCreateFileNote} disabled={isGenerating || !uploadedFile} className="w-full">
+                  {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  {isGenerating ? 'Processing...' : 'Generate Notes from File'}
+                </Button>
+                <Button variant="outline" onClick={() => setCreationOption(null)} className="w-full">
+                  Back
+                </Button>
+              </div>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

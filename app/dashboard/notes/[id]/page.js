@@ -15,7 +15,7 @@ import {
   CheckSquare, Quote, Code, AlignLeft, AlignCenter, AlignRight,
   Undo, Redo, Link, Image, Table, X, ChevronRight, ChevronDown,
   FileUp, Camera, Type, Heading1, Heading2, Heading3, BookOpen, ClipboardList,
-  Palette, Highlighter, Minus, Plus as PlusIcon
+  Palette, Highlighter, Minus, Plus as PlusIcon, Maximize, Minimize, MoreHorizontal
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -58,6 +58,8 @@ export default function NotesEditorPage({ user }) {
   const [textColor, setTextColor] = useState('#000000');
   const [highlightColor, setHighlightColor] = useState('#ffff00');
   const [workspace, setWorkspace] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [sharePermission, setSharePermission] = useState('private');
 
   const editor = useEditor({
     extensions: [
@@ -496,6 +498,9 @@ export default function NotesEditorPage({ user }) {
             <div className="w-px h-6 bg-gray-200" />
             <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().undo().run()}><Undo className="h-4 w-4" /></Button>
             <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().redo().run()}><Redo className="h-4 w-4" /></Button>
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleHorizontalRule().run()}><Minus className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(!isFullscreen)}><Maximize className="h-4 w-4" /></Button>
           </div>
         </div>
 
@@ -604,14 +609,17 @@ export default function NotesEditorPage({ user }) {
                 Quick Actions
               </p>
               {[
-                { icon: FileText, label: 'Summarize Note', action: 'summarize' },
-                { icon: MessageSquare, label: 'Explain Difficult Parts', action: 'explain' },
-                { icon: FileText, label: 'Simplify Content', action: 'simplify' },
-                { icon: FileText, label: 'Expand Content', action: 'expand' },
+                { icon: FileText, label: 'Summarize This Note', action: 'summarize' },
+                { icon: MessageSquare, label: 'Explain Difficult Concepts', action: 'explain' },
                 { icon: NotebookPen, label: 'Create Flashcards', action: 'flashcards' },
-                { icon: FileText, label: 'Create Quiz', action: 'quiz' },
-                { icon: FileText, label: 'Find Mistakes', action: 'mistakes' },
+                { icon: ClipboardList, label: 'Create Quiz', action: 'quiz' },
+                { icon: FileText, label: 'Create Mock Test', action: 'mock_test' },
                 { icon: FileText, label: 'Improve Writing', action: 'improve' },
+                { icon: FileText, label: 'Fix Grammar', action: 'grammar' },
+                { icon: FileText, label: 'Expand Notes', action: 'expand' },
+                { icon: FileText, label: 'Shorten Notes', action: 'shorten' },
+                { icon: FileText, label: 'Convert To Exam Notes', action: 'exam_notes' },
+                { icon: FileText, label: 'Convert To Revision Notes', action: 'revision_notes' },
               ].map((item) => (
                 <button
                   key={item.action}
@@ -963,6 +971,44 @@ export default function NotesEditorPage({ user }) {
                 <Button onClick={copyShareLink}>
                   Copy
                 </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Share Permissions</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setSharePermission('private')}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    sharePermission === 'private'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <p className="font-semibold text-sm">Private</p>
+                  <p className="text-xs text-gray-500">Only you</p>
+                </button>
+                <button
+                  onClick={() => setSharePermission('link')}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    sharePermission === 'link'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <p className="font-semibold text-sm">Anyone With Link</p>
+                  <p className="text-xs text-gray-500">Shared via link</p>
+                </button>
+                <button
+                  onClick={() => setSharePermission('public')}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    sharePermission === 'public'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <p className="font-semibold text-sm">Public</p>
+                  <p className="text-xs text-gray-500">Anyone can find</p>
+                </button>
               </div>
             </div>
             <div className="flex justify-end gap-2">
