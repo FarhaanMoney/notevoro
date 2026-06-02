@@ -344,46 +344,310 @@ export default function NotesEditorPage({ user }) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-white">
-      {/* Top Toolbar */}
-      <div className="border-b border-gray-200 px-4 py-2 bg-white sticky top-0 z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard/notes')}>
-              <ArrowLeft className="h-5 w-5" />
+    <div className="flex-1 min-h-0 flex bg-white">
+      {/* Left Sidebar - Navigation */}
+      <div className="w-64 border-r border-gray-200 flex flex-col bg-gray-50">
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-900">Notes</h3>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-2">
+            <Button variant="ghost" className="w-full justify-start" onClick={() => router.push('/dashboard/notes')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Notes
             </Button>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Untitled Note"
-              className="text-lg font-semibold border-0 focus:ring-0 px-0 w-64"
-            />
-            <span className="text-sm text-gray-400">
-              {saving ? 'Saving...' : 'Saved'}
-            </span>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setIsNewNoteModalOpen(true)}>
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsPrintModalOpen(true)}>
-              <Printer className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsDownloadModalOpen(true)}>
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsShareModalOpen(true)}>
-              <Share className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsAISidebarOpen(!isAISidebarOpen)}>
-              <Sparkles className="h-4 w-4" />
-            </Button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Top Navigation Bar */}
+        <div className="border-b border-gray-200 px-6 py-3 bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span className="hover:text-gray-900 cursor-pointer" onClick={() => router.push('/dashboard/notes')}>Notes</span>
+                <span>/</span>
+                <span className="text-gray-900 font-medium">{title || 'Untitled Note'}</span>
+              </div>
+              <span className="text-sm text-gray-400">
+                {saving ? 'Saving...' : 'Saved'}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setIsShareModalOpen(true)}>
+                <Share className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setIsDownloadModalOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setIsPrintModalOpen(true)}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsAISidebarOpen(!isAISidebarOpen)}>
+                <Sparkles className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Formatting Toolbar */}
-        <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-2">
+        <div className="border-b border-gray-200 px-6 py-2 bg-white">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            <div className="flex gap-1 mr-4">
+              <Button
+                variant={activeTab === 'editor' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('editor')}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Editor
+              </Button>
+              <Button
+                variant={activeTab === 'flashcards' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('flashcards')}
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Flashcards
+              </Button>
+              <Button
+                variant={activeTab === 'quiz' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('quiz')}
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Quiz
+              </Button>
+            </div>
+            <div className="w-px h-6 bg-gray-200" />
+            
+            {/* Font Family */}
+            <select 
+              value={fontFamily}
+              onChange={(e) => setFontFamily(e.target.value)}
+              className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
+            >
+              <option value="sans">Sans Serif</option>
+              <option value="serif">Serif</option>
+              <option value="mono">Monospace</option>
+            </select>
+            
+            {/* Font Size */}
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setFontSize(Math.max(12, parseInt(fontSize) - 2))}>
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="text-sm w-8 text-center">{fontSize}px</span>
+              <Button variant="ghost" size="sm" onClick={() => setFontSize(Math.min(32, parseInt(fontSize) + 2))}>
+                <PlusIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="w-px h-6 bg-gray-200" />
+            
+            {/* Text Color */}
+            <div className="relative">
+              <input
+                type="color"
+                value={textColor}
+                onChange={(e) => setTextColor(e.target.value)}
+                className="w-8 h-8 rounded cursor-pointer border-0"
+              />
+              <Palette className="h-4 w-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0" />
+            </div>
+            
+            {/* Highlight Color */}
+            <div className="relative">
+              <input
+                type="color"
+                value={highlightColor}
+                onChange={(e) => setHighlightColor(e.target.value)}
+                className="w-8 h-8 rounded cursor-pointer border-0"
+              />
+              <Highlighter className="h-4 w-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0" />
+            </div>
+            
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleUnderline().run()}><Underline className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleStrike().run()}><Strikethrough className="h-4 w-4" /></Button>
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}><Heading3 className="h-4 w-4" /></Button>
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBulletList().run()}><List className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleOrderedList().run()}><ListOrdered className="h-4 w-4" /></Button>
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBlockquote().run()}><Quote className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleCodeBlock().run()}><Code className="h-4 w-4" /></Button>
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().setTextAlign('left').run()}><AlignLeft className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().setTextAlign('center').run()}><AlignCenter className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().setTextAlign('right').run()}><AlignRight className="h-4 w-4" /></Button>
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().undo().run()}><Undo className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => editor?.chain().focus().redo().run()}><Redo className="h-4 w-4" /></Button>
+          </div>
+        </div>
+
+        {/* Main Editor Area */}
+        <div className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="max-w-5xl mx-auto px-8 py-8">
+            {activeTab === 'editor' && (
+              <div className="bg-white rounded-lg shadow-sm p-8 min-h-[600px]">
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Untitled Note"
+                  className="text-3xl font-bold border-0 focus:ring-0 px-0 mb-6"
+                />
+                {editor && (
+                  <EditorContent 
+                    editor={editor} 
+                    className="prose prose-lg max-w-none focus:outline-none"
+                    style={{ 
+                      fontFamily: fontFamily === 'sans' ? 'Inter, sans-serif' : fontFamily === 'serif' ? 'Georgia, serif' : 'monospace',
+                      fontSize: `${fontSize}px`,
+                      color: textColor
+                    }}
+                  />
+                )}
+              </div>
+            )}
+            {activeTab === 'flashcards' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Flashcards</h2>
+                  <Button onClick={() => handleAIAction('flashcards')} size="sm">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate from Note
+                  </Button>
+                </div>
+                {flashcards.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                    <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No flashcards yet. Generate them from your note!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {flashcards.map((card, index) => (
+                      <Card key={index} className="p-6">
+                        <p className="font-semibold text-gray-900 mb-2">{card.front}</p>
+                        <p className="text-gray-600">{card.back}</p>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeTab === 'quiz' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Quiz</h2>
+                  <Button onClick={() => handleAIAction('quiz')} size="sm">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate from Note
+                  </Button>
+                </div>
+                {quizzes.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                    <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No quiz yet. Generate it from your note!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {quizzes.map((quiz, index) => (
+                      <Card key={index} className="p-6">
+                        <p className="font-semibold text-gray-900 mb-4">{quiz.question}</p>
+                        <div className="space-y-2">
+                          {quiz.options.map((option, optIndex) => (
+                            <button
+                              key={optIndex}
+                              className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right AI Sidebar */}
+      {isAISidebarOpen && (
+        <div className="w-80 border-l border-gray-200 bg-gray-50 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              AI Assistant
+            </h3>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-2 mb-6">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Quick Actions
+              </p>
+              {[
+                { icon: FileText, label: 'Summarize Note', action: 'summarize' },
+                { icon: MessageSquare, label: 'Explain Difficult Parts', action: 'explain' },
+                { icon: FileText, label: 'Simplify Content', action: 'simplify' },
+                { icon: FileText, label: 'Expand Content', action: 'expand' },
+                { icon: NotebookPen, label: 'Create Flashcards', action: 'flashcards' },
+                { icon: FileText, label: 'Create Quiz', action: 'quiz' },
+                { icon: FileText, label: 'Find Mistakes', action: 'mistakes' },
+                { icon: FileText, label: 'Improve Writing', action: 'improve' },
+              ].map((item) => (
+                <button
+                  key={item.action}
+                  onClick={() => handleAIAction(item.action)}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-left"
+                >
+                  <item.icon className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                AI Chat
+              </p>
+              <Textarea
+                value={aiMessage}
+                onChange={(e) => setAiMessage(e.target.value)}
+                placeholder="Ask AI anything about this note..."
+                rows={4}
+                className="mb-3"
+              />
+              <Button onClick={handleAIChat} disabled={isAiThinking || !aiMessage.trim()} className="w-full">
+                {isAiThinking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                Send
+              </Button>
+
+              {aiResponse && (
+                <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                  <p className="text-sm text-gray-700">{aiResponse}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
           <div className="flex gap-1 mr-4">
             <Button
               variant={activeTab === 'editor' ? 'default' : 'ghost'}

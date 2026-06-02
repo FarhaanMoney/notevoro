@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -22,6 +23,7 @@ const suggestedTopics = [
 ];
 
 export default function NotesPage({ user }) {
+  const router = useRouter();
   const [notes, setNotes] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -409,7 +411,7 @@ export default function NotesPage({ user }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => window.location.href = `/dashboard/notes/${note.id}`} className="flex-1" size="sm">
+                    <Button onClick={() => router.push(`/dashboard/notes/${note.id}`)} className="flex-1" size="sm">
                       <FileText className="h-4 w-4 mr-2" />
                       Open
                     </Button>
