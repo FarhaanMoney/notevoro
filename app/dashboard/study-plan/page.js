@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle, Clock, Plus, Sparkles, Target, TrendingUp, BookOpen, Play } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Plus, Sparkles, Target, TrendingUp, BookOpen, Play, Zap, Upload, FileText, Folder, Award, Flame } from 'lucide-react';
 import AISidebar from '@/components/AISidebar';
+import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
+import FeatureDashboard from '@/components/workspace/FeatureDashboard';
+import { createClient } from '@/lib/supabase/client';
 
 export default function StudyPlanPage({ user }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,6 +19,30 @@ export default function StudyPlanPage({ user }) {
   const [tasks, setTasks] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState('');
+  const [workspaces, setWorkspaces] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+
+  useEffect(() => {
+    loadWorkspaces();
+  }, []);
+
+  const loadWorkspaces = async () => {
+    try {
+      const sb = createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      
+      const response = await fetch('/api/workspaces', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaces(data);
+      }
+    } catch (error) {
+      console.error('Study plan page: Failed to load workspaces:', error);
+    }
+  };
 
   const sampleTasks = [
     { id: 1, title: 'Review Chapter 5: Neural Networks', subject: 'AI', time: '2h', completed: false, priority: 'high' },
@@ -45,41 +72,119 @@ export default function StudyPlanPage({ user }) {
     ));
   };
 
+  // Calculate statistics for dashboard
+  const stats = {
+    totalItems: tasks.length,
+    completed: tasks.filter(t => t.completed).length,
+    inProgress: tasks.filter(t => !t.completed).length,
+    streak: 5,
+  };
+
   if (!hasStudyPlan) {
     return (
       <div className="flex-1 min-h-0 flex flex-col bg-white">
-        {/* Compact Header */}
-        <div className="border-b border-gray-200 px-6 py-4 bg-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Study Plan</h1>
-              <p className="text-sm text-gray-500 mt-1">Organize your study schedule and track progress.</p>
+        <WorkspaceTopBar
+          workspaceName={selectedWorkspace?.title}
+          featureName="Study Plan"
+          onSearch={(query) => setSearchQuery(query)}
+          showExport={false}
+          showFullscreen={false}
+        />
+        
+        <FeatureDashboard
+          featureType="study-plan"
+          stats={stats}
+        />
+
+        {/* Enhanced Empty State */}
+        <div className="flex-1 flex items-center justify-center px-6 bg-gray-50">
+          <div className="text-center max-w-2xl">
+            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
+              <Calendar className="h-10 w-10 text-purple-500" />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                AI Assistant
-              </Button>
-              <Button onClick={() => setHasStudyPlan(true)} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Plan
-              </Button>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Create Your Study Plan</h2>
+            <p className="text-gray-500 mb-8">
+              Organize your study schedule with AI-powered task management. 
+              Set deadlines, track progress, and achieve your learning goals.
+            </p>
+            
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <button
+                onClick={() => setHasStudyPlan(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Zap className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">Quick Start</h3>
+                <p className="text-xs text-gray-500">Get started now</p>
+              </button>
+              <button
+                onClick={() => setHasStudyPlan(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Target className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">Set Goals</h3>
+                <p className="text-xs text-gray-500">Define objectives</p>
+              </button>
+              <button
+                onClick={() => setHasStudyPlan(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Calendar className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">Schedule</h3>
+                <p className="text-xs text-gray-500">Plan your time</p>
+              </button>
+              <button
+                onClick={() => setIsAISidebarOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Sparkles className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">AI Help</h3>
+                <p className="text-xs text-gray-500">Get suggestions</p>
+              </button>
             </div>
+
+            <Button onClick={() => setHasStudyPlan(true)} size="lg" className="px-8">
+              <Plus className="h-5 w-5 mr-2" />
+              Create Study Plan
+            </Button>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Toolbar */}
-        <div className="border-b border-gray-200 px-6 py-3 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="flex-1" />
-            <Input
-              placeholder="Search plans..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64"
-            />
+  return (
+    <div className="flex-1 min-h-0 flex flex-col bg-white">
+      <WorkspaceTopBar
+        workspaceName={selectedWorkspace?.title}
+        featureName="Study Plan"
+        onSearch={(query) => setSearchQuery(query)}
+        showExport={false}
+        showFullscreen={false}
+      />
+      
+      <FeatureDashboard
+        featureType="study-plan"
+        stats={stats}
+      />
+
+      {/* Quick Actions Bar */}
+      <div className="border-b border-gray-200 px-6 py-4 bg-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Assistant
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32 h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -90,247 +195,67 @@ export default function StudyPlanPage({ user }) {
             </Select>
           </div>
         </div>
-
-        {/* Compact Empty State */}
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center max-w-sm">
-            <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No study plan yet</h3>
-            <p className="text-sm text-gray-500 mb-4">Create your personalized study schedule.</p>
-            <Button onClick={() => setHasStudyPlan(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Plan
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 min-h-0 flex flex-col bg-white">
-      {/* Compact Header */}
-      <div className="border-b border-gray-200 px-6 py-4 bg-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Study Plan</h1>
-            <p className="text-sm text-gray-500 mt-1">Organize your study schedule and track progress.</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI Assistant
-            </Button>
-            <Button onClick={() => setIsModalOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Task
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="border-b border-gray-200 px-6 py-3 bg-white">
-        <div className="flex items-center gap-4">
-          <div className="flex-1" />
-          <Input
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64"
-          />
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Recent</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="priority">Priority</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          {/* Performance Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                  <Target className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{tasks.filter(t => t.completed).length}/{tasks.length}</p>
-                  <p className="text-sm text-gray-500">Tasks Done</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">75%</p>
-                  <p className="text-sm text-gray-500">Completion</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">4h</p>
-                  <p className="text-sm text-gray-500">Study Time</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">7</p>
-                  <p className="text-sm text-gray-500">Day Streak</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Today's Tasks Section */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Today&apos;s Tasks</h2>
-            <div className="space-y-3">
-              {sampleTasks.map((task) => (
-                <Card key={task.id} className="p-4 hover:shadow-lg transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => handleToggleTask(task.id)}
-                        className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                          task.completed
-                            ? 'border-green-500 bg-green-500'
-                            : 'border-gray-300 hover:border-green-500'
-                        }`}
-                      >
-                        {task.completed && <CheckCircle className="h-4 w-4 text-white" />}
-                      </button>
-                      <div>
-                        <h3 className={`font-semibold text-gray-900 ${task.completed ? 'line-through text-gray-400' : ''}`}>
-                          {task.title}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs text-gray-500">{task.subject}</span>
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {task.time}
-                          </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {task.priority}
-                          </span>
-                        </div>
-                      </div>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tasks.map((task) => (
+              <Card key={task.id} className="p-4 hover:shadow-lg transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="relative">
+                    <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                      <Target className="h-6 w-6 text-white" />
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Play className="h-4 w-4" />
-                    </Button>
+                    <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full flex items-center justify-center shadow-md border border-gray-200 ${task.completed ? 'bg-green-100' : 'bg-white'}`}>
+                      <CheckCircle className={`h-4 w-4 ${task.completed ? 'text-green-600' : 'text-gray-400'}`} />
+                    </div>
                   </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Upcoming Section */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Upcoming This Week</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-4 hover:shadow-lg transition-shadow">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                    <BookOpen className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Math Quiz</h3>
-                    <p className="text-xs text-gray-500">Tomorrow, 2:00 PM</p>
+                  <div className="flex gap-1">
+                    <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                      <Play className="h-4 w-4 text-gray-500" />
+                    </button>
+                    <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors">
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </button>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full">
-                  Prepare
-                </Button>
-              </Card>
-              <Card className="p-4 hover:shadow-lg transition-shadow">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
-                    <BookOpen className="h-5 w-5 text-white" />
+                <h3 className="font-semibold text-gray-900 mb-2">{task.title}</h3>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Folder className="h-4 w-4" />
+                    <span>{task.subject}</span>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Biology Test</h3>
-                    <p className="text-xs text-gray-500">Wednesday, 10:00 AM</p>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Clock className="h-4 w-4" />
+                    <span>{task.time}</span>
                   </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full">
-                  Prepare
-                </Button>
-              </Card>
-              <Card className="p-4 hover:shadow-lg transition-shadow">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
-                    <BookOpen className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">History Essay</h3>
-                    <p className="text-xs text-gray-500">Friday, 5:00 PM</p>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Award className="h-4 w-4" />
+                    <span className="capitalize">{task.priority} priority</span>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full">
-                  Prepare
+                <Button 
+                  onClick={() => handleToggleTask(task.id)} 
+                  variant={task.completed ? "outline" : "default"}
+                  className="w-full" 
+                  size="sm"
+                >
+                  {task.completed ? 'Completed' : 'Mark Complete'}
                 </Button>
               </Card>
-            </div>
+            ))}
           </div>
         </div>
       </div>
-
-      {/* Add Task Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Task</h3>
-            <Input
-              placeholder="Task title..."
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              className="mb-4"
-            />
-            <div className="flex gap-2">
-              <Button onClick={handleAddTask} className="flex-1">
-                Add Task
-              </Button>
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
+      
       <AISidebar
         isOpen={isAISidebarOpen}
         onClose={() => setIsAISidebarOpen(false)}
         context={{
           tool: 'Study Plan',
-          studySet: null,
-          workspace: null
+          workspace: selectedWorkspace
         }}
       />
     </div>

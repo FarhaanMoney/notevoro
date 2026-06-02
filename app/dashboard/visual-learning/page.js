@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { LayoutDashboard, Plus, ArrowRight, Folder, Clock, Image as ImageIcon, TrendingUp, Award, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Plus, ArrowRight, Folder, Clock, Image as ImageIcon, TrendingUp, Award, Sparkles, Zap, Upload, FileText, Play, Share2, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AISidebar from '@/components/AISidebar';
+import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
+import FeatureDashboard from '@/components/workspace/FeatureDashboard';
 
 const visualExamples = [
   'Mind Maps',
@@ -48,6 +50,14 @@ export default function VisualLearningPage({ user }) {
     }
   };
 
+  // Calculate statistics for dashboard
+  const stats = {
+    totalItems: visualProjects.length,
+    createdThisWeek: 0,
+    studyTime: '0h',
+    aiActivity: 0,
+  };
+
   const handleGenerateVisual = () => {
     // TODO: Implement visual learning generation
     console.log('Generate visual learning clicked');
@@ -61,38 +71,108 @@ export default function VisualLearningPage({ user }) {
   if (!hasVisualLearning) {
     return (
       <div className="flex-1 min-h-0 flex flex-col bg-white">
-        {/* Compact Header */}
-        <div className="border-b border-gray-200 px-6 py-4 bg-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Visual Learning</h1>
-              <p className="text-sm text-gray-500 mt-1">Turn concepts into diagrams and visual aids.</p>
+        <WorkspaceTopBar
+          workspaceName={selectedWorkspace?.title}
+          featureName="Visual Learning"
+          onSearch={(query) => setSearchQuery(query)}
+          showExport={false}
+          showFullscreen={false}
+        />
+        
+        <FeatureDashboard
+          featureType="visual-learning"
+          stats={stats}
+        />
+
+        {/* Enhanced Empty State */}
+        <div className="flex-1 flex items-center justify-center px-6 bg-gray-50">
+          <div className="text-center max-w-2xl">
+            <div className="h-20 w-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-6">
+              <LayoutDashboard className="h-10 w-10 text-purple-500" />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                AI Assistant
-              </Button>
-              <Button onClick={handleGenerateVisual} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Create
-              </Button>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Create Visual Learning Aids</h2>
+            <p className="text-gray-500 mb-8">
+              Turn complex concepts into mind maps, flow charts, diagrams, and visual explanations. 
+              AI-powered visual learning for better understanding and retention.
+            </p>
+            
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <button
+                onClick={handleGenerateVisual}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Zap className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">Quick Start</h3>
+                <p className="text-xs text-gray-500">Create now</p>
+              </button>
+              <button
+                onClick={handleGenerateVisual}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <ImageIcon className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">Mind Map</h3>
+                <p className="text-xs text-gray-500">Visualize ideas</p>
+              </button>
+              <button
+                onClick={handleGenerateVisual}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <TrendingUp className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">Flow Chart</h3>
+                <p className="text-xs text-gray-500">Process steps</p>
+              </button>
+              <button
+                onClick={() => setIsAISidebarOpen(true)}
+                className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+              >
+                <Sparkles className="h-6 w-6 text-purple-500 mb-2" />
+                <h3 className="font-semibold text-gray-900 mb-1">AI Generate</h3>
+                <p className="text-xs text-gray-500">Auto-create</p>
+              </button>
             </div>
+
+            <Button onClick={handleGenerateVisual} size="lg" className="px-8">
+              <Plus className="h-5 w-5 mr-2" />
+              Create Visual Aid
+            </Button>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Toolbar */}
-        <div className="border-b border-gray-200 px-6 py-3 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="flex-1" />
-            <Input
-              placeholder="Search projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64"
-            />
+  return (
+    <div className="flex-1 min-h-0 flex flex-col bg-white">
+      <WorkspaceTopBar
+        workspaceName={selectedWorkspace?.title}
+        featureName="Visual Learning"
+        onSearch={(query) => setSearchQuery(query)}
+        showExport={false}
+        showFullscreen={false}
+      />
+      
+      <FeatureDashboard
+        featureType="visual-learning"
+        stats={stats}
+      />
+
+      {/* Quick Actions Bar */}
+      <div className="border-b border-gray-200 px-6 py-4 bg-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button onClick={handleGenerateVisual} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Visual
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsAISidebarOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Assistant
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32 h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -103,181 +183,56 @@ export default function VisualLearningPage({ user }) {
             </Select>
           </div>
         </div>
-
-        {/* Compact Empty State */}
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center max-w-sm">
-            <LayoutDashboard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No visual projects yet</h3>
-            <p className="text-sm text-gray-500 mb-4">Create your first diagram or visual aid.</p>
-            <Button onClick={handleGenerateVisual}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Diagram
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 min-h-0 flex flex-col bg-white">
-      {/* Compact Header */}
-      <div className="border-b border-gray-200 px-6 py-4 bg-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Visual Learning</h1>
-            <p className="text-sm text-gray-500 mt-1">Turn concepts into diagrams and visual aids.</p>
-          </div>
-          <Button onClick={handleGenerateVisual} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Create
-          </Button>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="border-b border-gray-200 px-6 py-3 bg-white">
-        <div className="flex items-center gap-4">
-          <div className="flex-1" />
-          <Input
-            placeholder="Search projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64"
-          />
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Recent</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="type">Type</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          {/* Performance Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                  <LayoutDashboard className="h-5 w-5 text-white" />
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visualProjects.map((project) => (
+              <Card key={project.id} className="p-4 hover:shadow-lg transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
+                    <ImageIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex gap-1">
+                    <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                      <Play className="h-4 w-4 text-gray-500" />
+                    </button>
+                    <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors">
+                      <Share2 className="h-4 w-4 text-gray-500" />
+                    </button>
+                    <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors">
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{visualProjects.length}</p>
-                  <p className="text-sm text-gray-500">Total Projects</p>
+                <h3 className="font-semibold text-gray-900 mb-2">{project.title || 'Untitled Project'}</h3>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Folder className="h-4 w-4" />
+                    <span>{project.type || 'Mind Map'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Clock className="h-4 w-4" />
+                    <span>Last edited: Today</span>
+                  </div>
                 </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
-                  <ImageIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">4</p>
-                  <p className="text-sm text-gray-500">Types</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}}>
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">2h</p>
-                  <p className="text-sm text-gray-500">Avg Time</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}}>
-                  <Award className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">95%</p>
-                  <p className="text-sm text-gray-500">Accuracy</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Recent Projects Section */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Projects</h2>
-            {visualProjects.length === 0 ? (
-              <Card className="p-6 text-center">
-                <LayoutDashboard className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">No projects yet</h3>
-                <p className="text-xs text-gray-500 mb-3">Create your first diagram or visual aid.</p>
-                <Button onClick={handleGenerateVisual} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Project
+                <Button onClick={handleGenerateVisual} className="w-full" size="sm">
+                  <Play className="h-4 w-4 mr-2" />
+                  View
                 </Button>
               </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-in">
-                {visualProjects.map((project) => (
-                  <Card key={project.id} className="p-4 card-hover card-press">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>
-                        <ImageIcon className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-xs text-gray-400 capitalize">{project.type}</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">{project.title}</h3>
-                    <div className="space-y-1 mb-3">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Folder className="h-3 w-3" />
-                        <span>Study Set</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        <span>Created {new Date(project.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <Button onClick={() => handleExampleClick(project.title)} className="w-full" size="sm">
-                      <ArrowRight className="h-3 w-3 mr-2" />
-                      Open
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Examples Section */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Diagram Types</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {visualExamples.map((example) => (
-                <button
-                  key={example}
-                  onClick={() => handleExampleClick(example)}
-                  className="flex items-center justify-between p-3 bg-white rounded-xl border-2 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-colors group"
-                >
-                  <span className="text-sm text-gray-700">{example}</span>
-                  <ArrowRight className="h-3 w-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       </div>
+      
       <AISidebar
         isOpen={isAISidebarOpen}
         onClose={() => setIsAISidebarOpen(false)}
         context={{
           tool: 'Visual Learning',
-          studySet: selectedWorkspace,
           workspace: selectedWorkspace
         }}
       />
