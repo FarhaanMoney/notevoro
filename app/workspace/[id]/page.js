@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Folder, ArrowLeft, Plus, FileText, BookOpen, ClipboardList, Upload, BarChart3, MessageSquare, Loader2, Clock, Sparkles, TrendingUp, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -31,17 +31,10 @@ export default function WorkspaceDetailPage({ user }) {
     quizzes: [],
     files: [],
   });
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-  const [isFlashcardModalOpen, setIsFlashcardModalOpen] = useState(false);
-  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [isFileModalOpen, setIsFileModalOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [noteTopic, setNoteTopic] = useState('');
-  const [noteText, setNoteText] = useState('');
-  const [flashcardTopic, setFlashcardTopic] = useState('');
-  const [quizTopic, setQuizTopic] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     loadWorkspace();
@@ -118,162 +111,6 @@ export default function WorkspaceDetailPage({ user }) {
       }
     } catch (error) {
       console.error('Failed to load resources:', error);
-    }
-  };
-
-  const handleCreateNote = async () => {
-    if (!noteTopic.trim() && !noteText.trim()) {
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      const sb = createClient();
-      const { data: { session } } = await sb.auth.getSession();
-      
-      // Create note first
-      const noteResponse = await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ 
-          topic: noteTopic.trim(),
-          text: noteText.trim(),
-          sourceType: noteText.trim() ? 'text' : 'topic',
-        }),
-      });
-
-      if (!noteResponse.ok) {
-        throw new Error('Failed to create note');
-      }
-
-      const noteData = await noteResponse.json();
-      
-      // Link note to workspace
-      const linkResponse = await fetch(`/api/workspaces/${params.id}/notes`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ noteId: noteData.note.id }),
-      });
-
-      if (linkResponse.ok) {
-        setResources(prev => ({ ...prev, notes: [noteData.note, ...prev.notes] }));
-        setIsNoteModalOpen(false);
-        setNoteTopic('');
-        setNoteText('');
-      }
-    } catch (error) {
-      console.error('Failed to create note:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleCreateFlashcard = async () => {
-    if (!flashcardTopic.trim()) {
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      const sb = createClient();
-      const { data: { session } } = await sb.auth.getSession();
-      
-      // Create flashcard first
-      const flashcardResponse = await fetch('/api/flashcards', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ 
-          topic: flashcardTopic.trim(),
-        }),
-      });
-
-      if (!flashcardResponse.ok) {
-        throw new Error('Failed to create flashcard');
-      }
-
-      const flashcardData = await flashcardResponse.json();
-      
-      // Link flashcard to workspace
-      const linkResponse = await fetch(`/api/workspaces/${params.id}/flashcards`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ flashcardId: flashcardData.deck.id }),
-      });
-
-      if (linkResponse.ok) {
-        setResources(prev => ({ ...prev, flashcards: [flashcardData.deck, ...prev.flashcards] }));
-        setIsFlashcardModalOpen(false);
-        setFlashcardTopic('');
-      }
-    } catch (error) {
-      console.error('Failed to create flashcard:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleCreateQuiz = async () => {
-    if (!quizTopic.trim()) {
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      const sb = createClient();
-      const { data: { session } } = await sb.auth.getSession();
-      
-      // Create quiz first
-      const quizResponse = await fetch('/api/quizzes', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ 
-          topic: quizTopic.trim(),
-        }),
-      });
-
-      if (!quizResponse.ok) {
-        throw new Error('Failed to create quiz');
-      }
-
-      const quizData = await quizResponse.json();
-      
-      // Link quiz to workspace
-      const linkResponse = await fetch(`/api/workspaces/${params.id}/quizzes`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ quizId: quizData.quiz.id }),
-      });
-
-      if (linkResponse.ok) {
-        setResources(prev => ({ ...prev, quizzes: [quizData.quiz, ...prev.quizzes] }));
-        setIsQuizModalOpen(false);
-        setQuizTopic('');
-      }
-    } catch (error) {
-      console.error('Failed to create quiz:', error);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -547,142 +384,28 @@ export default function WorkspaceDetailPage({ user }) {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 capitalize">{activeTab}</h2>
                 {activeTab === 'notes' && (
-                  <Dialog open={isNoteModalOpen} onOpenChange={setIsNoteModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Note
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>Create Note</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                          <Input
-                            placeholder="Enter a topic..."
-                            value={noteTopic}
-                            onChange={(e) => setNoteTopic(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 mb-2 block">Or paste text</label>
-                          <Textarea
-                            placeholder="Paste your text here..."
-                            value={noteText}
-                            onChange={(e) => setNoteText(e.target.value)}
-                            rows={4}
-                          />
-                        </div>
-                        <Button onClick={handleCreateNote} disabled={isGenerating} className="w-full">
-                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                          {isGenerating ? 'Generating...' : 'Generate Note'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button onClick={() => router.push('/dashboard/notes/create')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Note
+                  </Button>
                 )}
                 {activeTab === 'flashcards' && (
-                  <Dialog open={isFlashcardModalOpen} onOpenChange={setIsFlashcardModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Generate Flashcards
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>Generate Flashcards</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                          <Input
-                            placeholder="Enter a topic..."
-                            value={flashcardTopic}
-                            onChange={(e) => setFlashcardTopic(e.target.value)}
-                          />
-                        </div>
-                        <Button onClick={handleCreateFlashcard} disabled={isGenerating} className="w-full">
-                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                          {isGenerating ? 'Generating...' : 'Generate Flashcards'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button onClick={() => router.push('/dashboard/flashcards/create')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Generate Flashcards
+                  </Button>
                 )}
                 {activeTab === 'quizzes' && (
-                  <Dialog open={isQuizModalOpen} onOpenChange={setIsQuizModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Quiz
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>Create Quiz</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 mb-2 block">Topic</label>
-                          <Input
-                            placeholder="Enter a topic..."
-                            value={quizTopic}
-                            onChange={(e) => setQuizTopic(e.target.value)}
-                          />
-                        </div>
-                        <Button onClick={handleCreateQuiz} disabled={isGenerating} className="w-full">
-                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                          {isGenerating ? 'Generating...' : 'Generate Quiz'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button onClick={() => router.push('/dashboard/quizzes/create')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Quiz
+                  </Button>
                 )}
                 {activeTab === 'files' && (
-                  <Dialog open={isFileModalOpen} onOpenChange={setIsFileModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Upload File
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>Upload File</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 mb-2 block">File</label>
-                          <input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx,.ppt,.pptx"
-                            onChange={handleFileUpload}
-                            disabled={isUploading}
-                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                          />
-                          {isUploading && (
-                            <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Uploading...
-                            </p>
-                          )}
-                          {uploadedFile && (
-                            <p className="text-sm text-green-600 mt-2">
-                              ✓ {uploadedFile.name} uploaded
-                            </p>
-                          )}
-                        </div>
-                        <Button onClick={handleCreateFile} disabled={isGenerating || !uploadedFile} className="w-full">
-                          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                          {isGenerating ? 'Adding...' : 'Add to Study Set'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button onClick={() => setIsFileModalOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload File
+                  </Button>
                 )}
               </div>
 
@@ -710,9 +433,9 @@ export default function WorkspaceDetailPage({ user }) {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No {activeTab} yet</h3>
                   <p className="text-gray-500 mb-6">Create your first {activeTab.slice(0, -1)} to get started</p>
                   <Button onClick={() => {
-                    if (activeTab === 'notes') setIsNoteModalOpen(true);
-                    if (activeTab === 'flashcards') setIsFlashcardModalOpen(true);
-                    if (activeTab === 'quizzes') setIsQuizModalOpen(true);
+                    if (activeTab === 'notes') router.push('/dashboard/notes/create');
+                    if (activeTab === 'flashcards') router.push('/dashboard/flashcards/create');
+                    if (activeTab === 'quizzes') router.push('/dashboard/quizzes/create');
                     if (activeTab === 'files') setIsFileModalOpen(true);
                   }}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -724,6 +447,42 @@ export default function WorkspaceDetailPage({ user }) {
           )}
         </div>
       </div>
+
+      {/* File Upload Dialog */}
+      <Dialog open={isFileModalOpen} onOpenChange={setIsFileModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Upload File</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">File</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx,.ppt,.pptx"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              {isUploading && (
+                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </p>
+              )}
+              {uploadedFile && (
+                <p className="text-sm text-green-600 mt-2">
+                  ✓ {uploadedFile.name} uploaded
+                </p>
+              )}
+            </div>
+            <Button onClick={handleCreateFile} disabled={isGenerating || !uploadedFile} className="w-full">
+              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              {isGenerating ? 'Adding...' : 'Add to Study Set'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
