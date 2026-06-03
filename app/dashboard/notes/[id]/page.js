@@ -13,7 +13,7 @@ import {
   Sparkles, MessageSquare, Download, Share, Printer, Save,
   Bold, Italic, Underline, Strikethrough, List, ListOrdered,
   CheckSquare, Quote, Code, AlignLeft, AlignCenter, AlignRight,
-  Undo, Redo, Link, Image, Table, X, ChevronRight, ChevronDown,
+  Undo, Redo, Link, Image, Table as TableIcon, X, ChevronRight, ChevronDown,
   FileUp, Camera, Type, Heading1, Heading2, Heading3, BookOpen, ClipboardList,
   Palette, Highlighter, Minus, Plus as PlusIcon, Maximize, Minimize, MoreHorizontal
 } from 'lucide-react';
