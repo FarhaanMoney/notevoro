@@ -128,24 +128,16 @@ export default function VisualLearningCreatePage() {
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      <div className="w-64 border-r border-gray-200 bg-white flex-shrink-0">
-        <div className="p-4">
-          <h2 className="font-semibold text-gray-900">Notevoro</h2>
-        </div>
-      </div>
-
-      <WizardLayout
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        onNext={handleNext}
-        onBack={handleBack}
-        canProceed={canProceed()}
-        isLastStep={currentStep === 3}
-        featureName="Visual Learning"
-      >
-        {renderStep()}
-      </WizardLayout>
-    </div>
+    <WizardLayout
+      currentStep={currentStep}
+      totalSteps={totalSteps}
+      onNext={handleNext}
+      onBack={handleBack}
+      canProceed={canProceed()}
+      isLastStep={currentStep === 3}
+      featureName="Visual Learning"
+    >
+      {renderStep()}
+    </WizardLayout>
   );
 }
