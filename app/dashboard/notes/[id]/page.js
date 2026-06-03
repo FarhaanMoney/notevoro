@@ -894,7 +894,7 @@ export default function NotesEditorPage({ user }) {
           <div className="space-y-4 py-4">
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="font-semibold text-gray-900 mb-2">{title || 'Untitled Note'}</h3>
-              <p className="text-sm text-gray-500 mb-2">Date: {new Date().toLocaleDateString()}</p>
+              <p className="text-sm text-gray-500 mb-2">Date: {new Date(note?.updated_at || note?.created_at || Date.now()).toLocaleDateString()}</p>
               <div className="text-sm text-gray-600 line-clamp-3">
                 {content.replace(/<[^>]*>/g, '').substring(0, 200)}...
               </div>
@@ -964,7 +964,7 @@ export default function NotesEditorPage({ user }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Last Updated:</span>
-                <span className="text-sm font-medium text-gray-900">{new Date().toLocaleDateString()}</span>
+                <span className="text-sm font-medium text-gray-900">{new Date(note?.updated_at || note?.created_at || Date.now()).toLocaleDateString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Type:</span>
