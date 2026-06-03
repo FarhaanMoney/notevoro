@@ -214,7 +214,7 @@ export default function NotesPage({ user }) {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Clock className="h-4 w-4" />
-                      <span>Last edited: Today</span>
+                      <span>Last edited: {new Date(note.updated_at || note.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">

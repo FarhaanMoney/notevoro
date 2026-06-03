@@ -394,7 +394,7 @@ export default function FlashcardsPage({ user }) {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Clock className="h-4 w-4" />
-                      <span>Last studied: Today</span>
+                      <span>Last studied: {new Date(deck.updated_at || deck.created_at).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <TrendingUp className="h-4 w-4" />

@@ -187,7 +187,7 @@ export default function VisualLearningPage({ user }) {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Clock className="h-4 w-4" />
-                    <span>Last edited: Today</span>
+                    <span>Last edited: {new Date(visual.updated_at || visual.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <Button onClick={handleGenerateVisual} className="w-full" size="sm">
