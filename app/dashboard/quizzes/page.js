@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
 
-export default function QuizzesPage({ user }) {
+export default function QuizzesPage() {
   const router = useRouter();
   const [quizzes, setQuizzes] = useState([]);
   const [activeQuiz, setActiveQuiz] = useState(null);

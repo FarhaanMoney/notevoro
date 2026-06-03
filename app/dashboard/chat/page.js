@@ -16,7 +16,7 @@ const suggestedPrompts = [
   'Summarize Chapter 5',
 ];
 
-export default function ChatPage({ user }) {
+export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);

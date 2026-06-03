@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import AISidebar from '@/components/AISidebar';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
 
-export default function FlashcardsPage({ user }) {
+export default function FlashcardsPage() {
   const router = useRouter();
   const [flashcards, setFlashcards] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);

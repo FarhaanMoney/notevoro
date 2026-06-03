@@ -5,8 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { useUser } from '@/components/providers/dashboard-user-provider';
 
-export default function SettingsPage({ user }) {
+export default function SettingsPage() {
+  const user = useUser();
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white">
       {/* Header */}

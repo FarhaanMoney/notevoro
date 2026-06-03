@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import DashboardClient from './DashboardClient'
+import { DashboardUserProvider } from '@/components/providers/dashboard-user-provider'
+import DashboardShell from './DashboardShell'
 
 export default async function DashboardLayout({ children }) {
   // Check if environment variables are available
@@ -9,7 +10,11 @@ export default async function DashboardLayout({ children }) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     // If environment variables are not available, skip auth check for local development
-    return <DashboardClient user={null}>{children}</DashboardClient>
+    return (
+      <DashboardUserProvider user={null}>
+        <DashboardShell>{children}</DashboardShell>
+      </DashboardUserProvider>
+    )
   }
 
   const supabase = await createClient()
@@ -26,5 +31,9 @@ export default async function DashboardLayout({ children }) {
     .eq('id', user.id)
     .maybeSingle()
 
-  return <DashboardClient user={{ ...user, ...profile }}>{children}</DashboardClient>
+  return (
+    <DashboardUserProvider user={{ ...user, ...profile }}>
+      <DashboardShell>{children}</DashboardShell>
+    </DashboardUserProvider>
+  )
 }

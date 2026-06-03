@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client';
 import AISidebar from '@/components/AISidebar';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
 
-export default function MockTestsPage({ user }) {
+export default function MockTestsPage() {
   const router = useRouter();
   const [mockTests, setMockTests] = useState([]);
   const [activeTest, setActiveTest] = useState(null);

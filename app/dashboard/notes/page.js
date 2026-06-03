@@ -17,7 +17,7 @@ const suggestedTopics = [
   'Organic Chemistry',
 ];
 
-export default function NotesPage({ user }) {
+export default function NotesPage() {
   const router = useRouter();
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);

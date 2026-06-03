@@ -2,8 +2,10 @@
 
 import { Trophy, Flame, Target } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { useUser } from '@/components/providers/dashboard-user-provider';
 
-export default function ProgressPage({ user }) {
+export default function ProgressPage() {
+  const user = useUser();
   const xp = user?.xp || 0;
   const streak = user?.streak || 0;
   const level = user?.level || 1;

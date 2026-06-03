@@ -26,8 +26,10 @@ import LinkExtension from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import { toast } from 'sonner';
+import { useUser } from '@/components/providers/dashboard-user-provider';
 
-export default function NotesEditorPage({ user }) {
+export default function NotesEditorPage() {
+  const user = useUser();
   const params = useParams();
   const router = useRouter();
   const [note, setNote] = useState(null);

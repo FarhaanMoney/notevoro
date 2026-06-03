@@ -11,7 +11,7 @@ import AISidebar from '@/components/AISidebar';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
 import { createClient } from '@/lib/supabase/client';
 
-export default function StudyPlanPage({ user }) {
+export default function StudyPlanPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');

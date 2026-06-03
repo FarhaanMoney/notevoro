@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { MessageSquare, NotebookPen, BookOpen, ClipboardList, LayoutDashboard, ArrowRight, Flame, FileText, Clock, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/client';
+import { useUser } from '@/components/providers/dashboard-user-provider';
 
 const studyTools = [
   { id: 'notes', icon: NotebookPen, title: 'Smart Notes', description: 'Create AI notes from PDFs, lectures and videos.' },
@@ -15,7 +17,9 @@ const studyTools = [
   { id: 'chat', icon: MessageSquare, title: 'AI Chat', description: 'Your personal AI tutor for any subject.' },
 ];
 
-export default function DashboardPage({ user, onViewChange }) {
+export default function DashboardPage() {
+  const user = useUser();
+  const router = useRouter();
   const [recentActivity, setRecentActivity] = useState([]);
   const [materialsCount, setMaterialsCount] = useState(0);
 
@@ -139,7 +143,7 @@ export default function DashboardPage({ user, onViewChange }) {
                   <Card
                     key={tool.id}
                     className="premium-card p-6 cursor-pointer"
-                    onClick={() => onViewChange(tool.id)}
+                    onClick={() => router.push(`/dashboard/${tool.id}`)}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 55%, #3b82f6 100%)'}}>

@@ -17,7 +17,7 @@ const visualExamples = [
   'Process Diagrams',
 ];
 
-export default function VisualLearningPage({ user }) {
+export default function VisualLearningPage() {
   const router = useRouter();
   const [hasVisualLearning, setHasVisualLearning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
