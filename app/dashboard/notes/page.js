@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { NotebookPen, Plus, Copy, Share2, Clock, Trash2 } from 'lucide-react';
+import { NotebookPen, Plus, Copy, Share2, Clock, Trash2, Folder, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar';
 

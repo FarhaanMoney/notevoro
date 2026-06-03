@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, Plus, CheckCircle, RotateCw, ChevronLeft, ChevronRight, X, Folder, Clock, Edit2, Trash2, Copy, Share2 } from 'lucide-react';
+import { BookOpen, Plus, CheckCircle, RotateCw, ChevronLeft, ChevronRight, X, Folder, Clock, Edit2, Trash2, Copy, Share2, Sparkles, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import AISidebar from '@/components/AISidebar';

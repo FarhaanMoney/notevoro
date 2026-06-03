@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, Plus, CheckCircle, Play, Clock, Folder, Edit2, Trash2, Copy, Share2, Target } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Play, Clock, Folder, Edit2, Trash2, Copy, Share2, Target, Sparkles, Award } from 'lucide-react';
 import AISidebar from '@/components/AISidebar';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
