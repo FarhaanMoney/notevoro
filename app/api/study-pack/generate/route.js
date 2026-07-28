@@ -19,6 +19,7 @@ Adapt vocabulary and depth to the student's grade & curriculum. Be accurate, eng
 export async function POST(request) {
   try {
     const supabase = await createClient()
+    if (!supabase) return NextResponse.json({ error: 'Supabase not configured. Add keys to /app/.env' }, { status: 500 })
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

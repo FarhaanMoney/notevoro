@@ -18,6 +18,7 @@ Guidelines:
 
 export async function POST(request) {
   const supabase = await createClient()
+  if (!supabase) return new Response(JSON.stringify({ error: 'Supabase not configured' }), { status: 500 })
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
@@ -27,7 +28,6 @@ export async function POST(request) {
 
   const { data: profile } = await supabase.from('profiles').select('display_name, grade, curriculum').eq('id', user.id).single()
 
-  // Get or create chat
   let activeChatId = chatId
   if (!activeChatId) {
     const title = message.slice(0, 60)
@@ -35,10 +35,8 @@ export async function POST(request) {
     activeChatId = newChat?.id
   }
 
-  // Save user message
   await supabase.from('messages').insert({ chat_id: activeChatId, user_id: user.id, role: 'user', content: message })
 
-  // Load recent history
   const { data: history } = await supabase.from('messages').select('role, content').eq('chat_id', activeChatId).order('created_at', { ascending: true }).limit(30)
 
   const openai = getOpenAI()
@@ -46,9 +44,7 @@ export async function POST(request) {
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     async start(controller) {
-      // Send metadata frame first
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chatId: activeChatId, type: 'meta' })}\n\n`))
-
       let fullText = ''
       try {
         const completion = await openai.chat.completions.create({
@@ -67,7 +63,6 @@ export async function POST(request) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', delta })}\n\n`))
           }
         }
-        // Save assistant reply
         await supabase.from('messages').insert({ chat_id: activeChatId, user_id: user.id, role: 'assistant', content: fullText })
         await supabase.from('chats').update({ updated_at: new Date().toISOString() }).eq('id', activeChatId)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`))
@@ -81,10 +76,6 @@ export async function POST(request) {
   })
 
   return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-    },
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', 'Connection': 'keep-alive' },
   })
 }

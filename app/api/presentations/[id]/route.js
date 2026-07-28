@@ -7,19 +7,16 @@ export async function GET(_req, { params }) {
   if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { data: chat } = await supabase.from('chats').select('*').eq('id', id).eq('user_id', user.id).single()
-  if (!chat) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const { data: messages } = await supabase.from('messages').select('id, role, content, created_at').eq('chat_id', id).order('created_at', { ascending: true })
-  return NextResponse.json({ chat, messages: messages || [] })
+  const { data, error } = await supabase.from('presentations').select('*').eq('id', id).eq('user_id', user.id).single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 })
+  return NextResponse.json({ presentation: data })
 }
-
 export async function DELETE(_req, { params }) {
   const { id } = await params
   const supabase = await createClient()
   if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { error } = await supabase.from('chats').delete().eq('id', id).eq('user_id', user.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  await supabase.from('presentations').delete().eq('id', id).eq('user_id', user.id)
   return NextResponse.json({ ok: true })
 }
