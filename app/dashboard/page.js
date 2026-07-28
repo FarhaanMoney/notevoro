@@ -6,12 +6,33 @@ import { Sparkles, MessagesSquare, BookOpen, ArrowRight, Zap, Flame, Clock } fro
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  const { data: recentPacks } = await supabase.from('study_packs').select('id, topic, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(4)
-  const { data: recentChats } = await supabase.from('chats').select('id, title, updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(4)
 
-  const name = profile?.display_name || profile?.full_name || 'Student'
+  let name = 'Demo Student'
+  let recentPacks = []
+  let recentChats = []
+
+  if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      name = profile?.display_name || profile?.full_name || 'Student'
+      const { data: rp } = await supabase.from('study_packs').select('id, topic, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(4)
+      const { data: rc } = await supabase.from('chats').select('id, title, updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(4)
+      recentPacks = rp || []
+      recentChats = rc || []
+    }
+  } else {
+    // Preview seed data
+    recentPacks = [
+      { id: 'demo-1', topic: 'Photosynthesis', created_at: new Date(Date.now() - 3600e3).toISOString() },
+      { id: 'demo-2', topic: 'The French Revolution', created_at: new Date(Date.now() - 86400e3).toISOString() },
+      { id: 'demo-3', topic: 'Newton’s Laws of Motion', created_at: new Date(Date.now() - 2*86400e3).toISOString() },
+    ]
+    recentChats = [
+      { id: 'demo-c1', title: 'Explain quantum entanglement', updated_at: new Date(Date.now() - 1800e3).toISOString() },
+      { id: 'demo-c2', title: 'Help me solve quadratic equations', updated_at: new Date(Date.now() - 7200e3).toISOString() },
+    ]
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -20,7 +41,6 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground mt-1">Ready to learn something new today?</p>
       </div>
 
-      {/* Hero CTAs */}
       <div className="grid md:grid-cols-2 gap-4 mb-8">
         <Link href="/dashboard/study-pack">
           <Card className="p-6 bg-gradient-to-br from-violet-500/15 to-pink-500/15 border-primary/30 hover:border-primary/60 transition cursor-pointer group">
@@ -48,12 +68,11 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
           { icon: Flame, label: 'Streak', value: '1 day', color: 'text-orange-400' },
           { icon: Clock, label: 'Study Hours', value: '0.0h', color: 'text-blue-400' },
-          { icon: Zap, label: 'Study Packs', value: recentPacks?.length ?? 0, color: 'text-primary' },
+          { icon: Zap, label: 'Study Packs', value: recentPacks.length, color: 'text-primary' },
         ].map((s, i) => (
           <Card key={i} className="p-5 bg-card/50">
             <div className="flex items-center gap-3">
@@ -67,12 +86,11 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Recent activity */}
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Recent Study Packs</h2>
           <div className="space-y-2">
-            {(recentPacks?.length ?? 0) === 0 ? (
+            {recentPacks.length === 0 ? (
               <Card className="p-6 text-center bg-card/40 border-dashed">
                 <Sparkles className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">No study packs yet.</p>
@@ -94,7 +112,7 @@ export default async function DashboardPage() {
         <div>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Recent Chats</h2>
           <div className="space-y-2">
-            {(recentChats?.length ?? 0) === 0 ? (
+            {recentChats.length === 0 ? (
               <Card className="p-6 text-center bg-card/40 border-dashed">
                 <MessagesSquare className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">No chats yet.</p>
