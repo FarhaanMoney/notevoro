@@ -82,6 +82,15 @@ create table if not exists public.quiz_sets (
   questions jsonb not null default '[]'::jsonb,
   created_at timestamptz default now(), updated_at timestamptz default now()
 );
+create table if not exists public.practice_tests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null, subject text, duration_minutes int not null default 30,
+  questions jsonb not null default '[]'::jsonb,
+  result jsonb,
+  completed_at timestamptz,
+  created_at timestamptz default now(), updated_at timestamptz default now()
+);
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -104,7 +113,7 @@ $$;
 
 do $$ declare tbl text;
 begin
-  for tbl in select unnest(array['profiles','chats','messages','study_packs','atlas_sessions','folders','notes','research_reports','presentations','calendar_events','flashcard_sets','quiz_sets']) loop
+  for tbl in select unnest(array['profiles','chats','messages','study_packs','atlas_sessions','folders','notes','research_reports','presentations','calendar_events','flashcard_sets','quiz_sets','practice_tests']) loop
     execute format('alter table public.%I enable row level security', tbl);
   end loop;
 end $$;
@@ -114,7 +123,7 @@ create policy "profile_own_all" on public.profiles for all using (auth.uid() = i
 
 do $$ declare tbl text;
 begin
-  for tbl in select unnest(array['chats','study_packs','atlas_sessions','folders','notes','research_reports','presentations','calendar_events','flashcard_sets','quiz_sets']) loop
+  for tbl in select unnest(array['chats','study_packs','atlas_sessions','folders','notes','research_reports','presentations','calendar_events','flashcard_sets','quiz_sets','practice_tests']) loop
     execute format('drop policy if exists "own_all" on public.%I', tbl);
     execute format('create policy "own_all" on public.%I for all using (auth.uid() = user_id) with check (auth.uid() = user_id)', tbl);
   end loop;
@@ -127,9 +136,4 @@ create policy "msg_own_chat_insert" on public.messages for insert with check (pu
 drop policy if exists "msg_own_chat_delete" on public.messages;
 create policy "msg_own_chat_delete" on public.messages for delete using (public.is_chat_owner(chat_id));
 
-create index if not exists idx_notes_user on public.notes(user_id, updated_at desc);
-create index if not exists idx_research_user on public.research_reports(user_id, updated_at desc);
-create index if not exists idx_presentations_user on public.presentations(user_id, updated_at desc);
-create index if not exists idx_calendar_user_date on public.calendar_events(user_id, event_date);
-create index if not exists idx_flashcards_user on public.flashcard_sets(user_id, updated_at desc);
-create index if not exists idx_quizzes_user on public.quiz_sets(user_id, updated_at desc);
+create index if not exists idx_tests_user on public.practice_tests(user_id, created_at desc);

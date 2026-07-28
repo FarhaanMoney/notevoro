@@ -17,12 +17,12 @@ const nav = [
   { href: '/dashboard/study-pack', label: 'Study Packs', icon: BookOpen },
   { href: '/dashboard/flashcards', label: 'Flashcards', icon: Layers },
   { href: '/dashboard/quizzes', label: 'Quizzes', icon: HelpCircle },
-  { href: '/dashboard/tests', label: 'Practice Tests', icon: FileText, disabled: true },
+  { href: '/dashboard/tests', label: 'Practice Tests', icon: FileText },
   { href: '/dashboard/presentations', label: 'Presentations', icon: Presentation },
   { href: '/dashboard/research', label: 'Research Agent', icon: Search },
   { href: '/dashboard/folders', label: 'Folders', icon: Folder },
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/dashboard/usage', label: 'Usage', icon: BarChart3, disabled: true },
+  { href: '/dashboard/usage', label: 'Usage', icon: BarChart3 },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -55,19 +55,13 @@ export function Sidebar({ user, profile, previewMode }) {
         {nav.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href))
           return (
-            <Link
-              key={item.href}
-              href={item.disabled ? '#' : item.href}
-              onClick={(e) => item.disabled && e.preventDefault()}
+            <Link key={item.href} href={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
                 isActive ? 'bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-foreground border border-primary/30'
-                : item.disabled ? 'text-muted-foreground/50 cursor-not-allowed'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-              }`}
-            >
+              }`}>
               <item.icon className="w-4 h-4" />
               <span className="flex-1">{item.label}</span>
-              {item.disabled && <span className="text-[10px] text-muted-foreground/60">Soon</span>}
             </Link>
           )
         })}
