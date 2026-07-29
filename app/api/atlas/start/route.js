@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getOpenAI, AI_MODEL } from '@/lib/ai/openai'
+import { checkPermission, consumeUsage, logUsageRequest } from '@/lib/usage/usageEngine'
 
 export const maxDuration = 90
 
@@ -44,15 +45,25 @@ Rules:
 - answer_index is 0-based.`
 
 export async function POST(request) {
+  const startTime = Date.now()
+  let user = null
   try {
     const supabase = await createClient()
     if (!supabase) return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
-    const { data: { user } } = await supabase.auth.getUser()
+    const authResult = await supabase.auth.getUser()
+    user = authResult.data.user
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
     const topic = (body.topic || '').trim()
     if (!topic) return NextResponse.json({ error: 'Topic required' }, { status: 400 })
+
+    // Check usage permission
+    const permissionCheck = await checkPermission(user.id, 'atlas_sessions')
+    if (!permissionCheck.allowed) {
+      await logUsageRequest(user.id, 'atlas_sessions', false, Date.now() - startTime, false)
+      return NextResponse.json(permissionCheck, { status: 429 })
+    }
 
     const { data: profile } = await supabase.from('profiles').select('grade, curriculum, display_name').eq('id', user.id).single()
 
@@ -91,9 +102,16 @@ Generate the adaptive lesson plan now. Return JSON ONLY.`
     }).select().single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    
+    // Consume usage only after successful completion
+    await consumeUsage(user.id, 'atlas_sessions')
+    await logUsageRequest(user.id, 'atlas_sessions', true, Date.now() - startTime, true)
+    
     return NextResponse.json({ session })
   } catch (err) {
     console.error('[atlas/start]', err)
+    // Log failed usage - don't consume usage on failure
+    await logUsageRequest(user.id, 'atlas_sessions', true, Date.now() - startTime, false)
     return NextResponse.json({ error: err.message || 'Generation failed' }, { status: 500 })
   }
 }

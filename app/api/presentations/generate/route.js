@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getOpenAI, AI_MODEL } from '@/lib/ai/openai'
+import { checkPermission, consumeUsage, logUsageRequest } from '@/lib/usage/usageEngine'
 
 export const maxDuration = 90
 
@@ -28,15 +29,25 @@ Rules:
 - Adapt to grade/curriculum. Cover the topic progressively.`
 
 export async function POST(request) {
+  const startTime = Date.now()
+  let user = null
   try {
     const supabase = await createClient()
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
-    const { data: { user } } = await supabase.auth.getUser()
+    const authResult = await supabase.auth.getUser()
+    user = authResult.data.user
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
     const topic = (body.topic || '').trim()
     if (!topic) return NextResponse.json({ error: 'Topic required' }, { status: 400 })
     const theme = body.theme || 'violet'
+
+    // Check usage permission
+    const permissionCheck = await checkPermission(user.id, 'presentations')
+    if (!permissionCheck.allowed) {
+      await logUsageRequest(user.id, 'presentations', false, Date.now() - startTime, false)
+      return NextResponse.json(permissionCheck, { status: 429 })
+    }
 
     const { data: profile } = await supabase.from('profiles').select('grade, curriculum').eq('id', user.id).single()
     const openai = getOpenAI()
@@ -57,9 +68,15 @@ export async function POST(request) {
       user_id: user.id, topic: deck.title || topic, theme: deck.theme || theme, slides: deck.slides,
     }).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    
+    // Consume usage only after successful completion
+    await consumeUsage(user.id, 'presentations')
+    await logUsageRequest(user.id, 'presentations', true, Date.now() - startTime, true)
+    
     return NextResponse.json({ presentation: data })
   } catch (err) {
     console.error('[presentations/generate]', err)
+    if (user) await logUsageRequest(user.id, 'presentations', true, Date.now() - startTime, false)
     return NextResponse.json({ error: err.message || 'Failed' }, { status: 500 })
   }
 }

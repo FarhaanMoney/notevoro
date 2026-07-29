@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getOpenAI, AI_MODEL } from '@/lib/ai/openai'
+import { checkPermission, consumeUsage, logUsageRequest } from '@/lib/usage/usageEngine'
 
 export const maxDuration = 90
 
@@ -25,15 +26,25 @@ OUTPUT STRICT JSON (no markdown fences):
 Only cite well-known, real sources. Adapt depth to student's grade & curriculum. Be objective and cite perspectives where relevant.`
 
 export async function POST(request) {
+  const startTime = Date.now()
+  let user = null
   try {
     const supabase = await createClient()
     if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    user = authUser
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
     const topic = (body.topic || '').trim()
     if (!topic) return NextResponse.json({ error: 'Topic required' }, { status: 400 })
+
+    // Check usage permission
+    const permissionCheck = await checkPermission(user.id, 'research')
+    if (!permissionCheck.allowed) {
+      await logUsageRequest(user.id, 'research', false, Date.now() - startTime, false)
+      return NextResponse.json(permissionCheck, { status: 429 })
+    }
 
     const { data: profile } = await supabase.from('profiles').select('grade, curriculum').eq('id', user.id).single()
 
@@ -58,9 +69,15 @@ export async function POST(request) {
     }).select().single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    
+    // Consume usage only after successful completion
+    await consumeUsage(user.id, 'research')
+    await logUsageRequest(user.id, 'research', true, Date.now() - startTime, true)
+    
     return NextResponse.json({ report: data })
   } catch (err) {
     console.error('[research/generate]', err)
+    if (user) await logUsageRequest(user.id, 'research', true, Date.now() - startTime, false)
     return NextResponse.json({ error: err.message || 'Failed' }, { status: 500 })
   }
 }
