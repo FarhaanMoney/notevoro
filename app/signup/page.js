@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { GoogleButton } from '@/components/GoogleButton'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -30,7 +31,6 @@ export default function SignupPage() {
         options: { data: { full_name: form.fullName, display_name: form.displayName || form.fullName } },
       })
       if (error) throw error
-      // Save onboarding info to profile
       if (data.user) {
         await fetch('/api/profile', {
           method: 'POST',
@@ -60,7 +60,17 @@ export default function SignupPage() {
         <div className="rounded-2xl border border-border bg-card/60 backdrop-blur p-8">
           <h1 className="text-2xl font-bold">Create your account</h1>
           <p className="text-sm text-muted-foreground mt-1">Personalize your learning in 60 seconds.</p>
-          <form onSubmit={handleSignup} className="space-y-4 mt-6">
+
+          <div className="mt-6 space-y-3">
+            <GoogleButton label="Sign up with Google" />
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">or email</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+          </div>
+
+          <form onSubmit={handleSignup} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>First name</Label>

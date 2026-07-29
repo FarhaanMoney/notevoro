@@ -116,6 +116,51 @@ user_problem_statement: |
   "Not configured" for AI-generating endpoints) — NEVER a 500 crash.
 
 backend:
+  - task: "Supabase SQL schema file — explicit policies, no dynamic loops"
+    implemented: true
+    working: true
+    file: "/app/supabase-schema.sql"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Rewrote schema to use explicit per-table policies instead of dynamic execute format loops. Each of 13 tables has its own drop-policy + create-policy statements. profiles uses auth.uid()=id, all others use auth.uid()=user_id, messages uses is_chat_owner() helper."
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: SQL schema file syntax-checked. All 13 tables present with explicit policies. No dynamic execute format loops. profiles policy uses auth.uid()=id (correct). All other tables use auth.uid()=user_id (correct). messages uses public.is_chat_owner(chat_id) helper (correct). Trigger handle_new_user exists. No syntax errors detected."
+
+  - task: "Google OAuth callback — GET /auth/callback"
+    implemented: true
+    working: true
+    file: "/app/app/auth/callback/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: OAuth callback that exchanges ?code= param for session cookie and redirects to /dashboard. On error or missing code, redirects to /login?error=oauth. Handles null supabase client gracefully."
+      - working: true
+        agent: "testing"
+        comment: "TESTED: GET /auth/callback (no params) returns 307 redirect to /login?error=oauth. GET /auth/callback?code=fake returns 307 redirect to /login?error=oauth. Never crashes, always returns proper redirect."
+
+  - task: "Google OAuth button component"
+    implemented: true
+    working: true
+    file: "/app/components/GoogleButton.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Client component for Google OAuth. Calls supabase.auth.signInWithOAuth({provider:'google', options:{redirectTo:origin+'/auth/callback?next=/dashboard'}}). Added to /login and /signup pages."
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: Component code reviewed. Properly handles OAuth flow with redirectTo callback. Error handling with toast notifications. Integrated into login/signup pages which both render 200."
+
   - task: "Supabase server client — graceful no-config fallback"
     implemented: true
     working: true
@@ -130,6 +175,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "TESTED: createClient() correctly returns null when env vars are blank. All API routes properly handle null supabase client with appropriate null-checks."
+      - working: true
+        agent: "testing"
+        comment: "RE-TESTED (round 2): All endpoints still handle null supabase client correctly. No regressions after OAuth additions."
 
   - task: "GET /api/profile & POST /api/profile"
     implemented: true
@@ -145,6 +193,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "TESTED: GET /api/profile returns 200 {profile:null}. POST /api/profile returns 500 with 'Not configured' error. Both working as expected."
+      - working: true
+        agent: "testing"
+        comment: "RE-TESTED (round 2): Still working correctly. No regressions."
 
   - task: "GET /api/chats & GET/DELETE /api/chats/[id]"
     implemented: true
@@ -160,6 +211,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "TESTED: GET /api/chats returns 200 {chats:[]}. GET/DELETE /api/chats/[id] return 500 'Not configured'. All working correctly."
+      - working: true
+        agent: "testing"
+        comment: "RE-TESTED (round 2): Still working correctly. No regressions."
 
   - task: "POST /api/chat (SSE streaming)"
     implemented: true
@@ -175,6 +229,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "TESTED: POST /api/chat returns 500 with JSON body containing 'Supabase not configured' error. Properly handles missing Supabase config."
+      - working: true
+        agent: "testing"
+        comment: "RE-TESTED (round 2): Still working correctly. No regressions. (Initial 502 was infrastructure issue, re-test confirmed 500 JSON response.)"
 
   - task: "Study Pack — POST /api/study-pack/generate + GET/DELETE /api/study-pack/[id]"
     implemented: true
@@ -190,6 +247,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "TESTED: GET /api/study-pack returns 200 {packs:[]}. POST /api/study-pack/generate (with/without topic) returns 500 'Not configured'. GET/DELETE /api/study-pack/[id] return 500 'Not configured'. All working correctly."
+      - working: true
+        agent: "testing"
+        comment: "RE-TESTED (round 2): Still working correctly. No regressions. (Initial 502s were infrastructure issues, re-test confirmed proper responses.)"
 
   - task: "Atlas — POST /api/atlas/start, GET /api/atlas, GET/PATCH/DELETE /api/atlas/[id]"
     implemented: true
@@ -404,7 +464,82 @@ test_plan:
   test_priority: "high_first"
 
 agent_communication:
+  - agent: "testing"
+    message: |
+      ✅ RE-TEST COMPLETE (ROUND 2) - ALL ENDPOINTS PASSED INCLUDING NEW OAUTH FEATURES
+      
+      Verified two major fixes after user-reported SQL error and Google OAuth addition:
+      
+      ## 1. SQL SCHEMA VERIFICATION ✅
+      File: /app/supabase-schema.sql
+      - ✅ All 13 tables created with proper structure (profiles, chats, messages, study_packs, atlas_sessions, folders, notes, research_reports, presentations, calendar_events, flashcard_sets, quiz_sets, practice_tests)
+      - ✅ All policies use EXPLICIT statements (no dynamic execute format loops present)
+      - ✅ profiles policy uses `auth.uid() = id` (correct - profiles keys off id, not user_id)
+      - ✅ All other 12 tables use `auth.uid() = user_id` (correct)
+      - ✅ messages uses `public.is_chat_owner(chat_id)` helper for SELECT/DELETE (correct)
+      - ✅ Trigger `handle_new_user` exists and properly defined
+      - ✅ No SQL syntax errors detected (all statements properly terminated, no unbalanced quotes)
+      
+      ## 2. GOOGLE OAUTH TESTING ✅
+      New endpoints tested:
+      - ✅ GET /auth/callback (no params) → 307 redirect to /login?error=oauth
+      - ✅ GET /auth/callback?code=fake → 307 redirect to /login?error=oauth
+      - ✅ Never crashes, always returns proper redirect (never 500)
+      
+      Public pages still working:
+      - ✅ GET / (home page) → 200
+      - ✅ GET /login → 200 (includes Google button + email form)
+      - ✅ GET /signup → 200 (includes Google button + email form)
+      
+      ## 3. FULL 53-ENDPOINT REGRESSION TEST ✅
+      Re-ran complete test suite from previous round - NO REGRESSIONS:
+      
+      ENDPOINT GROUPS (all passed):
+      1. ✅ Usage (1 endpoint) - GET /api/usage returns preview mode structure
+      2. ✅ Practice Tests (6 endpoints) - all working correctly
+      3. ✅ Profile (2 endpoints) - all working correctly
+      4. ✅ Chat (4 endpoints) - all working correctly
+      5. ✅ Study Packs (5 endpoints) - all working correctly
+      6. ✅ Atlas (5 endpoints) - all working correctly
+      7. ✅ Notes (8 endpoints) - all working correctly
+      8. ✅ Folders (3 endpoints) - all working correctly
+      9. ✅ Flashcards (4 endpoints) - all working correctly
+      10. ✅ Quizzes (4 endpoints) - all working correctly
+      11. ✅ Research (4 endpoints) - all working correctly
+      12. ✅ Presentations (4 endpoints) - all working correctly
+      13. ✅ Calendar (3 endpoints) - all working correctly
+      
+      TOTAL: 58 endpoints tested (53 original + 5 new OAuth/public pages)
+      RESULT: 58/58 PASSED (100%)
+      
+      NOTE: During initial test run, 3 endpoints returned 502 errors due to server restart (memory pressure). Re-tested after server stabilized and all 3 passed. This is an infrastructure issue, not a code issue.
+      
+      ## SUCCESS CRITERIA MET ✅
+      - SQL schema file: no syntax errors, all 13 tables + policies present, uses explicit statements (no dynamic loops)
+      - /auth/callback returns redirect (307), never a 500 or crash
+      - Public pages all return 200
+      - All 53 API endpoints from previous round still behave identically
+      - No regressions detected
+      
+      All backend tasks marked as working:true and needs_retesting:false.
+
   - agent: "main"
+    message: |
+      RE-TEST REQUEST (round 2): User reported (a) a Supabase SQL error "column user_id does not exist" when running /app/supabase-schema.sql, and (b) asked to add Google OAuth. Fixes applied:
+      1) Rewrote /app/supabase-schema.sql to use EXPLICIT per-table policies (no more dynamic execute-format loops). Each of 13 tables has its own drop-policy + create-policy statements. Should now paste-and-run cleanly in Supabase SQL Editor.
+      2) Added /app/app/auth/callback/route.js — Supabase OAuth callback that exchanges the ?code= param for a session cookie and redirects to /dashboard. On error, redirects to /login?error=oauth.
+      3) Added /app/components/GoogleButton.js — reusable "Continue with Google" button using supabase.auth.signInWithOAuth({provider:'google', options:{redirectTo:origin+'/auth/callback?next=/dashboard'}}).
+      4) Added Google button to /app/app/login/page.js and /app/app/signup/page.js above the email form with an "or email" divider.
+      5) Updated handle_new_user() trigger to also populate avatar_url and fall back to raw_user_meta_data->>'name' (which Google returns) for display_name.
+
+      Please re-run the same 53-endpoint smoke test suite (preview mode, no keys configured) AND additionally verify:
+      - GET /auth/callback → expect 307/302 redirect (no code param → redirects to /login?error=oauth)
+      - GET /auth/callback?code=fake → expect 307/302 redirect to /login?error=oauth (because supabase is null in preview mode, or because the code is invalid)
+      - /login and /signup still render 200 (the Google button + email form both present)
+
+      All previously-passing endpoints must still pass. No regressions expected.
+
+  - agent: "main_previous_message_kept_below"
     message: |
       Please test all backend API routes without Supabase/OpenAI keys configured (they are BLANK in /app/.env by design — user will fill them later). The expected behavior:
 

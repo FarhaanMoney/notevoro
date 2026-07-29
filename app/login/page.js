@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { GoogleButton } from '@/components/GoogleButton'
 
 function LoginForm() {
   const router = useRouter()
@@ -46,7 +47,17 @@ function LoginForm() {
         <div className="rounded-2xl border border-border bg-card/60 backdrop-blur p-8">
           <h1 className="text-2xl font-bold">Welcome back</h1>
           <p className="text-sm text-muted-foreground mt-1">Log in to keep learning.</p>
-          <form onSubmit={handleLogin} className="space-y-4 mt-6">
+
+          <div className="mt-6 space-y-3">
+            <GoogleButton label="Continue with Google" />
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">or email</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" />
@@ -56,7 +67,7 @@ function LoginForm() {
               <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
             </div>
             <Button type="submit" disabled={loading} className="w-full h-11 bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Logging in...</> : 'Log in'}
+              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Logging in...</> : 'Log in with email'}
             </Button>
           </form>
           <p className="text-sm text-muted-foreground text-center mt-6">

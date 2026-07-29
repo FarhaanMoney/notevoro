@@ -2,6 +2,7 @@
 """
 Comprehensive backend API test for Notevoro in preview mode (no Supabase/OpenAI keys).
 Tests all 16 endpoint groups to ensure graceful degradation and proper error handling.
+UPDATED: Added OAuth callback and public page tests.
 """
 
 import requests
@@ -10,6 +11,7 @@ import sys
 
 # Base URL from .env
 BASE_URL = "https://notevoro-launch.preview.emergentagent.com/api"
+PUBLIC_BASE_URL = "https://notevoro-launch.preview.emergentagent.com"
 
 # Test results tracking
 results = {
@@ -79,11 +81,74 @@ def test_endpoint(name, method, url, expected_status, expected_keys=None, body=N
         print(f"❌ {name}: Unexpected error - {str(e)}")
         return False
 
+def test_redirect(name, url):
+    """Test that an endpoint returns a redirect (302 or 307)."""
+    results["total"] += 1
+    try:
+        response = requests.get(url, timeout=10, allow_redirects=False)
+        if response.status_code in [302, 307]:
+            results["passed"].append(f"✅ {name}")
+            print(f"✅ {name} (status: {response.status_code}, location: {response.headers.get('Location', 'N/A')})")
+            return True
+        else:
+            results["failed"].append(f"❌ {name}: Expected 302/307, got {response.status_code}")
+            print(f"❌ {name}: Expected 302/307, got {response.status_code}")
+            print(f"   Response: {response.text[:500]}")
+            return False
+    except requests.exceptions.RequestException as e:
+        results["failed"].append(f"❌ {name}: Request failed - {str(e)}")
+        print(f"❌ {name}: Request failed - {str(e)}")
+        return False
+
+def test_public_page(name, url):
+    """Test that a public page returns 200."""
+    results["total"] += 1
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            results["passed"].append(f"✅ {name}")
+            print(f"✅ {name}")
+            return True
+        else:
+            results["failed"].append(f"❌ {name}: Expected 200, got {response.status_code}")
+            print(f"❌ {name}: Expected 200, got {response.status_code}")
+            return False
+    except requests.exceptions.RequestException as e:
+        results["failed"].append(f"❌ {name}: Request failed - {str(e)}")
+        print(f"❌ {name}: Request failed - {str(e)}")
+        return False
+
 def main():
     print("=" * 80)
     print("NOTEVORO BACKEND API TEST - PREVIEW MODE (No Supabase/OpenAI)")
     print("=" * 80)
     print(f"Base URL: {BASE_URL}\n")
+    
+    # ========================================================================
+    # 0. NEW OAUTH CALLBACK & PUBLIC PAGES (HIGH PRIORITY)
+    # ========================================================================
+    print("\n[0] Testing OAuth Callback & Public Pages (NEW)")
+    print("-" * 80)
+    test_redirect(
+        "GET /auth/callback (no params)",
+        f"{PUBLIC_BASE_URL}/auth/callback"
+    )
+    test_redirect(
+        "GET /auth/callback?code=fake",
+        f"{PUBLIC_BASE_URL}/auth/callback?code=invalid_fake_code_123&next=/dashboard"
+    )
+    test_public_page(
+        "GET / (home page)",
+        f"{PUBLIC_BASE_URL}/"
+    )
+    test_public_page(
+        "GET /login",
+        f"{PUBLIC_BASE_URL}/login"
+    )
+    test_public_page(
+        "GET /signup",
+        f"{PUBLIC_BASE_URL}/signup"
+    )
     
     # ========================================================================
     # 1. USAGE (NEWLY BUILT - HIGH PRIORITY)
