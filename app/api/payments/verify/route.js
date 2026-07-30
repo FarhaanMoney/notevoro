@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { handleSuccessfulPayment, handleFailedPayment } from '@/lib/payments/razorpay'
+import { ensureUserRecords, logActivity } from '@/lib/auth/user-init'
 
 export async function POST(request) {
   try {
@@ -41,6 +42,16 @@ export async function POST(request) {
       if (!result.success) {
         return NextResponse.json({ error: result.error || 'Payment verification failed' }, { status: 400 })
       }
+
+      // Ensure user records are updated with new plan
+      await ensureUserRecords(user.id, user.email, user.user_metadata)
+
+      // Log the subscription upgrade
+      await logActivity(user.id, 'subscription_purchased', 'subscription', user.id, {
+        plan,
+        amount,
+        paymentId,
+      })
 
       return NextResponse.json({ success: true, message: 'Payment verified successfully' })
     } else {

@@ -73,7 +73,7 @@ export function SettingsForm({ profile, email, preview }) {
             <div className="font-semibold">Free plan</div>
             <div className="text-xs text-muted-foreground">20 AI chats/day · 500MB storage</div>
           </div>
-          <Button className="bg-gradient-to-r from-violet-500 to-pink-500">Upgrade to Pro</Button>
+          <Button className="bg-gradient-to-r from-violet-500 to-pink-500" onClick={() => window.location.href = '/dashboard/subscriptions'}>Upgrade to Pro</Button>
         </div>
       </Card>
 

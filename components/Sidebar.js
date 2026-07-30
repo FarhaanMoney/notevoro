@@ -74,7 +74,7 @@ export function Sidebar({ user, profile, previewMode }) {
             <span className="text-xs font-semibold">Free plan</span>
           </div>
           <p className="text-[11px] text-muted-foreground mb-2">Upgrade for unlimited AI &amp; priority speed.</p>
-          <Button size="sm" className="w-full h-7 text-xs bg-gradient-to-r from-violet-500 to-pink-500">Upgrade to Pro</Button>
+          <Button size="sm" className="w-full h-7 text-xs bg-gradient-to-r from-violet-500 to-pink-500" onClick={() => window.location.href = '/dashboard/subscriptions'}>Upgrade to Pro</Button>
         </div>
         <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/40">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white text-sm font-semibold">{initial}</div>

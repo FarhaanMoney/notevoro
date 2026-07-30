@@ -211,12 +211,13 @@ export async function handleSuccessfulPayment(
       return { success: false, error: 'Failed to create payment record' }
     }
 
-    // Calculate subscription period
+    // Calculate exact 1-month subscription period
     const currentPeriodStart = new Date()
-    const currentPeriodEnd = new Date()
-    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1) // 1 month subscription
+    const currentPeriodEnd = new Date(currentPeriodStart)
+    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1)
+    currentPeriodEnd.setHours(23, 59, 59, 999) // End of the day, 1 month from now
 
-    // Update subscription
+    // Update subscription with exact period
     const subscriptionUpdated = await updateSubscription(userId, {
       plan,
       status: 'active',
@@ -235,6 +236,7 @@ export async function handleSuccessfulPayment(
     await logActivity(userId, 'payment_successful', 'payment', payment.id, {
       plan,
       amount,
+      period_end: currentPeriodEnd.toISOString(),
     })
 
     return { success: true }

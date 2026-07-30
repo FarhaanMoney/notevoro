@@ -76,7 +76,7 @@ export default function UsagePage() {
               <div className="text-2xl font-bold">{planLabel}</div>
             </div>
           </div>
-          {plan === 'free' && <Button className="bg-gradient-to-r from-violet-500 to-pink-500">Upgrade to Pro</Button>}
+          {plan === 'free' && <Button className="bg-gradient-to-r from-violet-500 to-pink-500" onClick={() => window.location.href = '/dashboard/subscriptions'}>Upgrade to Pro</Button>}
         </div>
       </Card>
 

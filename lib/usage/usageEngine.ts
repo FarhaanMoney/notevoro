@@ -73,10 +73,40 @@ export async function getCurrentPlan(userId: string): Promise<PlanType> {
 
   const { data: subscription } = await supabase
     .from('subscriptions')
-    .select('plan')
+    .select('plan, current_period_end')
     .eq('user_id', userId)
     .eq('status', 'active')
     .single()
+
+  // Check if subscription has expired
+  if (subscription?.current_period_end) {
+    const now = new Date()
+    const expiryDate = new Date(subscription.current_period_end)
+    
+    if (now > expiryDate) {
+      // Subscription has expired, reset to free
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ 
+          status: 'expired',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('status', 'active')
+
+      if (!error) {
+        // Create new free subscription
+        await supabase.from('subscriptions').insert({
+          user_id: userId,
+          plan: 'free',
+          status: 'active',
+          provider: 'internal',
+        })
+      }
+
+      return 'free'
+    }
+  }
 
   return (subscription?.plan as PlanType) || 'free'
 }
