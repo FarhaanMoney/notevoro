@@ -22,6 +22,22 @@ export async function ensureUserRecords(userId: string, email: string, metadata?
   if (!supabase) return false
 
   try {
+    // Use manual fallback for now
+    return await ensureUserRecordsManual(userId, email, metadata)
+  } catch (error) {
+    console.error('[User Init] Error ensuring user records:', error)
+    return false
+  }
+}
+
+/**
+ * Manual fallback for user record creation
+ */
+async function ensureUserRecordsManual(userId: string, email: string, metadata?: any) {
+  const supabase = await createClient()
+  if (!supabase) return false
+
+  try {
     // 1. Ensure profile exists
     const { data: existingProfile } = await supabase
       .from('profiles')
@@ -80,7 +96,7 @@ export async function ensureUserRecords(userId: string, email: string, metadata?
 
     return true
   } catch (error) {
-    console.error('[User Init] Error ensuring user records:', error)
+    console.error('[User Init] Error in manual fallback:', error)
     return false
   }
 }

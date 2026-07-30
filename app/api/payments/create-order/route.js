@@ -17,54 +17,32 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     }
 
+    // Require Razorpay credentials
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      return NextResponse.json({ 
+        error: 'Payment system not configured. Please contact administrator to set up Razorpay credentials.' 
+      }, { status: 503 })
+    }
+
     const planDetails = getRazorpayPlanDetails(plan)
     const receipt = `notevoro_${user.id}_${Date.now()}`
 
-    // Check if Razorpay is configured
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      console.warn('[Payments] Razorpay not configured. Using mock payment for development.')
-      
-      // Mock order for development
-      const mockOrderId = `order_mock_${Date.now()}`
-      return NextResponse.json({
-        orderId: mockOrderId,
-        amount: planDetails.amount * 100, // in paise
-        currency: 'INR',
-        keyId: 'mock_key_id',
-        mock: true, // Flag to indicate this is a mock payment
-      })
+    const order = await createRazorpayOrder(
+      planDetails.amount,
+      receipt,
+      { userId: user.id, plan }
+    )
+
+    if (!order) {
+      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    try {
-      const order = await createRazorpayOrder(
-        planDetails.amount,
-        receipt,
-        { userId: user.id, plan }
-      )
-
-      if (!order) {
-        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
-      }
-
-      return NextResponse.json({
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        keyId: process.env.RAZORPAY_KEY_ID,
-      })
-    } catch (razorpayError) {
-      console.error('[Payments] Razorpay error, falling back to mock:', razorpayError)
-      
-      // Fallback to mock payment if Razorpay fails
-      const mockOrderId = `order_mock_${Date.now()}`
-      return NextResponse.json({
-        orderId: mockOrderId,
-        amount: planDetails.amount * 100, // in paise
-        currency: 'INR',
-        keyId: 'mock_key_id',
-        mock: true,
-      })
-    }
+    return NextResponse.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID,
+    })
   } catch (error) {
     console.error('[Payments] Error creating order:', error)
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })

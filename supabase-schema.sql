@@ -30,6 +30,7 @@ drop trigger if exists on_auth_user_created on auth.users;
 -- Drop functions
 drop function if exists public.handle_new_user();
 drop function if exists public.is_chat_owner(p_chat_id uuid);
+drop function if exists public.create_user_profile(p_user_id uuid, p_email text, p_metadata jsonb);
 
 -- =========================
 -- TABLES
@@ -293,7 +294,9 @@ begin
   -- Create user stats if not exists
   insert into public.user_stats (user_id)
   values (new.id)
-  on conflict (user_id) do nothing;
+  on conflict (user_id) do update set
+    last_active = now(),
+    updated_at = now();
   
   return new;
 end;
@@ -302,6 +305,49 @@ $$;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
+
+-- Function to manually create profile for existing users
+create function public.create_user_profile(p_user_id uuid, p_email text, p_metadata jsonb)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Temporarily disable RLS for this function
+  set local role to postgres;
+  
+  -- Create profile
+  insert into public.profiles (id, email, full_name, display_name, avatar_url)
+  values (
+    p_user_id,
+    p_email,
+    coalesce(p_metadata->>'full_name', p_metadata->>'name'),
+    coalesce(p_metadata->>'display_name', p_metadata->>'name', split_part(p_email, '@', 1)),
+    p_metadata->>'avatar_url'
+  )
+  on conflict (id) do update set
+    email = p_email,
+    full_name = coalesce(p_metadata->>'full_name', p_metadata->>'name'),
+    display_name = coalesce(p_metadata->>'display_name', p_metadata->>'name', split_part(p_email, '@', 1)),
+    avatar_url = p_metadata->>'avatar_url',
+    updated_at = now();
+  
+  -- Create default free subscription if not exists
+  insert into public.subscriptions (user_id, plan, status, provider)
+  values (p_user_id, 'free', 'active', 'internal')
+  on conflict (user_id, status) do nothing;
+  
+  -- Create user stats if not exists
+  insert into public.user_stats (user_id)
+  values (p_user_id)
+  on conflict (user_id) do update set
+    last_active = now(),
+    updated_at = now();
+  
+  return true;
+end;
+$$;
 
 create function public.is_chat_owner(p_chat_id uuid)
 returns boolean
@@ -385,6 +431,8 @@ alter table public.files             enable row level security;
 -- profiles (keyed by id = auth.uid())
 create policy "profile_own_all" on public.profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
+create policy "profile_bypass_rls" on public.profiles
+  for all to postgres using (true) with check (true);
 
 -- chats
 create policy "chats_own_all" on public.chats
