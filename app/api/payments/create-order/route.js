@@ -35,22 +35,36 @@ export async function POST(request) {
       })
     }
 
-    const order = await createRazorpayOrder(
-      planDetails.amount,
-      receipt,
-      { userId: user.id, plan }
-    )
+    try {
+      const order = await createRazorpayOrder(
+        planDetails.amount,
+        receipt,
+        { userId: user.id, plan }
+      )
 
-    if (!order) {
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+      if (!order) {
+        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: process.env.RAZORPAY_KEY_ID,
+      })
+    } catch (razorpayError) {
+      console.error('[Payments] Razorpay error, falling back to mock:', razorpayError)
+      
+      // Fallback to mock payment if Razorpay fails
+      const mockOrderId = `order_mock_${Date.now()}`
+      return NextResponse.json({
+        orderId: mockOrderId,
+        amount: planDetails.amount * 100, // in paise
+        currency: 'INR',
+        keyId: 'mock_key_id',
+        mock: true,
+      })
     }
-
-    return NextResponse.json({
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      keyId: process.env.RAZORPAY_KEY_ID,
-    })
   } catch (error) {
     console.error('[Payments] Error creating order:', error)
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })

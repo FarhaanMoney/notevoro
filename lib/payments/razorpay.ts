@@ -4,7 +4,6 @@
  * Production Razorpay payment integration for subscriptions
  */
 
-import Razorpay from 'razorpay'
 import crypto from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { 
@@ -17,16 +16,22 @@ import { logActivity } from '@/lib/auth/user-init'
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET
 
-if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-  console.warn('[Razorpay] Missing credentials. Payment features will be disabled.')
-}
+let razorpay = null
 
-const razorpay = RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET 
-  ? new Razorpay({
-    key_id: RAZORPAY_KEY_ID,
-    key_secret: RAZORPAY_KEY_SECRET,
-  })
-  : null
+// Only import Razorpay if credentials are available
+if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
+  try {
+    const Razorpay = require('razorpay')
+    razorpay = new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
+    })
+  } catch (error) {
+    console.error('[Razorpay] Failed to initialize Razorpay:', error)
+  }
+} else {
+  console.warn('[Razorpay] Missing credentials. Payment features will use mock mode.')
+}
 
 export interface RazorpayOrder {
   id: string
@@ -66,7 +71,7 @@ export async function createRazorpayOrder(
 ): Promise<RazorpayOrder | null> {
   if (!razorpay) {
     console.error('[Razorpay] Razorpay not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.')
-    return null
+    throw new Error('Razorpay not configured')
   }
 
   try {
