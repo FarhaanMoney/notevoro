@@ -65,7 +65,7 @@ export async function createRazorpayOrder(
   notes?: any
 ): Promise<RazorpayOrder | null> {
   if (!razorpay) {
-    console.error('[Razorpay] Razorpay not configured')
+    console.error('[Razorpay] Razorpay not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.')
     return null
   }
 
@@ -81,7 +81,7 @@ export async function createRazorpayOrder(
     return order as RazorpayOrder
   } catch (error) {
     console.error('[Razorpay] Error creating order:', error)
-    return null
+    throw error
   }
 }
 

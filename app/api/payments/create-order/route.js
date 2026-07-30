@@ -20,6 +20,21 @@ export async function POST(request) {
     const planDetails = getRazorpayPlanDetails(plan)
     const receipt = `notevoro_${user.id}_${Date.now()}`
 
+    // Check if Razorpay is configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.warn('[Payments] Razorpay not configured. Using mock payment for development.')
+      
+      // Mock order for development
+      const mockOrderId = `order_mock_${Date.now()}`
+      return NextResponse.json({
+        orderId: mockOrderId,
+        amount: planDetails.amount * 100, // in paise
+        currency: 'INR',
+        keyId: 'mock_key_id',
+        mock: true, // Flag to indicate this is a mock payment
+      })
+    }
+
     const order = await createRazorpayOrder(
       planDetails.amount,
       receipt,
@@ -38,6 +53,6 @@ export async function POST(request) {
     })
   } catch (error) {
     console.error('[Payments] Error creating order:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

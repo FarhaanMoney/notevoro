@@ -114,6 +114,41 @@ export default function SubscriptionsPage() {
         throw new Error(data.error || 'Failed to create order')
       }
 
+      // Handle mock payment for development
+      if (data.mock) {
+        console.log('[Subscriptions] Using mock payment for development')
+        
+        // Simulate payment completion
+        const mockPaymentId = `pay_mock_${Date.now()}`
+        const mockSignature = 'mock_signature'
+        
+        const verifyRes = await fetch('/api/payments/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: data.orderId,
+            paymentId: mockPaymentId,
+            signature: mockSignature,
+            plan: planId,
+            amount: data.amount / 100, // Convert from paise to rupees
+            status: 'success',
+            mock: true,
+          }),
+        })
+
+        const verifyData = await verifyRes.json()
+
+        if (verifyData.success) {
+          // Refresh the page to show updated plan
+          window.location.reload()
+        } else {
+          alert('Payment verification failed. Please contact support.')
+          setProcessingPlan(null)
+          setLoading(false)
+        }
+        return
+      }
+
       // Open Razorpay checkout
       const options = {
         key: data.keyId,
