@@ -11,6 +11,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 /**
  * Ensure user has all required records

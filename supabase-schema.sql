@@ -48,7 +48,7 @@ create table public.profiles (
 
 create table public.chats (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete set null,
+  user_id uuid not null,
   title text not null default 'New chat',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -56,8 +56,8 @@ create table public.chats (
 
 create table public.messages (
   id uuid primary key default gen_random_uuid(),
-  chat_id uuid not null references public.chats(id) on delete cascade,
-  user_id uuid references auth.users(id) on delete set null,
+  chat_id uuid not null,
+  user_id uuid,
   role text not null check (role in ('user','assistant','system')),
   content text not null,
   created_at timestamptz default now()
@@ -65,7 +65,7 @@ create table public.messages (
 
 create table public.study_packs (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   topic text not null,
   grade text,
   curriculum text,
@@ -78,7 +78,7 @@ create table public.study_packs (
 
 create table public.atlas_sessions (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   topic text not null,
   grade text,
   curriculum text,
@@ -90,7 +90,7 @@ create table public.atlas_sessions (
 
 create table public.folders (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   name text not null,
   color text default 'violet',
   created_at timestamptz default now(),
@@ -99,8 +99,8 @@ create table public.folders (
 
 create table public.notes (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
-  folder_id uuid references public.folders(id) on delete set null,
+  user_id uuid,
+  folder_id uuid,
   title text not null default 'Untitled',
   content_html text not null default '',
   content_text text not null default '',
@@ -110,7 +110,7 @@ create table public.notes (
 
 create table public.research_reports (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   topic text not null,
   report jsonb not null default '{}'::jsonb,
   created_at timestamptz default now(),
@@ -119,7 +119,7 @@ create table public.research_reports (
 
 create table public.presentations (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   topic text not null,
   theme text default 'violet',
   slides jsonb not null default '[]'::jsonb,
@@ -129,7 +129,7 @@ create table public.presentations (
 
 create table public.calendar_events (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   title text not null,
   description text,
   event_type text default 'reminder',
@@ -141,7 +141,7 @@ create table public.calendar_events (
 
 create table public.flashcard_sets (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   topic text not null,
   cards jsonb not null default '[]'::jsonb,
   created_at timestamptz default now(),
@@ -150,7 +150,7 @@ create table public.flashcard_sets (
 
 create table public.quiz_sets (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   topic text not null,
   difficulty text default 'medium',
   questions jsonb not null default '[]'::jsonb,
@@ -160,7 +160,7 @@ create table public.quiz_sets (
 
 create table public.practice_tests (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   title text not null,
   subject text,
   duration_minutes int not null default 30,
@@ -266,6 +266,9 @@ security definer
 set search_path = public
 as $$
 begin
+  -- Temporarily disable RLS for this function
+  set local role to postgres;
+  
   -- Create profile
   insert into public.profiles (id, email, full_name, display_name, avatar_url)
   values (
@@ -275,14 +278,19 @@ begin
     coalesce(new.raw_user_meta_data->>'display_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.raw_user_meta_data->>'avatar_url'
   )
-  on conflict (id) do nothing;
+  on conflict (id) do update set
+    email = new.email,
+    full_name = coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name'),
+    display_name = coalesce(new.raw_user_meta_data->>'display_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    avatar_url = new.raw_user_meta_data->>'avatar_url',
+    updated_at = now();
   
-  -- Create default free subscription
+  -- Create default free subscription if not exists
   insert into public.subscriptions (user_id, plan, status, provider)
   values (new.id, 'free', 'active', 'internal')
   on conflict (user_id, status) do nothing;
   
-  -- Create user stats
+  -- Create user stats if not exists
   insert into public.user_stats (user_id)
   values (new.id)
   on conflict (user_id) do nothing;
@@ -312,6 +320,9 @@ security definer
 set search_path = public
 as $$
 begin
+  -- Temporarily disable RLS for this function
+  set local role to postgres;
+  
   -- Ensure profile exists
   insert into public.profiles (id, email, full_name, display_name, avatar_url)
   values (
@@ -321,7 +332,12 @@ begin
     coalesce(p_metadata->>'display_name', p_metadata->>'name', split_part(p_email, '@', 1)),
     p_metadata->>'avatar_url'
   )
-  on conflict (id) do nothing;
+  on conflict (id) do update set
+    email = p_email,
+    full_name = coalesce(p_metadata->>'full_name', p_metadata->>'name'),
+    display_name = coalesce(p_metadata->>'display_name', p_metadata->>'name', split_part(p_email, '@', 1)),
+    avatar_url = p_metadata->>'avatar_url',
+    updated_at = now();
   
   -- Ensure subscription exists
   insert into public.subscriptions (user_id, plan, status, provider)
@@ -331,12 +347,9 @@ begin
   -- Ensure user_stats exists
   insert into public.user_stats (user_id)
   values (p_user_id)
-  on conflict (user_id) do nothing;
-  
-  -- Update last_active
-  update public.user_stats 
-  set last_active = now(), updated_at = now()
-  where user_id = p_user_id;
+  on conflict (user_id) do update set
+    last_active = now(),
+    updated_at = now();
   
   return true;
 end;
@@ -454,6 +467,7 @@ create policy "files_own_all" on public.files
 -- =========================
 create index idx_chats_user            on public.chats(user_id, updated_at desc);
 create index idx_messages_chat         on public.messages(chat_id, created_at asc);
+create index idx_messages_user         on public.messages(user_id, created_at asc);
 create index idx_study_packs_user      on public.study_packs(user_id, updated_at desc);
 create index idx_atlas_user            on public.atlas_sessions(user_id, updated_at desc);
 create index idx_notes_user            on public.notes(user_id, updated_at desc);
