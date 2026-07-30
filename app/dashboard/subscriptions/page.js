@@ -3,82 +3,16 @@
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Crown, Check, Zap, Sparkles, ArrowRight, Loader2 } from 'lucide-react'
+import { Crown, Check, Zap, Sparkles, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import Script from 'next/script'
-
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: '₹0',
-    period: 'forever',
-    description: 'Perfect for getting started',
-    features: [
-      '20 AI Chats per day',
-      '1 Atlas Session per day',
-      '3 Flashcard Sets per day',
-      '3 Quizzes per day',
-      '1 Practice Test per day',
-      '1 Presentation per day',
-      '1 Research per day',
-      '500 MB Storage',
-    ],
-    current: true,
-    gradient: 'from-gray-900 to-gray-800',
-    borderColor: 'border-gray-700',
-    ctaText: 'Current Plan',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '₹299',
-    period: '/month',
-    description: 'For serious learners',
-    features: [
-      '250 AI Chats per day',
-      'Unlimited Atlas Sessions',
-      'Unlimited Flashcard Sets',
-      'Unlimited Quizzes',
-      'Unlimited Practice Tests',
-      'Unlimited Presentations',
-      'Unlimited Research',
-      '4 AI Images per day',
-      '10 GB Storage',
-    ],
-    current: false,
-    gradient: 'from-purple-900/50 to-blue-900/50',
-    borderColor: 'border-purple-500/50',
-    ctaText: 'Upgrade to Pro',
-    popular: true,
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    price: '₹899',
-    period: '/month',
-    description: 'Maximum power for achievers',
-    features: [
-      'Unlimited AI Chats',
-      'Unlimited Atlas Sessions',
-      'Unlimited Flashcard Sets',
-      'Unlimited Quizzes',
-      'Unlimited Practice Tests',
-      'Unlimited Presentations',
-      'Unlimited Research',
-      'Unlimited AI Images',
-      '100 GB Storage',
-    ],
-    current: false,
-    gradient: 'from-blue-900/50 to-purple-900/50',
-    borderColor: 'border-blue-500/50',
-    ctaText: 'Upgrade to Premium',
-  },
-]
+import { PLANS } from '@/lib/payments/config'
 
 export default function SubscriptionsPage() {
   const [currentPlan, setCurrentPlan] = useState('free')
   const [loading, setLoading] = useState(false)
   const [processingPlan, setProcessingPlan] = useState(null)
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     // Fetch current plan
@@ -90,18 +24,28 @@ export default function SubscriptionsPage() {
           setCurrentPlan(data.plan)
         }
       } catch (error) {
-        console.error('Error fetching current plan:', error)
+        console.error('[Subscriptions] Error fetching current plan:', error)
       }
     }
     fetchCurrentPlan()
+
+    // Check if Razorpay is already loaded
+    if (typeof window !== 'undefined' && window.Razorpay) {
+      console.log('[Subscriptions] Razorpay already loaded')
+      setRazorpayLoaded(true)
+    }
   }, [])
 
   const handleUpgrade = async (planId) => {
+    setError(null)
     setProcessingPlan(planId)
     setLoading(true)
 
     try {
-      // Create Razorpay order
+      console.log('[Subscriptions] Starting upgrade process for plan:', planId)
+
+      // Step 1: Create Razorpay order
+      console.log('[Subscriptions] Creating Razorpay order...')
       const res = await fetch('/api/payments/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,46 +54,21 @@ export default function SubscriptionsPage() {
 
       const data = await res.json()
 
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to create order')
+      if (!res.ok) {
+        console.error('[Subscriptions] Order creation failed:', data)
+        throw new Error(data.error || data.message || 'Failed to create payment order')
       }
 
-      // Handle mock payment for development
-      if (data.mock) {
-        console.log('[Subscriptions] Using mock payment for development')
-        
-        // Simulate payment completion
-        const mockPaymentId = `pay_mock_${Date.now()}`
-        const mockSignature = 'mock_signature'
-        
-        const verifyRes = await fetch('/api/payments/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: data.orderId,
-            paymentId: mockPaymentId,
-            signature: mockSignature,
-            plan: planId,
-            amount: data.amount / 100, // Convert from paise to rupees
-            status: 'success',
-            mock: true,
-          }),
-        })
+      console.log('[Subscriptions] Order created successfully:', data)
 
-        const verifyData = await verifyRes.json()
-
-        if (verifyData.success) {
-          // Refresh the page to show updated plan
-          window.location.reload()
-        } else {
-          alert('Payment verification failed. Please contact support.')
-          setProcessingPlan(null)
-          setLoading(false)
-        }
-        return
+      // Step 2: Check if Razorpay is loaded
+      if (!razorpayLoaded || typeof window.Razorpay === 'undefined') {
+        console.error('[Subscriptions] Razorpay not loaded')
+        throw new Error('Payment system not ready. Please refresh the page and try again.')
       }
 
-      // Open Razorpay checkout
+      // Step 3: Open Razorpay checkout
+      console.log('[Subscriptions] Opening Razorpay checkout...')
       const options = {
         key: data.keyId,
         amount: data.amount,
@@ -158,27 +77,38 @@ export default function SubscriptionsPage() {
         description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
         order_id: data.orderId,
         handler: async function (response) {
-          // Handle payment success
-          const verifyRes = await fetch('/api/payments/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              orderId: data.orderId,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-              plan: planId,
-              amount: data.amount / 100, // Convert from paise to rupees
-              status: 'success',
-            }),
-          })
+          console.log('[Subscriptions] Payment successful, verifying...', response)
+          
+          try {
+            // Handle payment success
+            const verifyRes = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId: data.orderId,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                plan: planId,
+                amount: data.amount / 100, // Convert from paise to rupees
+                status: 'success',
+              }),
+            })
 
-          const verifyData = await verifyRes.json()
+            const verifyData = await verifyRes.json()
 
-          if (verifyData.success) {
-            // Refresh the page to show updated plan
-            window.location.reload()
-          } else {
-            alert('Payment verification failed. Please contact support.')
+            if (verifyData.success) {
+              console.log('[Subscriptions] Payment verified successfully')
+              // Refresh the page to show updated plan
+              window.location.reload()
+            } else {
+              console.error('[Subscriptions] Payment verification failed:', verifyData)
+              alert('Payment verification failed. Please contact support.')
+              setProcessingPlan(null)
+              setLoading(false)
+            }
+          } catch (verifyError) {
+            console.error('[Subscriptions] Error during verification:', verifyError)
+            alert('Payment verification error. Please contact support.')
             setProcessingPlan(null)
             setLoading(false)
           }
@@ -193,17 +123,21 @@ export default function SubscriptionsPage() {
         },
         modal: {
           ondismiss: function () {
+            console.log('[Subscriptions] Razorpay modal dismissed')
             setProcessingPlan(null)
             setLoading(false)
           },
         },
       }
 
-      const rzp = new Razorpay(options)
+      const rzp = new window.Razorpay(options)
       rzp.open()
+      
+      console.log('[Subscriptions] Razorpay checkout opened')
     } catch (error) {
-      console.error('Payment error:', error)
-      alert('Failed to initiate payment. Please try again.')
+      console.error('[Subscriptions] Payment error:', error)
+      setError(error.message)
+      alert(error.message || 'Failed to initiate payment. Please try again.')
       setProcessingPlan(null)
       setLoading(false)
     }
@@ -235,12 +169,26 @@ export default function SubscriptionsPage() {
             </p>
           </div>
 
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <span className="text-red-400">{error}</span>
+            </div>
+          )}
+
           {/* Pricing Cards */}
           <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {PLANS.map((plan) => (
+            {Object.values(PLANS).map((plan) => (
               <Card
                 key={plan.id}
-                className={`relative overflow-hidden ${plan.gradient} ${plan.borderColor} border backdrop-blur-sm transition-all hover:scale-105 ${
+                className={`relative overflow-hidden ${
+                  plan.id === 'free' 
+                    ? 'from-gray-900 to-gray-800 border-gray-700' 
+                    : plan.id === 'pro'
+                    ? 'from-purple-900/50 to-blue-900/50 border-purple-500/50'
+                    : 'from-blue-900/50 to-purple-900/50 border-blue-500/50'
+                } border backdrop-blur-sm transition-all hover:scale-105 ${
                   plan.popular ? 'ring-2 ring-purple-500/50' : ''
                 }`}
               >
@@ -254,7 +202,7 @@ export default function SubscriptionsPage() {
                   <div className="text-center mb-6">
                     <div className="text-2xl font-bold mb-2">{plan.name}</div>
                     <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-4xl font-bold">{plan.price}</span>
+                      <span className="text-4xl font-bold">₹{plan.price}</span>
                       <span className="text-gray-400">{plan.period}</span>
                     </div>
                     <p className="text-gray-400 text-sm mt-2">{plan.description}</p>
@@ -271,7 +219,7 @@ export default function SubscriptionsPage() {
 
                   <Button
                     onClick={() => plan.id !== currentPlan && handleUpgrade(plan.id)}
-                    disabled={plan.id === currentPlan || loading}
+                    disabled={plan.id === currentPlan || loading || !razorpayLoaded}
                     className={`w-full ${
                       plan.id === currentPlan
                         ? 'bg-gray-700 hover:bg-gray-600 cursor-not-allowed'
@@ -290,11 +238,16 @@ export default function SubscriptionsPage() {
                     ) : plan.id === currentPlan ? (
                       <>
                         <Check className="w-4 h-4 mr-2" />
-                        {plan.ctaText}
+                        Current Plan
+                      </>
+                    ) : !razorpayLoaded ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Loading...
                       </>
                     ) : (
                       <>
-                        {plan.ctaText}
+                        Upgrade to {plan.name}
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </>
                     )}
@@ -346,7 +299,18 @@ export default function SubscriptionsPage() {
       </div>
       
       {/* Razorpay Script */}
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
+      <Script 
+        src="https://checkout.razorpay.com/v1/checkout.js" 
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('[Subscriptions] Razorpay script loaded')
+          setRazorpayLoaded(true)
+        }}
+        onError={() => {
+          console.error('[Subscriptions] Razorpay script failed to load')
+          setError('Payment system failed to load. Please refresh the page.')
+        }}
+      />
     </>
   )
 }
