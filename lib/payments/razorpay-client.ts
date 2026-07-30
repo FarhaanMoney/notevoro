@@ -35,7 +35,20 @@ let razorpayClient: any = null
  * Check if running in development mode
  */
 function isDevelopmentMode(): boolean {
-  return process.env.NODE_ENV === 'development' || process.env.ENABLE_MOCK_PAYMENTS === 'true'
+  const isDev = process.env.NODE_ENV === 'development' || 
+                process.env.ENABLE_MOCK_PAYMENTS === 'true' ||
+                !process.env.RAZORPAY_KEY_ID ||
+                !process.env.RAZORPAY_KEY_SECRET
+  
+  console.log('[Razorpay] Development mode check:', {
+    NODE_ENV: process.env.NODE_ENV,
+    ENABLE_MOCK_PAYMENTS: process.env.ENABLE_MOCK_PAYMENTS,
+    hasKeyId: !!process.env.RAZORPAY_KEY_ID,
+    hasKeySecret: !!process.env.RAZORPAY_KEY_SECRET,
+    isDevMode: isDev
+  })
+  
+  return isDev
 }
 
 /**
@@ -47,7 +60,18 @@ function initializeRazorpayClient() {
   }
 
   try {
-    const config = getPaymentConfig()
+    // Try to get config first
+    let config
+    try {
+      config = getPaymentConfig()
+    } catch (configError) {
+      console.warn('[Razorpay] Payment config not available:', configError.message)
+      if (isDevelopmentMode()) {
+        console.log('[Razorpay] Using mock mode due to missing config')
+        return null
+      }
+      throw configError
+    }
     
     if (!config.razorpayKeyId || !config.razorpayKeySecret) {
       if (isDevelopmentMode()) {
@@ -57,8 +81,18 @@ function initializeRazorpayClient() {
       throw new Error('Razorpay credentials not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.')
     }
     
-    // Dynamically import Razorpay only when needed
-    const Razorpay = require('razorpay')
+    // Try to load Razorpay library
+    let Razorpay
+    try {
+      Razorpay = require('razorpay')
+    } catch (importError) {
+      console.error('[Razorpay] Failed to import razorpay package:', importError)
+      if (isDevelopmentMode()) {
+        console.log('[Razorpay] Using mock mode due to missing razorpay package')
+        return null
+      }
+      throw new Error('Razorpay package not installed. Run: npm install razorpay')
+    }
     
     razorpayClient = new Razorpay({
       key_id: config.razorpayKeyId!,
@@ -70,7 +104,7 @@ function initializeRazorpayClient() {
   } catch (error) {
     console.error('[Razorpay] Failed to initialize client:', error)
     
-    if (error.message.includes('credentials not configured')) {
+    if (error.message.includes('credentials not configured') || error.message.includes('package not installed')) {
       throw error
     }
     
@@ -86,23 +120,33 @@ export async function createRazorpayOrder(
   userId: string,
   userEmail: string
 ): Promise<RazorpayOrderResponse> {
+  let validatedPlan: PlanType | null = null
+  
   try {
+    console.log('[Razorpay] createRazorpayOrder called with:', { plan, userId, userEmail })
+    
     // Validate plan
-    const validatedPlan = validatePlan(plan)
+    validatedPlan = validatePlan(plan)
     if (!validatedPlan) {
       throw new Error(`Invalid plan: ${plan}`)
     }
 
+    console.log('[Razorpay] Plan validated:', validatedPlan)
+
     // Get price in paise
     const amount = getPlanPriceInPaise(validatedPlan)
+    console.log('[Razorpay] Amount in paise:', amount)
     
     // Check if should use mock mode
+    console.log('[Razorpay] Initializing client...')
     const client = initializeRazorpayClient()
     
-    if (!client && isDevelopmentMode()) {
-      console.log('[Razorpay] Using mock payment mode for development')
+    if (!client) {
+      console.log('[Razorpay] Client is null, using mock payment mode')
       
-      const mockOrderId = `mock_order_${Date.now()}`
+      const mockOrderId = `mock_order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      
+      console.log('[Razorpay] Created mock order:', { mockOrderId, amount })
       
       return {
         orderId: mockOrderId,
@@ -113,9 +157,7 @@ export async function createRazorpayOrder(
       }
     }
     
-    if (!client) {
-      throw new Error('Razorpay client not available. Please configure credentials or enable development mode.')
-    }
+    console.log('[Razorpay] Using real Razorpay client')
     
     // Create real order
     const receipt = `notevoro_${userId}_${Date.now()}`
@@ -156,7 +198,30 @@ export async function createRazorpayOrder(
       keyId: config.publicRazorpayKeyId!,
     }
   } catch (error) {
-    console.error('[Razorpay] Error creating order:', error)
+    console.error('[Razorpay] Error creating order:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    })
+    
+    // Fallback to mock mode on error
+    if (isDevelopmentMode()) {
+      console.log('[Razorpay] Falling back to mock mode due to error')
+      
+      // Use validated plan or fallback to free
+      const fallbackPlan = validatedPlan || 'free'
+      const amount = getPlanPriceInPaise(fallbackPlan)
+      const mockOrderId = `mock_order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      
+      return {
+        orderId: mockOrderId,
+        amount,
+        currency: 'INR',
+        keyId: 'mock_key_id',
+        mock: true,
+      }
+    }
+    
     throw error
   }
 }

@@ -8,18 +8,27 @@ export async function POST(request) {
   console.log('[Payment] Create order request received')
   
   try {
-    // Step 1: Validate environment variables
+    // Step 1: Validate environment variables (be lenient in development)
     console.log('[Payment] Validating environment variables...')
     const envValidation = validatePaymentEnv()
     
     if (!envValidation.valid) {
-      console.error('[Payment] Environment validation failed:', envValidation.errors)
-      return NextResponse.json({ 
-        error: 'Payment system not configured',
-        message: 'Payment features are currently unavailable. Please contact the administrator to configure Razorpay credentials.',
-        details: envValidation.errors,
-        setupInstructions: 'To enable payments, set the following environment variables: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, NEXT_PUBLIC_RAZORPAY_KEY_ID'
-      }, { status: 503 })
+      const isDevelopment = process.env.NODE_ENV === 'development'
+      
+      if (isDevelopment) {
+        console.warn('[Payment] Environment validation failed in development, will use mock mode:', envValidation.errors)
+        // Continue with mock mode in development
+      } else {
+        console.error('[Payment] Environment validation failed:', envValidation.errors)
+        return NextResponse.json({ 
+          error: 'Payment system not configured',
+          message: 'Payment features are currently unavailable. Please contact the administrator to configure Razorpay credentials.',
+          details: envValidation.errors,
+          setupInstructions: 'To enable payments, set the following environment variables: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, NEXT_PUBLIC_RAZORPAY_KEY_ID'
+        }, { status: 503 })
+      }
+    } else {
+      console.log('[Payment] Environment variables validated successfully')
     }
     
     console.log('[Payment] Environment variables validated successfully')
