@@ -41,7 +41,8 @@ export async function POST(request) {
       signature, 
       plan, 
       amount,
-      status 
+      status,
+      mock
     } = body
     
     console.log('[Payment] Payment data received:', {
@@ -51,7 +52,106 @@ export async function POST(request) {
       amount,
       status,
       hasSignature: !!signature,
+      isMock: !!mock,
     })
+
+    // Handle mock payment for development
+    if (mock) {
+      console.log('[Payment] Processing mock payment for development')
+      
+      // Skip signature verification for mock payments
+      // Check for duplicate payment
+      const { data: existingPayment } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('payment_id', paymentId)
+        .single()
+
+      if (existingPayment) {
+        console.log('[Payment] Mock payment already processed, skipping')
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Mock payment already processed',
+          duplicate: true
+        })
+      }
+
+      // Create mock payment record
+      const payment = await createPayment(user.id, {
+        payment_id: paymentId,
+        order_id: orderId,
+        amount,
+        status: 'completed',
+      })
+
+      if (!payment) {
+        console.error('[Payment] Failed to create mock payment record')
+        return NextResponse.json({ error: 'Failed to create payment record' }, { status: 500 })
+      }
+      
+      console.log('[Payment] Mock payment record created:', { paymentId: payment.id })
+
+      // Calculate subscription period
+      const currentPeriodStart = new Date()
+      const currentPeriodEnd = new Date(currentPeriodStart)
+      currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1)
+      currentPeriodEnd.setHours(23, 59, 59, 999)
+
+      console.log('[Payment] Mock subscription period:', {
+        start: currentPeriodStart.toISOString(),
+        end: currentPeriodEnd.toISOString(),
+      })
+
+      // Update subscription
+      const subscriptionUpdated = await updateSubscription(user.id, {
+        plan: validatedPlan,
+        status: 'active',
+        provider: 'mock',
+        razorpay_payment_id: paymentId,
+        razorpay_subscription_id: paymentId,
+        current_period_start: currentPeriodStart.toISOString(),
+        current_period_end: currentPeriodEnd.toISOString(),
+      })
+
+      if (!subscriptionUpdated) {
+        console.error('[Payment] Failed to update mock subscription')
+        return NextResponse.json({ error: 'Failed to update subscription' }, { status: 500 })
+      }
+      
+      console.log('[Payment] Mock subscription updated successfully')
+
+      // Ensure user records are updated
+      await ensureUserRecords(user.id, user.email, user.user_metadata)
+      console.log('[Payment] Mock user records ensured')
+
+      // Refresh user session
+      await refreshUserSession(user.id)
+      console.log('[Payment] Mock user session refreshed')
+
+      // Get updated user data
+      const userData = await getUserDataForRefresh(user.id)
+      console.log('[Payment] Mock user data retrieved for refresh')
+
+      // Log activity
+      await logActivity(user.id, 'subscription_purchased', 'subscription', user.id, {
+        plan: validatedPlan,
+        amount,
+        paymentId,
+        orderId,
+        mock: true,
+      })
+      console.log('[Payment] Mock activity logged')
+
+      console.log('[Payment] Mock payment verification completed successfully')
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Mock payment processed successfully',
+        plan: validatedPlan,
+        periodEnd: currentPeriodEnd.toISOString(),
+        userData: userData,
+        mock: true,
+      })
+    }
 
     // Step 3: Validate required fields
     if (!orderId || !paymentId || !plan || !amount) {

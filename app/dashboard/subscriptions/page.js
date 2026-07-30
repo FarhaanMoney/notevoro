@@ -61,7 +61,50 @@ export default function SubscriptionsPage() {
 
       console.log('[Subscriptions] Order created successfully:', data)
 
-      // Step 2: Check if Razorpay is loaded
+      // Step 2: Handle mock payment mode
+      if (data.mock) {
+        console.log('[Subscriptions] Using mock payment mode')
+        
+        // Simulate successful payment
+        const mockPaymentId = `mock_pay_${Date.now()}`
+        const mockSignature = 'mock_signature'
+        
+        try {
+          const verifyRes = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId: data.orderId,
+              paymentId: mockPaymentId,
+              signature: mockSignature,
+              plan: planId,
+              amount: data.amount / 100,
+              status: 'success',
+              mock: true,
+            }),
+          })
+
+          const verifyData = await verifyRes.json()
+
+          if (verifyData.success) {
+            console.log('[Subscriptions] Mock payment verified successfully')
+            window.location.reload()
+          } else {
+            console.error('[Subscriptions] Mock payment verification failed:', verifyData)
+            alert('Mock payment verification failed. Please contact support.')
+            setProcessingPlan(null)
+            setLoading(false)
+          }
+        } catch (verifyError) {
+          console.error('[Subscriptions] Error during mock verification:', verifyError)
+          alert('Mock payment verification error. Please contact support.')
+          setProcessingPlan(null)
+          setLoading(false)
+        }
+        return
+      }
+
+      // Step 3: Check if Razorpay is loaded
       if (!razorpayLoaded || typeof window.Razorpay === 'undefined') {
         console.error('[Subscriptions] Razorpay not loaded')
         throw new Error('Payment system not ready. Please refresh the page and try again.')

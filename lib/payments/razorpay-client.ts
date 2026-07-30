@@ -26,9 +26,17 @@ export interface RazorpayOrderResponse {
   amount: number
   currency: string
   keyId: string
+  mock?: boolean
 }
 
 let razorpayClient: any = null
+
+/**
+ * Check if running in development mode
+ */
+function isDevelopmentMode(): boolean {
+  return process.env.NODE_ENV === 'development' || process.env.ENABLE_MOCK_PAYMENTS === 'true'
+}
 
 /**
  * Initialize Razorpay client
@@ -40,6 +48,14 @@ function initializeRazorpayClient() {
 
   try {
     const config = getPaymentConfig()
+    
+    if (!config.razorpayKeyId || !config.razorpayKeySecret) {
+      if (isDevelopmentMode()) {
+        console.warn('[Razorpay] Running in development mode without real credentials')
+        return null // Will use mock mode
+      }
+      throw new Error('Razorpay credentials not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.')
+    }
     
     // Dynamically import Razorpay only when needed
     const Razorpay = require('razorpay')
@@ -53,7 +69,12 @@ function initializeRazorpayClient() {
     return razorpayClient
   } catch (error) {
     console.error('[Razorpay] Failed to initialize client:', error)
-    throw new Error('Failed to initialize Razorpay client. Check your credentials.')
+    
+    if (error.message.includes('credentials not configured')) {
+      throw error
+    }
+    
+    throw new Error('Failed to initialize Razorpay client. Please check your credentials and ensure the razorpay package is installed.')
   }
 }
 
@@ -75,10 +96,28 @@ export async function createRazorpayOrder(
     // Get price in paise
     const amount = getPlanPriceInPaise(validatedPlan)
     
-    // Initialize client
+    // Check if should use mock mode
     const client = initializeRazorpayClient()
     
-    // Create order
+    if (!client && isDevelopmentMode()) {
+      console.log('[Razorpay] Using mock payment mode for development')
+      
+      const mockOrderId = `mock_order_${Date.now()}`
+      
+      return {
+        orderId: mockOrderId,
+        amount,
+        currency: 'INR',
+        keyId: 'mock_key_id',
+        mock: true,
+      }
+    }
+    
+    if (!client) {
+      throw new Error('Razorpay client not available. Please configure credentials or enable development mode.')
+    }
+    
+    // Create real order
     const receipt = `notevoro_${userId}_${Date.now()}`
     
     const options = {
@@ -131,6 +170,12 @@ export function verifyRazorpaySignature(
   signature: string
 ): boolean {
   try {
+    // Skip signature verification for mock payments
+    if (orderId.startsWith('mock_order_') || paymentId.startsWith('mock_pay_')) {
+      console.log('[Razorpay] Skipping signature verification for mock payment')
+      return true
+    }
+
     const config = getPaymentConfig()
     const crypto = require('crypto')
     

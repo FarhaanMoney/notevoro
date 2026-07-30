@@ -15,8 +15,10 @@ export async function POST(request) {
     if (!envValidation.valid) {
       console.error('[Payment] Environment validation failed:', envValidation.errors)
       return NextResponse.json({ 
-        error: 'Payment system misconfigured',
-        details: envValidation.errors 
+        error: 'Payment system not configured',
+        message: 'Payment features are currently unavailable. Please contact the administrator to configure Razorpay credentials.',
+        details: envValidation.errors,
+        setupInstructions: 'To enable payments, set the following environment variables: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, NEXT_PUBLIC_RAZORPAY_KEY_ID'
       }, { status: 503 })
     }
     
