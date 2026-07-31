@@ -1,13 +1,14 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClient } from '@/lib/supabase/browser'
-import { Loader2, LogOut, Crown, AlertTriangle } from 'lucide-react'
+import { Loader2, LogOut, Crown, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function SettingsForm({ profile, email, preview }) {
@@ -18,7 +19,13 @@ export function SettingsForm({ profile, email, preview }) {
     curriculum: profile?.curriculum || 'CBSE',
   })
   const [saving, setSaving] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+  const { theme, setTheme, resolvedTheme } = useTheme()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   async function save() {
     if (preview) return toast.error('Preview mode — add Supabase keys to save')
@@ -40,8 +47,40 @@ export function SettingsForm({ profile, email, preview }) {
     router.refresh()
   }
 
+  const currentTheme = mounted ? (resolvedTheme || theme || 'dark') : 'dark'
+
   return (
     <div className="space-y-6">
+      <Card className="p-6">
+        <div className="text-xs uppercase tracking-wide text-primary font-semibold mb-2">Appearance</div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/60 p-4">
+          <div>
+            <div className="font-medium">Theme</div>
+            <div className="text-sm text-muted-foreground">Switch between light and dark appearance.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={currentTheme === 'light' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTheme('light')}
+              className="gap-2"
+            >
+              <Sun className="h-4 w-4" /> Light
+            </Button>
+            <Button
+              type="button"
+              variant={currentTheme === 'dark' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTheme('dark')}
+              className="gap-2"
+            >
+              <Moon className="h-4 w-4" /> Dark
+            </Button>
+          </div>
+        </div>
+      </Card>
+
       <Card className="p-6">
         <div className="text-xs uppercase tracking-wide text-primary font-semibold mb-2">Profile</div>
         <div className="grid md:grid-cols-2 gap-4">

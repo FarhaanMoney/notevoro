@@ -1,6 +1,7 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ThemeProvider } from 'next-themes'
 import { createClient } from '@/lib/supabase/browser'
 
 export function Providers({ children }) {
@@ -17,5 +18,9 @@ export function Providers({ children }) {
     return () => subscription.unsubscribe()
   }, [router])
 
-  return children
+  return (
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+      {children}
+    </ThemeProvider>
+  )
 }
