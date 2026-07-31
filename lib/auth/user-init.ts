@@ -11,19 +11,18 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 /**
  * Ensure user has all required records
  * Call this after successful authentication
  */
 export async function ensureUserRecords(userId: string, email: string, metadata?: any) {
-  const supabase = await createClient()
+  const supabase = supabaseAdmin || (await createClient())
   if (!supabase) return false
 
   try {
-    // Use manual fallback for now
-    return await ensureUserRecordsManual(userId, email, metadata)
+    return await ensureUserRecordsManual(userId, email, metadata, supabase)
   } catch (error) {
     console.error('[User Init] Error ensuring user records:', error)
     return false
@@ -33,64 +32,87 @@ export async function ensureUserRecords(userId: string, email: string, metadata?
 /**
  * Manual fallback for user record creation
  */
-async function ensureUserRecordsManual(userId: string, email: string, metadata?: any) {
-  const supabase = await createClient()
+async function ensureUserRecordsManual(userId: string, email: string, metadata?: any, client?: any) {
+  const supabase = client || (supabaseAdmin || (await createClient()))
   if (!supabase) return false
 
   try {
-    // 1. Ensure profile exists
-    const { data: existingProfile } = await supabase
+    const now = new Date().toISOString()
+
+    const { data: existingProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
+
+    if (profileError && profileError.code !== 'PGRST116') throw profileError
 
     if (!existingProfile) {
-      await supabase.from('profiles').insert({
+      await supabase.from('profiles').upsert({
         id: userId,
         email,
         full_name: metadata?.full_name || metadata?.name || null,
         display_name: metadata?.display_name || metadata?.name || email.split('@')[0],
         avatar_url: metadata?.avatar_url || null,
-      })
+      }, { onConflict: 'id' })
     }
 
-    // 2. Ensure subscription exists
-    const { data: existingSubscription } = await supabase
+    const { data: existingActiveSubscription, error: subError } = await supabase
       .from('subscriptions')
       .select('id')
       .eq('user_id', userId)
       .eq('status', 'active')
-      .single()
+      .maybeSingle()
 
-    if (!existingSubscription) {
-      await supabase.from('subscriptions').insert({
-        user_id: userId,
-        plan: 'free',
-        status: 'active',
-        provider: 'internal',
-      })
+    if (subError && subError.code !== 'PGRST116') throw subError
+
+    if (!existingActiveSubscription) {
+      const { data: existingSubscription } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (existingSubscription) {
+        await supabase.from('subscriptions').update({
+          plan: 'free',
+          status: 'active',
+          provider: 'internal',
+          updated_at: now,
+        }).eq('id', existingSubscription.id)
+      } else {
+        await supabase.from('subscriptions').insert({
+          user_id: userId,
+          plan: 'free',
+          status: 'active',
+          provider: 'internal',
+        })
+      }
     }
 
-    // 3. Ensure user_stats exists
-    const { data: existingStats } = await supabase
+    const { data: existingStats, error: statsError } = await supabase
       .from('user_stats')
       .select('user_id')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
+
+    if (statsError && statsError.code !== 'PGRST116') throw statsError
 
     if (!existingStats) {
-      await supabase.from('user_stats').insert({
+      await supabase.from('user_stats').upsert({
         user_id: userId,
-      })
+        last_active: now,
+        updated_at: now,
+      }, { onConflict: 'user_id' })
     }
 
-    // 4. Update last_active in user_stats
     await supabase
       .from('user_stats')
-      .update({ 
-        last_active: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      .update({
+        last_active: now,
+        updated_at: now,
       })
       .eq('user_id', userId)
 

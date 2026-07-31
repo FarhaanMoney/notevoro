@@ -1,21 +1,39 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { ensureUserRecords } from '@/lib/auth/user-init'
 
 export async function GET(request) {
   try {
     const supabase = await createClient()
     if (!supabase) return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
+
+    if (!profile) {
+      const initialized = await ensureUserRecords(user.id, user.email, user.user_metadata)
+      if (!initialized) {
+        return NextResponse.json({ profile: null })
+      }
+
+      const { data: createdProfile, error: createdProfileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (createdProfileError) throw createdProfileError
+      return NextResponse.json({ profile: createdProfile })
+    }
 
     return NextResponse.json({ profile })
   } catch (error) {
@@ -24,31 +42,45 @@ export async function GET(request) {
   }
 }
 
+export async function POST(request) {
+  return handleProfileWrite(request, 'POST')
+}
+
 export async function PUT(request) {
+  return handleProfileWrite(request, 'PUT')
+}
+
+async function handleProfileWrite(request, method) {
   try {
     const supabase = await createClient()
     if (!supabase) return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    const body = await request.json()
-    const { display_name, full_name, grade, curriculum, avatar_url } = body
+    const body = await request.json().catch(() => ({}))
+    const { display_name, full_name, grade, curriculum, avatar_url, email, userId } = body
 
-    const updateData = {
+    const targetUser = user || (userId ? { id: userId, email: email || null, user_metadata: {} } : null)
+    if (!targetUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    await ensureUserRecords(targetUser.id, targetUser.email || email || '', targetUser.user_metadata || {})
+
+    const upsertData = {
+      id: targetUser.id,
+      email: email ?? targetUser.email,
       updated_at: new Date().toISOString(),
     }
 
-    if (display_name !== undefined) updateData.display_name = display_name
-    if (full_name !== undefined) updateData.full_name = full_name
-    if (grade !== undefined) updateData.grade = grade
-    if (curriculum !== undefined) updateData.curriculum = curriculum
-    if (avatar_url !== undefined) updateData.avatar_url = avatar_url
+    if (display_name !== undefined) upsertData.display_name = display_name
+    if (full_name !== undefined) upsertData.full_name = full_name
+    if (grade !== undefined) upsertData.grade = grade
+    if (curriculum !== undefined) upsertData.curriculum = curriculum
+    if (avatar_url !== undefined) upsertData.avatar_url = avatar_url
 
-    const { data: profile, error } = await supabase
+    const client = supabaseAdmin || supabase
+    const { data: profile, error } = await client
       .from('profiles')
-      .update(updateData)
-      .eq('id', user.id)
+      .upsert(upsertData, { onConflict: 'id' })
       .select()
       .single()
 

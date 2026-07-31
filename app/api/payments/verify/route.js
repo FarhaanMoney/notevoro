@@ -55,6 +55,16 @@ export async function POST(request) {
       isMock: !!mock,
     })
 
+    const validatedPlan = validatePlan(plan)
+
+    if (!validatedPlan) {
+      console.error('[Payment] Invalid plan received:', plan)
+      return NextResponse.json({
+        error: 'Invalid plan',
+        message: `Plan must be one of: free, pro, premium. Received: ${plan}`
+      }, { status: 400 })
+    }
+
     // Handle mock payment for development
     if (mock) {
       console.log('[Payment] Processing mock payment for development')
@@ -167,18 +177,6 @@ export async function POST(request) {
       }, { status: 400 })
     }
 
-    // Step 4: Validate plan
-    console.log('[Payment] Validating plan...')
-    const validatedPlan = validatePlan(plan)
-    
-    if (!validatedPlan) {
-      console.error('[Payment] Invalid plan received:', plan)
-      return NextResponse.json({ 
-        error: 'Invalid plan',
-        message: `Plan must be one of: free, pro, premium. Received: ${plan}`
-      }, { status: 400 })
-    }
-    
     console.log('[Payment] Plan validated:', validatedPlan)
 
     // Step 5: Handle payment status

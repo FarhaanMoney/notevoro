@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { updateSubscription, getCurrentSubscription, getPaymentHistory } from '@/lib/subscriptions/subscription-manager'
 
 // ADMIN KEY - In production, this should be stored securely
@@ -118,8 +118,7 @@ export async function PUT(request) {
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update(updateData)
-      .eq('id', userId)
+      .upsert({ id: userId, ...updateData }, { onConflict: 'id' })
       .select()
       .single()
 

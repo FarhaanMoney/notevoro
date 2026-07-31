@@ -47,19 +47,33 @@ export async function getCurrentSubscription(userId: string): Promise<Subscripti
   const supabase = await createClient()
   if (!supabase) return null
 
-  const { data, error } = await supabase
+  const { data: activeSub, error: activeError } = await supabase
     .from('subscriptions')
     .select('*')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .single()
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-  if (error) {
+  if (!activeError && activeSub) {
+    return activeSub as Subscription
+  }
+
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error && error.code !== 'PGRST116') {
     console.error('[Subscription] Error getting current subscription:', error)
     return null
   }
 
-  return data as Subscription
+  return data as Subscription | null
 }
 
 /**

@@ -33,7 +33,7 @@ export default function SignupPage() {
       if (error) throw error
       if (data.user) {
         await fetch('/api/profile', {
-          method: 'POST',
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ full_name: form.fullName, display_name: form.displayName || form.fullName, grade: form.grade, curriculum: form.curriculum }),
         })

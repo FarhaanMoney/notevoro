@@ -24,7 +24,7 @@ export function SettingsForm({ profile, email, preview }) {
     if (preview) return toast.error('Preview mode — add Supabase keys to save')
     setSaving(true)
     try {
-      const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const res = await fetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       toast.success('Saved')

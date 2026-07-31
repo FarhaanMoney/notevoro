@@ -99,6 +99,7 @@ export async function POST(request) {
       currency: orderResponse.currency,
       keyId: orderResponse.keyId,
       plan: validatedPlan,
+      mock: orderResponse.mock || false,
     })
 
   } catch (error) {
