@@ -192,17 +192,20 @@ export async function createRazorpayOrder(
       keyId: config.publicRazorpayKeyId!,
     }
   } catch (error) {
+    const resolvedError = error instanceof Error ? error : (error || {})
+    const errorMessage = resolvedError?.message ||
+      (resolvedError?.error && (resolvedError.error.description || resolvedError.error.reason)) ||
+      resolvedError?.description ||
+      JSON.stringify(resolvedError)
+
     console.error('[Razorpay] Error creating order:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
+      rawError: resolvedError,
+      message: errorMessage,
     })
     
-    // Fallback to mock mode on error
     if (isDevelopmentMode()) {
       console.log('[Razorpay] Falling back to mock mode due to error')
       
-      // Use validated plan or fallback to free
       const fallbackPlan = validatedPlan || 'free'
       const amount = getPlanPriceInPaise(fallbackPlan)
       const mockOrderId = `mock_order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -216,7 +219,7 @@ export async function createRazorpayOrder(
       }
     }
     
-    throw error
+    throw new Error(errorMessage)
   }
 }
 
