@@ -154,7 +154,10 @@ export async function createRazorpayOrder(
     console.log('[Razorpay] Using real Razorpay client')
     
     // Create real order
-    const receipt = `notevoro_${userId}_${Date.now()}`
+    const maxReceiptLength = 56
+    const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '')
+    const receiptUserIdPart = safeUserId.slice(0, maxReceiptLength - 10 - String(Date.now()).length)
+    const receipt = `notevoro_${receiptUserIdPart}_${Date.now()}`
     
     const options = {
       amount,
