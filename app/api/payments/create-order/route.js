@@ -101,16 +101,25 @@ export async function POST(request) {
     })
 
   } catch (error) {
-    console.error('[Payment] Error in create-order:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    })
+    const normalizedError = (() => {
+      if (!error) return { message: 'Unknown payment error' }
+      if (error instanceof Error) return error
+      if (typeof error === 'string') return { message: error }
+      if (typeof error === 'object') {
+        return {
+          message: error.message || error.description || JSON.stringify(error),
+          raw: error,
+        }
+      }
+      return { message: String(error) }
+    })()
+
+    console.error('[Payment] Error in create-order:', normalizedError)
     
     return NextResponse.json({ 
       error: 'Failed to create payment order',
-      message: error.message || 'An unexpected error occurred',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      message: normalizedError.message || 'An unexpected error occurred',
+      details: process.env.NODE_ENV === 'development' ? normalizedError.raw || normalizedError : undefined
     }, { status: 500 })
   }
 }

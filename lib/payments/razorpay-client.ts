@@ -192,14 +192,23 @@ export async function createRazorpayOrder(
       keyId: config.publicRazorpayKeyId!,
     }
   } catch (error) {
-    const resolvedError = error instanceof Error ? error : (error || {})
-    const errorMessage = resolvedError?.message ||
-      (resolvedError?.error && (resolvedError.error.description || resolvedError.error.reason)) ||
-      resolvedError?.description ||
-      JSON.stringify(resolvedError)
+    const normalizedError = (() => {
+      if (!error) return { message: 'Unknown Razorpay error' }
+      if (error instanceof Error) return error
+      if (typeof error === 'string') return { message: error }
+      if (typeof error === 'object') {
+        return {
+          message: error.message || error.description || error.error?.description || error.error?.reason || JSON.stringify(error),
+          raw: error,
+        }
+      }
+      return { message: String(error) }
+    })()
+
+    const errorMessage = normalizedError.message || 'Unknown Razorpay error'
 
     console.error('[Razorpay] Error creating order:', {
-      rawError: resolvedError,
+      rawError: normalizedError.raw || normalizedError,
       message: errorMessage,
     })
     
