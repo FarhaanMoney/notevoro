@@ -8,7 +8,7 @@
  */
 
 export type PlanType = 'free' | 'pro' | 'premium'
-export type FeatureType = 'ai_chat' | 'atlas_sessions' | 'flashcards' | 'quizzes' | 'tests' | 'presentations' | 'research' | 'images' | 'storage'
+export type FeatureType = 'ai_chat' | 'atlas_sessions' | 'flashcards' | 'quizzes' | 'tests' | 'presentations' | 'research' | 'images' | 'storage' | 'file_uploads' | 'web_search'
 
 export interface PlanLimits {
   plan: PlanType
@@ -22,6 +22,9 @@ export interface PlanLimits {
   research_per_day: number | 'unlimited'
   images_per_day: number | 'unlimited'
   storage_mb: number
+  file_uploads_per_chat: number | 'unlimited'
+  max_file_size_mb: number
+  web_search_per_day: number | 'unlimited'
 }
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
@@ -36,6 +39,9 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     research_per_day: 1,
     images_per_day: 1,
     storage_mb: 500,
+    file_uploads_per_chat: 3,
+    max_file_size_mb: 10,
+    web_search_per_day: 'unlimited',
   },
   pro: {
     plan: 'pro',
@@ -49,6 +55,9 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     research_per_day: 'unlimited',
     images_per_day: 4,
     storage_mb: 10240, // 10 GB
+    file_uploads_per_chat: 20,
+    max_file_size_mb: 50,
+    web_search_per_day: 'unlimited',
   },
   premium: {
     plan: 'premium',
@@ -62,6 +71,9 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     research_per_day: 'unlimited',
     images_per_day: 'unlimited',
     storage_mb: 102400, // 100 GB
+    file_uploads_per_chat: 'unlimited',
+    max_file_size_mb: 200,
+    web_search_per_day: 'unlimited',
   },
 }
 
@@ -87,6 +99,8 @@ export function isFeatureUnlimited(plan: PlanType, feature: FeatureType): boolea
     research: 'research_per_day',
     images: 'images_per_day',
     storage: 'storage_mb',
+    file_uploads: 'file_uploads_per_chat',
+    web_search: 'web_search_per_day',
   }
   const limitKey = featureKeyMap[feature]
   return limits[limitKey] === 'unlimited'
@@ -107,6 +121,8 @@ export function getFeatureLimit(plan: PlanType, feature: FeatureType): number {
     research: 'research_per_day',
     images: 'images_per_day',
     storage: 'storage_mb',
+    file_uploads: 'file_uploads_per_chat',
+    web_search: 'web_search_per_day',
   }
   const limitKey = featureKeyMap[feature]
   const limit = limits[limitKey]
@@ -118,4 +134,19 @@ export function getFeatureLimit(plan: PlanType, feature: FeatureType): number {
  */
 export function getStorageLimit(plan: PlanType): number {
   return getLimits(plan).storage_mb
+}
+
+/**
+ * Get max file size in MB for a plan
+ */
+export function getMaxFileSize(plan: PlanType): number {
+  return getLimits(plan).max_file_size_mb
+}
+
+/**
+ * Get file uploads per chat limit for a plan
+ */
+export function getFileUploadsPerChat(plan: PlanType): number {
+  const limit = getLimits(plan).file_uploads_per_chat
+  return limit === 'unlimited' ? Infinity : (limit as number)
 }

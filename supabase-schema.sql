@@ -23,6 +23,13 @@ drop table if exists public.study_packs cascade;
 drop table if exists public.messages cascade;
 drop table if exists public.chats cascade;
 drop table if exists public.profiles cascade;
+drop table if exists public.chat_uploads cascade;
+drop table if exists public.chat_context cascade;
+drop table if exists public.chat_memories cascade;
+drop table if exists public.chat_images cascade;
+drop table if exists public.chat_web_results cascade;
+drop table if exists public.chat_tools cascade;
+drop table if exists public.chat_modes cascade;
 
 -- Drop triggers
 drop trigger if exists on_auth_user_created on auth.users;
@@ -31,6 +38,7 @@ drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists public.handle_new_user();
 drop function if exists public.is_chat_owner(p_chat_id uuid);
 drop function if exists public.create_user_profile(p_user_id uuid, p_email text, p_metadata jsonb);
+drop function if exists public.ensure_user_records(p_user_id uuid, p_email text, p_metadata jsonb);
 
 -- =========================
 -- TABLES
@@ -61,6 +69,9 @@ create table public.messages (
   user_id uuid,
   role text not null check (role in ('user','assistant','system')),
   content text not null,
+  tools_used jsonb default '[]'::jsonb,
+  context_sources jsonb default '[]'::jsonb,
+  metadata jsonb default '{}'::jsonb,
   created_at timestamptz default now()
 );
 
@@ -219,6 +230,8 @@ create table public.usage (
   research_used int not null default 0,
   images_used int not null default 0,
   storage_used_mb int not null default 0,
+  file_uploads_used int not null default 0,
+  web_searches_used int not null default 0,
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
   unique (user_id, date)
@@ -254,6 +267,90 @@ create table public.files (
   storage_path text not null,
   mime_type text,
   size bigint not null,
+  created_at timestamptz default now()
+);
+
+-- =========================
+-- AI WORKSPACE TABLES
+-- =========================
+create table public.chat_uploads (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete set null,
+  chat_id uuid references public.chats(id) on delete cascade,
+  file_id uuid references public.files(id) on delete set null,
+  name text not null,
+  mime_type text,
+  size bigint not null,
+  pages int,
+  processed boolean default false,
+  ocr_text text,
+  content_summary text,
+  created_at timestamptz default now()
+);
+
+create table public.chat_context (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete set null,
+  chat_id uuid references public.chats(id) on delete cascade,
+  source_type text not null check (source_type in ('notes', 'folders', 'atlas_sessions', 'research_reports', 'presentations', 'flashcard_sets', 'quiz_sets', 'practice_tests', 'calendar_events', 'uploads')),
+  source_id uuid,
+  source_name text,
+  enabled boolean default true,
+  created_at timestamptz default now()
+);
+
+create table public.chat_memories (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete set null,
+  memory_type text not null,
+  memory_key text not null,
+  memory_value text not null,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table public.chat_images (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete set null,
+  chat_id uuid references public.chats(id) on delete cascade,
+  storage_path text not null,
+  prompt text,
+  image_type text check (image_type in ('generated', 'uploaded', 'analyzed')),
+  analysis_result jsonb,
+  ocr_text text,
+  created_at timestamptz default now()
+);
+
+create table public.chat_web_results (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete set null,
+  chat_id uuid references public.chats(id) on delete cascade,
+  query text not null,
+  search_engine text default 'google',
+  results jsonb default '[]'::jsonb,
+  citations jsonb default '[]'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table public.chat_tools (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete set null,
+  chat_id uuid references public.chats(id) on delete cascade,
+  tool_name text not null,
+  tool_data jsonb default '{}'::jsonb,
+  status text default 'active' check (status in ('active', 'completed', 'failed')),
+  result jsonb,
+  created_at timestamptz default now()
+);
+
+create table public.chat_modes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete set null,
+  chat_id uuid references public.chats(id) on delete cascade,
+  mode text not null check (mode in ('general', 'study', 'research', 'writing', 'coding', 'creative', 'presentation', 'analysis')),
+  system_prompt text,
+  enabled_tools jsonb default '[]'::jsonb,
   created_at timestamptz default now()
 );
 
@@ -509,6 +606,36 @@ create policy "activity_log_own_all" on public.activity_log
 -- files
 create policy "files_own_all" on public.files
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "files_bypass_rls" on public.files
+  for all to postgres using (true) with check (true);
+
+-- chat_uploads
+create policy "chat_uploads_own_all" on public.chat_uploads
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- chat_context
+create policy "chat_context_own_all" on public.chat_context
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- chat_memories
+create policy "chat_memories_own_all" on public.chat_memories
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- chat_images
+create policy "chat_images_own_all" on public.chat_images
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- chat_web_results
+create policy "chat_web_results_own_all" on public.chat_web_results
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- chat_tools
+create policy "chat_tools_own_all" on public.chat_tools
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- chat_modes
+create policy "chat_modes_own_all" on public.chat_modes
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- =========================
 -- INDEXES
@@ -533,3 +660,13 @@ create index idx_payments_subscription on public.payments(subscription_id);
 create index idx_activity_log_user     on public.activity_log(user_id, created_at desc);
 create index idx_files_user           on public.files(user_id, created_at desc);
 create index idx_files_folder         on public.files(folder_id);
+create index idx_chat_uploads_chat    on public.chat_uploads(chat_id, created_at desc);
+create index idx_chat_uploads_user    on public.chat_uploads(user_id, created_at desc);
+create index idx_chat_context_chat     on public.chat_context(chat_id, source_type);
+create index idx_chat_context_user     on public.chat_context(user_id, created_at desc);
+create index idx_chat_memories_user    on public.chat_memories(user_id, is_active);
+create index idx_chat_images_chat      on public.chat_images(chat_id, created_at desc);
+create index idx_chat_images_user      on public.chat_images(user_id, created_at desc);
+create index idx_chat_web_results_chat on public.chat_web_results(chat_id, created_at desc);
+create index idx_chat_tools_chat       on public.chat_tools(chat_id, tool_name);
+create index idx_chat_modes_chat       on public.chat_modes(chat_id, mode);

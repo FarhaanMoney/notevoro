@@ -11,7 +11,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { getLimits, isFeatureUnlimited, getFeatureLimit, getStorageLimit, PlanType, FeatureType } from './plans'
+import { getLimits, isFeatureUnlimited, getFeatureLimit, getStorageLimit, getMaxFileSize, getFileUploadsPerChat, PlanType, FeatureType } from './plans'
 
 export interface UsageCheckResult {
   success: boolean
@@ -35,6 +35,9 @@ export interface UsageSummary {
     presentations_used: number
     research_used: number
     images_used: number
+    file_uploads_used: number
+    web_searches_used: number
+    storage_used_mb: number
   }
   all_time: {
     notes: number
@@ -50,6 +53,9 @@ export interface UsageSummary {
     research_per_day: number | 'unlimited'
     images_per_day: number | 'unlimited'
     storage_mb: number
+    file_uploads_per_chat: number | 'unlimited'
+    max_file_size_mb: number
+    web_search_per_day: number | 'unlimited'
   }
   remaining: {
     ai_chat: number
@@ -60,6 +66,8 @@ export interface UsageSummary {
     presentations: number
     research: number
     images: number
+    file_uploads: number
+    web_searches: number
     storage_mb: number
   }
 }
