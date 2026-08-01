@@ -35,10 +35,7 @@ let razorpayClient: any = null
  * Check if running in development mode
  */
 function isDevelopmentMode(): boolean {
-  const isDev = process.env.NODE_ENV === 'development' || 
-                process.env.ENABLE_MOCK_PAYMENTS === 'true' ||
-                !process.env.RAZORPAY_KEY_ID ||
-                !process.env.RAZORPAY_KEY_SECRET
+  const isDev = process.env.NODE_ENV === 'development' || process.env.ENABLE_MOCK_PAYMENTS === 'true'
   
   console.log('[Razorpay] Development mode check:', {
     NODE_ENV: process.env.NODE_ENV,
@@ -54,13 +51,12 @@ function isDevelopmentMode(): boolean {
 /**
  * Initialize Razorpay client
  */
-function initializeRazorpayClient() {
+async function initializeRazorpayClient() {
   if (razorpayClient) {
     return razorpayClient
   }
 
   try {
-    // Try to get config first
     let config
     try {
       config = getPaymentConfig()
@@ -76,15 +72,15 @@ function initializeRazorpayClient() {
     if (!config.razorpayKeyId || !config.razorpayKeySecret) {
       if (isDevelopmentMode()) {
         console.warn('[Razorpay] Running in development mode without real credentials')
-        return null // Will use mock mode
+        return null
       }
       throw new Error('Razorpay credentials not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.')
     }
     
-    // Try to load Razorpay library
     let Razorpay
     try {
-      Razorpay = require('razorpay')
+      const imported = await import('razorpay')
+      Razorpay = imported.default || imported
     } catch (importError) {
       console.error('[Razorpay] Failed to import razorpay package:', importError)
       if (isDevelopmentMode()) {
@@ -133,13 +129,11 @@ export async function createRazorpayOrder(
 
     console.log('[Razorpay] Plan validated:', validatedPlan)
 
-    // Get price in paise
     const amount = getPlanPriceInPaise(validatedPlan)
     console.log('[Razorpay] Amount in paise:', amount)
     
-    // Check if should use mock mode
     console.log('[Razorpay] Initializing client...')
-    const client = initializeRazorpayClient()
+    const client = await initializeRazorpayClient()
     
     if (!client) {
       console.log('[Razorpay] Client is null, using mock payment mode')

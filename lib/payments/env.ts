@@ -21,10 +21,10 @@ export function validatePaymentEnv(): EnvValidationResult {
   const razorpayKeyId = process.env.RAZORPAY_KEY_ID?.trim()
   const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET?.trim()
   const razorpayWebhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim()
-  const publicRazorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim()
+  const publicRazorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim() || process.env.RAZORPAY_KEY_ID?.trim()
 
-  // In development mode, be more lenient
-  const isDevelopment = process.env.NODE_ENV === 'development' || !razorpayKeyId || !razorpayKeySecret
+  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.ENABLE_MOCK_PAYMENTS === 'true'
+  const hasServerKeys = Boolean(razorpayKeyId && razorpayKeySecret)
 
   if (!razorpayKeyId) {
     if (!isDevelopment) {
@@ -47,7 +47,11 @@ export function validatePaymentEnv(): EnvValidationResult {
   }
   
   if (!publicRazorpayKeyId) {
-    errors.push('NEXT_PUBLIC_RAZORPAY_KEY_ID is missing or empty')
+    if (!isDevelopment) {
+      errors.push('NEXT_PUBLIC_RAZORPAY_KEY_ID or RAZORPAY_KEY_ID is missing or empty')
+    } else {
+      console.warn('[Env] NEXT_PUBLIC_RAZORPAY_KEY_ID not set, using RAZORPAY_KEY_ID if available')
+    }
   }
 
   return {

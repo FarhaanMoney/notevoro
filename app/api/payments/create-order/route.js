@@ -4,6 +4,8 @@ import { createRazorpayOrder } from '@/lib/payments/razorpay-client'
 import { validatePlan } from '@/lib/payments/config'
 import { validatePaymentEnv } from '@/lib/payments/env'
 
+export const runtime = 'nodejs'
+
 export async function POST(request) {
   console.log('[Payment] Create order request received')
   
@@ -11,27 +13,23 @@ export async function POST(request) {
     // Step 1: Validate environment variables (be lenient in development)
     console.log('[Payment] Validating environment variables...')
     const envValidation = validatePaymentEnv()
-    
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.ENABLE_MOCK_PAYMENTS === 'true'
+
+    if (!envValidation.valid && !isDevelopment) {
+      console.error('[Payment] Environment validation failed:', envValidation.errors)
+      return NextResponse.json({ 
+        error: 'Payment system not configured',
+        message: 'Payment features are currently unavailable. Please contact the administrator to configure Razorpay credentials.',
+        details: envValidation.errors,
+        setupInstructions: 'To enable payments, set the following environment variables: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, NEXT_PUBLIC_RAZORPAY_KEY_ID'
+      }, { status: 503 })
+    }
+
     if (!envValidation.valid) {
-      const isDevelopment = process.env.NODE_ENV === 'development'
-      
-      if (isDevelopment) {
-        console.warn('[Payment] Environment validation failed in development, will use mock mode:', envValidation.errors)
-        // Continue with mock mode in development
-      } else {
-        console.error('[Payment] Environment validation failed:', envValidation.errors)
-        return NextResponse.json({ 
-          error: 'Payment system not configured',
-          message: 'Payment features are currently unavailable. Please contact the administrator to configure Razorpay credentials.',
-          details: envValidation.errors,
-          setupInstructions: 'To enable payments, set the following environment variables: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, NEXT_PUBLIC_RAZORPAY_KEY_ID'
-        }, { status: 503 })
-      }
+      console.warn('[Payment] Environment validation failed, continuing in mock mode:', envValidation.errors)
     } else {
       console.log('[Payment] Environment variables validated successfully')
     }
-    
-    console.log('[Payment] Environment variables validated successfully')
 
     // Step 2: Authenticate user
     console.log('[Payment] Authenticating user...')

@@ -61,6 +61,11 @@ export default function SubscriptionsPage() {
 
       console.log('[Subscriptions] Order created successfully:', data)
 
+      if (!data.orderId || !data.keyId) {
+        console.error('[Subscriptions] Missing payment gateway response', data)
+        throw new Error('Payment gateway returned incomplete order data. Please refresh and try again.')
+      }
+
       // Step 2: Handle mock payment mode
       if (data.mock) {
         console.log('[Subscriptions] Using mock payment mode')
@@ -105,7 +110,13 @@ export default function SubscriptionsPage() {
       }
 
       // Step 3: Check if Razorpay is loaded; fall back to mock mode if unavailable
+      const isDevelopment = process.env.NODE_ENV === 'development'
       if (!razorpayLoaded || typeof window.Razorpay === 'undefined') {
+        if (!isDevelopment) {
+          console.error('[Subscriptions] Razorpay script unavailable in production')
+          throw new Error('Payment gateway is unavailable. Please refresh the page or contact support.')
+        }
+
         console.warn('[Subscriptions] Razorpay not loaded, using mock fallback')
 
         const mockPaymentId = `mock_pay_${Date.now()}`
