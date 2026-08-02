@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Sparkles, MessagesSquare, BookOpen, ArrowRight, Zap, Flame, Clock } from 'lucide-react'
+import { VoroIllustration } from '@/components/voro/VoroIllustration'
+import { VoroEmptyState } from '@/components/voro/VoroIllustration'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -36,9 +38,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Welcome back, {name} 👋</h1>
-        <p className="text-muted-foreground mt-1">Ready to learn something new today?</p>
+      <div className="flex items-center gap-6 mb-8">
+        <VoroIllustration type="dashboard" size="xl" />
+        <div>
+          <h1 className="text-3xl font-bold">Welcome back, {name} 👋</h1>
+          <p className="text-muted-foreground mt-1">Ready to learn something new today? Voro is here to help!</p>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 mb-8">
@@ -57,13 +62,13 @@ export default async function DashboardPage() {
         <Link href="/dashboard/chat">
           <Card className="p-6 bg-card/60 hover:border-primary/40 transition cursor-pointer group">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center">
-                <MessagesSquare className="w-5 h-5 text-primary" />
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center glow">
+                <MessagesSquare className="w-5 h-5 text-white" />
               </div>
               <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition" />
             </div>
-            <h3 className="text-lg font-semibold">Ask AI Tutor</h3>
-            <p className="text-sm text-muted-foreground mt-1">Chat with a personalized AI tutor. Get explanations, code, examples.</p>
+            <h3 className="text-lg font-semibold">Chat with Voro</h3>
+            <p className="text-sm text-muted-foreground mt-1">Your AI learning companion is ready to help with explanations, examples, and more.</p>
           </Card>
         </Link>
       </div>
@@ -91,11 +96,13 @@ export default async function DashboardPage() {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Recent Study Packs</h2>
           <div className="space-y-2">
             {recentPacks.length === 0 ? (
-              <Card className="p-6 text-center bg-card/40 border-dashed">
-                <Sparkles className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No study packs yet.</p>
-                <Link href="/dashboard/study-pack"><Button size="sm" className="mt-3">Create your first</Button></Link>
-              </Card>
+              <VoroEmptyState
+                type="notes"
+                title="No study packs yet"
+                description="Create your first study pack to start learning with Voro's help."
+                action={<Link href="/dashboard/study-pack"><Button size="sm">Create your first</Button></Link>}
+                className="bg-card/40 border-dashed"
+              />
             ) : recentPacks.map((p) => (
               <Link key={p.id} href={`/dashboard/study-pack/${p.id}`}>
                 <Card className="p-3 hover:border-primary/40 transition cursor-pointer">
@@ -113,11 +120,13 @@ export default async function DashboardPage() {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Recent Chats</h2>
           <div className="space-y-2">
             {recentChats.length === 0 ? (
-              <Card className="p-6 text-center bg-card/40 border-dashed">
-                <MessagesSquare className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No chats yet.</p>
-                <Link href="/dashboard/chat"><Button size="sm" className="mt-3">Start a chat</Button></Link>
-              </Card>
+              <VoroEmptyState
+                type="default"
+                title="No chats yet"
+                description="Start a conversation with Voro to get help with any topic."
+                action={<Link href="/dashboard/chat"><Button size="sm">Start a chat</Button></Link>}
+                className="bg-card/40 border-dashed"
+              />
             ) : recentChats.map((c) => (
               <Link key={c.id} href={`/dashboard/chat?id=${c.id}`}>
                 <Card className="p-3 hover:border-primary/40 transition cursor-pointer">

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Wand2, Loader2, Clock, ListChecks } from 'lucide-react'
 import { toast } from 'sonner'
+import { VoroStatus } from '@/components/voro/VoroStatus'
 
 const SUGGESTIONS = ['Physics: Kinematics', 'Algebra Fundamentals', 'World History 1900-1950', 'Biology: Cell Structure', 'Organic Chemistry Basics']
 
@@ -28,9 +29,11 @@ export function TestLauncher() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success('Test ready. Good luck!')
+      toast.success('Voro is ready! Good luck!')
       router.push(`/dashboard/tests/${data.test.id}`)
-    } catch (err) { toast.error(err.message) } finally { setLoading(false) }
+    } catch (err) {
+      toast.error('Hmm... Voro couldn\'t finish that. Please try again.')
+    } finally { setLoading(false) }
   }
 
   return (
@@ -41,7 +44,7 @@ export function TestLauncher() {
             placeholder="Subject or chapter... e.g. Physics: Kinematics, Algebra, World History"
             className="h-12 text-base" disabled={loading} autoFocus />
           <Button type="submit" size="lg" disabled={loading || !subject.trim()} className="h-12 bg-gradient-to-r from-violet-500 to-pink-500">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Building test...</> : <><Wand2 className="w-4 h-4 mr-2" />Generate test</>}
+            {loading ? <VoroStatus type="test" className="text-white" /> : <><Wand2 className="w-4 h-4 mr-2" />Generate test</>}
           </Button>
         </div>
         <div className="flex flex-wrap gap-4 items-center">

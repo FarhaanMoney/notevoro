@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Wand2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { VoroStatus } from '@/components/voro/VoroStatus'
 
 const THEMES = [
   { id: 'violet', grad: 'from-violet-500 to-pink-500' },
@@ -31,9 +32,11 @@ export function PresentationLauncher() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success('Deck ready!')
+      toast.success('Voro created your presentation!')
       router.push(`/dashboard/presentations/${data.presentation.id}`)
-    } catch (err) { toast.error(err.message) } finally { setLoading(false) }
+    } catch (err) {
+      toast.error('Hmm... Voro couldn\'t finish that. Please try again.')
+    } finally { setLoading(false) }
   }
 
   return (
@@ -44,7 +47,7 @@ export function PresentationLauncher() {
             placeholder="Presentation topic... e.g. Water Cycle, Introduction to ML, French Revolution"
             className="h-12 text-base" disabled={loading} autoFocus />
           <Button type="submit" size="lg" disabled={loading || !topic.trim()} className="h-12 bg-gradient-to-r from-violet-500 to-pink-500">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Designing slides...</> : <><Wand2 className="w-4 h-4 mr-2" />Generate deck</>}
+            {loading ? <VoroStatus type="presentation" className="text-white" /> : <><Wand2 className="w-4 h-4 mr-2" />Generate deck</>}
           </Button>
         </div>
         <div>

@@ -34,6 +34,7 @@ export default async function FlashcardsPage() {
         loadingLabel="Creating cards..."
         redirectPath="/dashboard/flashcards"
         includeCount={true}
+        statusType="flashcards"
       />
       {sets.length > 0 && (
         <div className="mt-10">

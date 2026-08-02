@@ -6,8 +6,11 @@ import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Send, MessagesSquare, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react'
+import { Send, MessagesSquare, Plus, Trash2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
+import { VoroAvatarFox } from '@/components/voro/VoroAvatar'
+import { VoroThinkingWithText } from '@/components/voro/VoroThinking'
+import { VoroIllustration } from '@/components/voro/VoroIllustration'
 
 function ChatUI() {
   const params = useSearchParams()
@@ -128,22 +131,22 @@ function ChatUI() {
       {/* Chat window */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="border-b border-border p-4 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="font-semibold">AI Tutor</span>
-          <span className="text-xs text-muted-foreground ml-auto">GPT-4o · personalized</span>
+          <VoroAvatarFox size="md" />
+          <span className="font-semibold">Chat with Voro</span>
+          <span className="text-xs text-muted-foreground ml-auto">Your AI learning companion</span>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin p-6">
           {messages.length === 0 && !streaming && (
             <div className="h-full flex items-center justify-center">
               <div className="text-center max-w-md">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center mx-auto mb-4 glow">
-                  <Sparkles className="w-7 h-7 text-white" />
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500/20 to-pink-500/20 border border-primary/30 flex items-center justify-center mx-auto mb-4">
+                  <div className="text-5xl">🦊</div>
                 </div>
-                <h2 className="text-xl font-bold">Ask me anything</h2>
-                <p className="text-sm text-muted-foreground mt-1">I'll explain, teach, and help you study. Try asking about a concept, a problem, or a topic.</p>
+                <h2 className="text-xl font-bold">Hi! I'm Voro</h2>
+                <p className="text-sm text-muted-foreground mt-1">Your AI learning companion. I can help you understand concepts, solve problems, research information, create notes, build presentations and much more.</p>
                 <div className="grid grid-cols-1 gap-2 mt-6">
-                  {['Explain quantum entanglement like I’m 15', 'Help me solve: 2x² + 5x - 3 = 0', 'What caused World War 1?', 'Difference between mitosis and meiosis'].map((s) => (
+                  {['Explain photosynthesis', 'Help me solve a math problem', 'Research climate change', 'Create presentation', 'Summarize my notes', 'Generate flashcards'].map((s) => (
                     <button key={s} onClick={() => setInput(s)} className="text-left text-sm p-3 rounded-lg border border-border bg-card/40 hover:border-primary/40 transition">
                       {s}
                     </button>
@@ -156,9 +159,7 @@ function ChatUI() {
             {messages.map((m) => <MessageBubble key={m.id} role={m.role} content={m.content} />)}
             {streaming && streamText && <MessageBubble role="assistant" content={streamText} streaming />}
             {streaming && !streamText && (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" /> Thinking...
-              </div>
+              <VoroThinkingWithText text="Voro is thinking..." />
             )}
           </div>
         </div>
@@ -190,7 +191,7 @@ function MessageBubble({ role, content, streaming }) {
       <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-semibold ${
         isUser ? 'bg-muted text-foreground' : 'bg-gradient-to-br from-violet-500 to-pink-500 text-white'
       }`}>
-        {isUser ? 'You' : <Sparkles className="w-4 h-4" />}
+        {isUser ? 'You' : '🦊'}
       </div>
       <div className={`rounded-2xl px-4 py-3 max-w-[85%] ${isUser ? 'bg-primary/15 border border-primary/20' : 'bg-card/60 border border-border'}`}>
         <div className="prose-notevoro text-sm">
@@ -204,7 +205,11 @@ function MessageBubble({ role, content, streaming }) {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="p-8"><Loader2 className="w-5 h-5 animate-spin" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <VoroIllustration type="default" className="w-24 h-24" />
+      </div>
+    }>
       <ChatUI />
     </Suspense>
   )

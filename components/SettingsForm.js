@@ -17,6 +17,9 @@ export function SettingsForm({ profile, email, preview }) {
     display_name: profile?.display_name || '',
     grade: profile?.grade || '',
     curriculum: profile?.curriculum || 'CBSE',
+    preferred_explanation_style: profile?.preferred_explanation_style || 'balanced',
+    difficulty_preference: profile?.difficulty_preference || 'medium',
+    learning_pace: profile?.learning_pace || 'moderate',
   })
   const [saving, setSaving] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -101,6 +104,51 @@ export function SettingsForm({ profile, email, preview }) {
         <div className="mt-6 flex justify-end">
           <Button onClick={save} disabled={saving} className="bg-gradient-to-r from-violet-500 to-pink-500">
             {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Save changes'}
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="p-6">
+        <div className="text-xs uppercase tracking-wide text-primary font-semibold mb-2">🦊 Voro Preferences</div>
+        <p className="text-sm text-muted-foreground mb-4">Customize how Voro teaches and interacts with you.</p>
+        <div className="grid md:grid-cols-1 gap-4">
+          <div>
+            <Label>Explanation style</Label>
+            <Select value={form.preferred_explanation_style} onValueChange={(v) => setForm({ ...form, preferred_explanation_style: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visual">Visual (more diagrams, charts)</SelectItem>
+                <SelectItem value="textual">Textual (detailed explanations)</SelectItem>
+                <SelectItem value="balanced">Balanced (mix of both)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Difficulty preference</Label>
+            <Select value={form.difficulty_preference} onValueChange={(v) => setForm({ ...form, difficulty_preference: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="easy">Easy (gentle explanations)</SelectItem>
+                <SelectItem value="medium">Medium (balanced depth)</SelectItem>
+                <SelectItem value="hard">Hard (deep dive, advanced)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Learning pace</Label>
+            <Select value={form.learning_pace} onValueChange={(v) => setForm({ ...form, learning_pace: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="slow">Slow (step-by-step, detailed)</SelectItem>
+                <SelectItem value="moderate">Moderate (balanced pace)</SelectItem>
+                <SelectItem value="fast">Fast (quick, concise)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end">
+          <Button onClick={save} disabled={saving} className="bg-gradient-to-r from-violet-500 to-pink-500">
+            {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Save preferences'}
           </Button>
         </div>
       </Card>

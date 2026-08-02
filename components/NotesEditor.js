@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Bold, Italic, Strikethrough, List, ListOrdered, Quote, Code, Heading1, Heading2, Heading3,
-  Undo2, Redo2, Wand2, Sparkles, FileText, BookOpen, Layers, Zap, Loader2, Check, Undo
+  Undo2, Redo2, Wand2, Sparkles, FileText, BookOpen, Layers, Zap, Check, Undo
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { VoroThinking } from '@/components/voro/VoroThinking'
 
 const AI_ACTIONS = [
   { id: 'rewrite', label: 'Rewrite', icon: Wand2 },
@@ -82,7 +83,7 @@ export function NotesEditor({ noteId, preview, folders, onUpdated }) {
         })
         setSavedAt(new Date())
         if (patch.title !== undefined) onUpdated?.(noteId, { title: patch.title })
-      } catch (e) { toast.error('Save failed') } finally { setSaving(false) }
+      } catch (e) { toast.error('Hmm... Voro had trouble saving. Please try again.') } finally { setSaving(false) }
     }, 800)
   }
 
@@ -108,7 +109,7 @@ export function NotesEditor({ noteId, preview, folders, onUpdated }) {
       const html = markdownToHtml(data.result)
       editor.commands.setContent(html)
       setAiPreview({ originalHtml })
-      toast.success('Applied! Review — you can undo if you don’t like it.')
+      toast.success('Voro updated your notes! Review — you can undo if you don\'t like it.')
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -134,7 +135,7 @@ export function NotesEditor({ noteId, preview, folders, onUpdated }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
-      toast.success('Study pack created!')
+      toast.success('Voro created your study pack!')
       router.push(`/dashboard/study-pack/${data.pack.id}`)
     } catch (err) {
       toast.error(err.message)
@@ -143,7 +144,11 @@ export function NotesEditor({ noteId, preview, folders, onUpdated }) {
     }
   }
 
-  if (!editor || !note) return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin" /></div>
+  if (!editor || !note) return (
+    <div className="flex-1 flex items-center justify-center">
+      <VoroThinking size="lg" className="text-primary" />
+    </div>
+  )
 
   const btn = (active, onClick, Icon, title) => (
     <button onClick={onClick} title={title} className={`p-2 rounded hover:bg-muted/60 ${active ? 'bg-primary/15 text-primary' : 'text-muted-foreground'}`}>
@@ -183,7 +188,7 @@ export function NotesEditor({ noteId, preview, folders, onUpdated }) {
           {AI_ACTIONS.map((a) => (
             <button key={a.id} disabled={aiLoading === a.id} onClick={() => runAI(a.id)}
               className="text-xs px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary flex items-center gap-1.5 transition disabled:opacity-50">
-              {aiLoading === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <a.icon className="w-3 h-3" />}
+              {aiLoading === a.id ? <VoroStatus type="notes" className="text-primary" /> : <a.icon className="w-3 h-3" />}
               {a.label}
             </button>
           ))}
@@ -194,7 +199,7 @@ export function NotesEditor({ noteId, preview, folders, onUpdated }) {
           )}
           <button onClick={convertToStudyPack} disabled={converting}
             className="text-xs px-2.5 py-1.5 rounded-md bg-gradient-to-r from-violet-500 to-pink-500 text-white flex items-center gap-1.5 disabled:opacity-50">
-            {converting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            {converting ? <VoroThinking size="xs" className="text-white" /> : <Sparkles className="w-3 h-3" />}
             Study Pack
           </button>
         </div>

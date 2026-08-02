@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Crown, MessagesSquare, GraduationCap, BookOpen, Layers, HelpCircle, FileText, Presentation as PresIcon, Search, StickyNote, Folder, HardDrive, Zap, Loader2 } from 'lucide-react'
+import { Crown, MessagesSquare, GraduationCap, BookOpen, Layers, HelpCircle, FileText, Presentation as PresIcon, Search, StickyNote, Folder, HardDrive, Zap } from 'lucide-react'
+import { VoroIllustration } from '@/components/voro/VoroIllustration'
 
 const FEATURES = [
   { key: 'ai_chat', label: 'AI Chats', icon: MessagesSquare, limitKey: 'ai_chat_per_day', todayKey: 'ai_chat_used' },
@@ -51,7 +52,12 @@ export default function UsagePage() {
     })()
   }, [])
 
-  if (loading) return <div className="p-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+  if (loading) return (
+    <div className="p-8 flex flex-col items-center justify-center min-h-[400px]">
+      <VoroIllustration type="default" className="w-16 h-16 mb-4" />
+      <p className="text-sm text-muted-foreground">Voro is loading your stats...</p>
+    </div>
+  )
   if (!data) return null
 
   const { plan, limits, today, all_time, remaining } = data

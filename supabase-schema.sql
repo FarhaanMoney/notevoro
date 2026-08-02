@@ -50,6 +50,9 @@ create table public.profiles (
   display_name text,
   grade text,
   curriculum text,
+  preferred_explanation_style text default 'balanced',
+  difficulty_preference text default 'medium',
+  learning_pace text default 'moderate',
   avatar_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()

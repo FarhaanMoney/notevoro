@@ -6,9 +6,10 @@ import { createClient } from '@/lib/supabase/browser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { GoogleButton } from '@/components/GoogleButton'
+import { VoroThinking } from '@/components/voro/VoroThinking'
 
 function LoginForm() {
   const router = useRouter()
@@ -67,7 +68,7 @@ function LoginForm() {
               <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
             </div>
             <Button type="submit" disabled={loading} className="w-full h-11 bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Logging in...</> : 'Log in with email'}
+              {loading ? <VoroThinking size="sm" className="text-white" /> : 'Log in with email'}
             </Button>
           </form>
           <p className="text-sm text-muted-foreground text-center mt-6">
@@ -81,7 +82,11 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen gradient-bg flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
+        <VoroThinking size="lg" className="text-primary" />
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   )

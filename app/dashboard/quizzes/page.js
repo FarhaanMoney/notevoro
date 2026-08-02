@@ -34,6 +34,7 @@ export default async function QuizzesPage() {
         redirectPath="/dashboard/quizzes"
         includeCount
         includeDifficulty
+        statusType="quiz"
       />
       {sets.length > 0 && (
         <div className="mt-10">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Wand2, Loader2, Globe, Youtube, Image as ImageIcon, BookMarked } from 'lucide-react'
 import { toast } from 'sonner'
+import { VoroStatus } from '@/components/voro/VoroStatus'
 
 const SUGGESTIONS = ['Climate change causes', 'History of Silk Road', 'Quantum computing basics', 'Renaissance art movement', 'Ancient Roman government']
 
@@ -25,9 +26,11 @@ export function ResearchLauncher() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success('Research report ready!')
+      toast.success('Voro finished your research report!')
       router.push(`/dashboard/research/${data.report.id}`)
-    } catch (err) { toast.error(err.message) } finally { setLoading(false) }
+    } catch (err) {
+      toast.error('Hmm... Voro couldn\'t finish that. Please try again.')
+    } finally { setLoading(false) }
   }
 
   return (
@@ -38,7 +41,7 @@ export function ResearchLauncher() {
             placeholder="Research any topic... e.g. Climate change, Renaissance art, quantum computing"
             className="h-12 text-base" disabled={loading} autoFocus />
           <Button type="submit" size="lg" disabled={loading || !topic.trim()} className="h-12 bg-gradient-to-r from-violet-500 to-pink-500">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Researching...</> : <><Wand2 className="w-4 h-4 mr-2" />Research</>}
+            {loading ? <VoroStatus type="research" className="text-white" /> : <><Wand2 className="w-4 h-4 mr-2" />Research</>}
           </Button>
         </div>
         <div className="flex flex-wrap gap-2">

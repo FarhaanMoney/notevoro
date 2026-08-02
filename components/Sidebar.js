@@ -8,18 +8,19 @@ import {
   GraduationCap, LogOut, Crown, StickyNote
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { VoroAvatarFox } from '@/components/voro/VoroAvatar'
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/atlas', label: 'Professor Atlas', icon: GraduationCap },
-  { href: '/dashboard/chat', label: 'AI Chat', icon: MessagesSquare },
+  { href: '/dashboard/atlas', label: 'Voro Tutor', icon: GraduationCap },
+  { href: '/dashboard/chat', label: 'Chat with Voro', icon: MessagesSquare },
   { href: '/dashboard/notes', label: 'Notes', icon: StickyNote },
   { href: '/dashboard/study-pack', label: 'Study Packs', icon: BookOpen },
   { href: '/dashboard/flashcards', label: 'Flashcards', icon: Layers },
   { href: '/dashboard/quizzes', label: 'Quizzes', icon: HelpCircle },
   { href: '/dashboard/tests', label: 'Practice Tests', icon: FileText },
   { href: '/dashboard/presentations', label: 'Presentations', icon: Presentation },
-  { href: '/dashboard/research', label: 'Research Agent', icon: Search },
+  { href: '/dashboard/research', label: 'Research with Voro', icon: Search },
   { href: '/dashboard/folders', label: 'Folders', icon: Folder },
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
   { href: '/dashboard/usage', label: 'Usage', icon: BarChart3 },
@@ -68,6 +69,13 @@ export function Sidebar({ user, profile, previewMode }) {
       </nav>
 
       <div className="p-3 border-t border-border space-y-2">
+        <div className="rounded-xl p-3 bg-gradient-to-br from-violet-500/10 to-pink-500/10 border border-primary/20 cursor-pointer hover:border-primary/40 transition">
+          <div className="flex items-center gap-2 mb-1">
+            <VoroAvatarFox size="sm" />
+            <span className="text-xs font-semibold">🦊 Voro</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground">Your AI Companion</p>
+        </div>
         <div className="rounded-xl p-3 bg-gradient-to-br from-violet-500/10 to-pink-500/10 border border-primary/20">
           <div className="flex items-center gap-2 mb-1">
             <Crown className="w-3.5 h-3.5 text-primary" />

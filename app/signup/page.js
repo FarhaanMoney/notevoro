@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { GoogleButton } from '@/components/GoogleButton'
+import { VoroThinking } from '@/components/voro/VoroThinking'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -105,7 +106,7 @@ export default function SignupPage() {
               </div>
             </div>
             <Button type="submit" disabled={loading} className="w-full h-11 bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create account'}
+              {loading ? <VoroThinking size="sm" className="text-white" /> : 'Create account'}
             </Button>
           </form>
           <p className="text-sm text-muted-foreground text-center mt-6">

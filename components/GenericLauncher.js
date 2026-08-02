@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Wand2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { VoroStatus } from '@/components/voro/VoroStatus'
 
-export function GenericLauncher({ endpoint, placeholder, suggestions = [], buttonLabel = 'Generate', loadingLabel = 'Generating...', redirectPath, includeCount = false, includeDifficulty = false }) {
+export function GenericLauncher({ endpoint, placeholder, suggestions = [], buttonLabel = 'Generate', loadingLabel = 'Generating...', redirectPath, includeCount = false, includeDifficulty = false, statusType = 'default' }) {
   const [topic, setTopic] = useState('')
   const [count, setCount] = useState(includeCount ? 15 : 10)
   const [difficulty, setDifficulty] = useState('medium')
@@ -26,9 +27,11 @@ export function GenericLauncher({ endpoint, placeholder, suggestions = [], butto
       const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success('Ready!')
+      toast.success('Voro created your quiz!')
       router.push(`${redirectPath}/${data.set?.id || data.pack?.id}`)
-    } catch (err) { toast.error(err.message) } finally { setLoading(false) }
+    } catch (err) {
+      toast.error('Hmm... Voro couldn\'t finish that. Please try again.')
+    } finally { setLoading(false) }
   }
 
   return (
@@ -37,7 +40,7 @@ export function GenericLauncher({ endpoint, placeholder, suggestions = [], butto
         <div className="flex gap-2">
           <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={placeholder} className="h-12 text-base" disabled={loading} autoFocus />
           <Button type="submit" size="lg" disabled={loading || !topic.trim()} className="h-12 bg-gradient-to-r from-violet-500 to-pink-500">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{loadingLabel}</> : <><Wand2 className="w-4 h-4 mr-2" />{buttonLabel}</>}
+            {loading ? <VoroStatus type={statusType} className="text-white" /> : <><Wand2 className="w-4 h-4 mr-2" />{buttonLabel}</>}
           </Button>
         </div>
         <div className="flex gap-3 items-center">
