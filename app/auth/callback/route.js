@@ -14,16 +14,29 @@ export async function GET(request) {
     if (supabase) {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
       if (!error && data?.user) {
+        console.log('[auth/callback] User authenticated:', data.user.id, data.user.email)
+
         // Ensure user has all required records
-        await ensureUserRecords(
+        const recordsCreated = await ensureUserRecords(
           data.user.id,
           data.user.email,
           data.user.user_metadata
         )
-        
+
+        if (!recordsCreated) {
+          console.error('[auth/callback] Failed to create user records')
+          return NextResponse.redirect(new URL('/login?error=user_records', url.origin))
+        }
+
+        console.log('[auth/callback] User records created successfully')
+
         // Log the login activity
-        await logActivity(data.user.id, 'login', 'user', data.user.id)
-        
+        try {
+          await logActivity(data.user.id, 'login', 'user', data.user.id)
+        } catch (logError) {
+          console.error('[auth/callback] Activity log error (non-critical):', logError)
+        }
+
         return NextResponse.redirect(new URL(next, url.origin))
       }
       console.error('[auth/callback] exchange error:', error.message)

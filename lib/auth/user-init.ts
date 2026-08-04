@@ -22,7 +22,10 @@ export async function ensureUserRecords(userId: string, email: string, metadata?
   if (!supabase) return false
 
   try {
-    return await ensureUserRecordsManual(userId, email, metadata, supabase)
+    console.log('[User Init] Creating user records for:', userId, email)
+    const result = await ensureUserRecordsManual(userId, email, metadata, supabase)
+    console.log('[User Init] User records result:', result)
+    return result
   } catch (error) {
     console.error('[User Init] Error ensuring user records:', error)
     return false
@@ -37,85 +40,20 @@ async function ensureUserRecordsManual(userId: string, email: string, metadata?:
   if (!supabase) return false
 
   try {
-    const now = new Date().toISOString()
+    console.log('[User Init] Using SQL function to initialize user records')
+    // Use SQL function to initialize all records (bypasses RLS)
+    const { error: initError } = await supabase.rpc('initialize_user_records', {
+      p_user_id: userId,
+      p_email: email,
+      p_metadata: metadata || {},
+    })
 
-    const { data: existingProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (profileError && profileError.code !== 'PGRST116') throw profileError
-
-    if (!existingProfile) {
-      await supabase.from('profiles').upsert({
-        id: userId,
-        email,
-        full_name: metadata?.full_name || metadata?.name || null,
-        display_name: metadata?.display_name || metadata?.name || email.split('@')[0],
-        avatar_url: metadata?.avatar_url || null,
-      }, { onConflict: 'id' })
+    if (initError) {
+      console.error('[User Init] initialize_user_records error:', initError)
+      throw initError
     }
 
-    const { data: existingActiveSubscription, error: subError } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .maybeSingle()
-
-    if (subError && subError.code !== 'PGRST116') throw subError
-
-    if (!existingActiveSubscription) {
-      const { data: existingSubscription } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (existingSubscription) {
-        await supabase.from('subscriptions').update({
-          plan: 'free',
-          status: 'active',
-          provider: 'internal',
-          updated_at: now,
-        }).eq('id', existingSubscription.id)
-      } else {
-        await supabase.from('subscriptions').insert({
-          user_id: userId,
-          plan: 'free',
-          status: 'active',
-          provider: 'internal',
-        })
-      }
-    }
-
-    const { data: existingStats, error: statsError } = await supabase
-      .from('user_stats')
-      .select('user_id')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (statsError && statsError.code !== 'PGRST116') throw statsError
-
-    if (!existingStats) {
-      await supabase.from('user_stats').upsert({
-        user_id: userId,
-        last_active: now,
-        updated_at: now,
-      }, { onConflict: 'user_id' })
-    }
-
-    await supabase
-      .from('user_stats')
-      .update({
-        last_active: now,
-        updated_at: now,
-      })
-      .eq('user_id', userId)
-
+    console.log('[User Init] User records initialized successfully')
     return true
   } catch (error) {
     console.error('[User Init] Error in manual fallback:', error)
@@ -137,12 +75,12 @@ export async function logActivity(
   if (!supabase) return
 
   try {
-    await supabase.from('activity_log').insert({
-      user_id: userId,
-      action,
-      entity_type: entityType,
-      entity_id: entityId,
-      metadata: metadata || {},
+    await supabase.rpc('log_activity', {
+      p_user_id: userId,
+      p_action: action,
+      p_entity_type: entityType || null,
+      p_entity_id: entityId || null,
+      p_metadata: metadata || {},
     })
   } catch (error) {
     console.error('[Activity Log] Error logging activity:', error)
