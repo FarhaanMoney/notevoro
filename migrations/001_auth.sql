@@ -352,20 +352,12 @@ begin
     new.email,
     coalesce(new.raw_user_meta_data, '{}'::jsonb)
   );
-  
-  -- Log signup activity
-  perform public.log_activity(
-    new.id,
-    'signup',
-    'user',
-    new.id,
-    jsonb_build_object(
-      'provider', new.raw_app_meta_data->>'provider',
-      'email', new.email
-    )
-  );
-  
+
   return new;
+exception when others then
+    -- Log error but don't fail the signup
+    raise log 'handle_new_user error: %', SQLERRM;
+    return new;
 end;
 $$;
 
