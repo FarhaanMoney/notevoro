@@ -662,19 +662,19 @@ $$;
 create trigger update_conversation_updated_at
 before update on public.conversations
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on messages
 create trigger update_message_updated_at
 before update on public.messages
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on memories
 create trigger update_memory_updated_at
 before update on public.memories
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Update memory access count on read
 create or replace function public.update_memory_access()

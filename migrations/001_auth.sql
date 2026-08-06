@@ -368,10 +368,11 @@ after insert on auth.users
 for each row
 execute procedure public.handle_new_user();
 
--- Auto-update updated_at timestamp on profiles
-create or replace function public.update_profile_timestamp()
+-- Auto-update updated_at timestamp (generic function for all tables)
+create or replace function public.update_timestamp()
 returns trigger
 language plpgsql
+security definer
 set search_path = public
 as $$
 begin
@@ -383,16 +384,16 @@ $$;
 create trigger update_profile_updated_at
 before update on public.profiles
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on user_settings
 create trigger update_user_settings_updated_at
 before update on public.user_settings
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on user_preferences
 create trigger update_user_preferences_updated_at
 before update on public.user_preferences
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();

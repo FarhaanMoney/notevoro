@@ -671,10 +671,10 @@ $$;
 create trigger update_subscription_updated_at
 before update on public.subscriptions
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on usage_limits
 create trigger update_usage_limits_updated_at
 before update on public.usage_limits
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();

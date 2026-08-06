@@ -1016,64 +1016,64 @@ $$;
 create trigger update_flashcard_set_updated_at
 before update on public.flashcard_sets
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on flashcards
 create trigger update_flashcard_updated_at
 before update on public.flashcards
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on quiz_sets
 create trigger update_quiz_set_updated_at
 before update on public.quiz_sets
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on quiz_questions
 create trigger update_quiz_question_updated_at
 before update on public.quiz_questions
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on practice_tests
 create trigger update_practice_test_updated_at
 before update on public.practice_tests
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on atlas_sessions
 create trigger update_atlas_session_updated_at
 before update on public.atlas_sessions
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on atlas_steps
 create trigger update_atlas_step_updated_at
 before update on public.atlas_steps
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on atlas_progress
 create trigger update_atlas_progress_updated_at
 before update on public.atlas_progress
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on presentations
 create trigger update_presentation_updated_at
 before update on public.presentations
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on research_reports
 create trigger update_research_report_updated_at
 before update on public.research_reports
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on study_guides
 create trigger update_study_guide_updated_at
 before update on public.study_guides
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();

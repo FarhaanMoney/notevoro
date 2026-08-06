@@ -502,16 +502,16 @@ $$;
 create trigger update_event_updated_at
 before update on public.events
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on reminders
 create trigger update_reminder_updated_at
 before update on public.reminders
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on recurring_events
 create trigger update_recurring_event_updated_at
 before update on public.recurring_events
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();

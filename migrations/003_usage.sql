@@ -454,10 +454,10 @@ $$;
 create trigger update_daily_usage_cache_updated_at
 before update on public.daily_usage_cache
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on monthly_usage_cache
 create trigger update_monthly_usage_cache_updated_at
 before update on public.monthly_usage_cache
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();

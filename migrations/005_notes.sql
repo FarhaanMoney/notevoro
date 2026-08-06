@@ -698,16 +698,16 @@ $$;
 create trigger update_folder_updated_at
 before update on public.folders
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on notes
 create trigger update_note_updated_at
 before update on public.notes
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on note_tags
 create trigger update_note_tag_updated_at
 before update on public.note_tags
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();

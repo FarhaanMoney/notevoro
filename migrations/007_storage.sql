@@ -490,10 +490,10 @@ $$;
 create trigger update_file_updated_at
 before update on public.files
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
 
 -- Auto-update updated_at on storage_usage
 create trigger update_storage_usage_updated_at
 before update on public.storage_usage
 for each row
-execute procedure public.update_profile_timestamp();
+execute procedure public.update_timestamp();
