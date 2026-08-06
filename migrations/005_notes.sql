@@ -42,7 +42,8 @@ create table public.notes (
   
   -- Note details
   title text not null,
-  content text, -- Rich text content (HTML/JSON)
+  content_html text, -- HTML content
+  content_text text, -- Plain text content
   content_type text default 'html', -- 'html', 'markdown', 'json'
   
   -- Metadata
@@ -83,25 +84,26 @@ create table public.note_versions (
   id uuid primary key default gen_random_uuid(),
   note_id uuid not null references public.notes(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  
+
   -- Version details
   version_number integer not null,
-  content text not null,
+  content_html text,
+  content_text text,
   content_type text not null,
-  
+
   -- Change summary
   change_summary text,
-  change_type text default 'edit', -- 'create', 'edit', 'ai_edit', 'restore'
-  
+  change_type text default 'edit', -- 'create', 'edit', 'ai_edit', 'restore',
+
   -- Metadata
   metadata jsonb default '{}'::jsonb,
-  
+
   -- Size
   content_size integer,
-  
+
   -- Timestamps
   created_at timestamptz default now(),
-  
+
   -- Constraints
   constraint note_versions_number_positive check (version_number > 0),
   constraint note_versions_type_valid check (change_type in ('create', 'edit', 'ai_edit', 'restore')),
