@@ -32,15 +32,38 @@ export async function middleware(request) {
   let workspaceType = 'student'
   if (user) {
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('workspace_type')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
+      
+      if (profileError) {
+        console.error('[middleware] Profile query error:', profileError)
+        console.error('[middleware] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
+      }
+      
+      if (!profile) {
+        console.error('[middleware] PROFILE NOT FOUND for user ID:', user.id)
+        console.error('[middleware] This indicates the profile creation trigger may have failed')
+        // DO NOT fallback to student - this masks the actual bug
+        // Instead, redirect to a safe default or show error
+        const redirect = url.clone()
+        redirect.pathname = '/login'
+        redirect.searchParams.set('error', 'profile_not_found')
+        return NextResponse.redirect(redirect)
+      }
+      
       workspaceType = profile?.workspace_type || 'student'
       console.log('[middleware] User ID:', user.id, 'workspace_type:', workspaceType, 'pathname:', url.pathname)
     } catch (err) {
-      console.error('[middleware] Error fetching profile:', err)
+      console.error('[middleware] Unexpected error fetching profile:', err)
+      console.error('[middleware] User ID:', user.id, 'Error:', err.message)
+      // DO NOT fallback to student - redirect to login with error
+      const redirect = url.clone()
+      redirect.pathname = '/login'
+      redirect.searchParams.set('error', 'profile_lookup_failed')
+      return NextResponse.redirect(redirect)
     }
   }
 

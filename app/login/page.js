@@ -31,7 +31,24 @@ function LoginForm() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         console.log('[login] User authenticated:', user.id)
-        const { data: profile } = await supabase.from('profiles').select('workspace_type').eq('id', user.id).single()
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('workspace_type').eq('id', user.id).maybeSingle()
+        
+        if (profileError) {
+          console.error('[login] Profile query error:', profileError)
+          console.error('[login] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
+          toast.error('Failed to load profile. Please try again.')
+          setLoading(false)
+          return
+        }
+        
+        if (!profile) {
+          console.error('[login] PROFILE NOT FOUND for user ID:', user.id)
+          console.error('[login] This indicates the profile creation trigger may have failed')
+          toast.error('Profile not found. Please contact support.')
+          setLoading(false)
+          return
+        }
+        
         const workspaceType = profile?.workspace_type || 'student'
         console.log('[login] Profile workspace_type:', workspaceType)
         const defaultPath = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
