@@ -2,9 +2,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Sparkles, MessagesSquare, BookOpen, ArrowRight, Zap, Flame, Clock } from 'lucide-react'
+import { Sparkles, MessagesSquare, BookOpen, ArrowRight, Zap, Flame, Clock, Users } from 'lucide-react'
 import { VoroIllustration } from '@/components/voro/VoroIllustration'
 import { VoroEmptyState } from '@/components/voro/VoroIllustration'
+import { JoinClassroomButton } from '@/components/JoinClassroomButton'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -46,7 +47,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
         <Link href="/dashboard/study-pack">
           <Card className="p-6 bg-gradient-to-br from-violet-500/15 to-pink-500/15 border-primary/30 hover:border-primary/60 transition cursor-pointer group">
             <div className="flex items-start justify-between mb-4">
@@ -71,6 +72,16 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground mt-1">Your AI learning companion is ready to help with explanations, examples, and more.</p>
           </Card>
         </Link>
+        <Card className="p-6 bg-card/60 hover:border-primary/40 transition">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center glow">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold mb-1">Join Classroom</h3>
+          <p className="text-sm text-muted-foreground mb-3">Enter a code to join your teacher's classroom.</p>
+          <JoinClassroomButton />
+        </Card>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
