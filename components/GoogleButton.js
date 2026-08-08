@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-export function GoogleButton({ label = 'Continue with Google' }) {
+export function GoogleButton({ label = 'Continue with Google', workspaceType = 'student' }) {
   const [loading, setLoading] = useState(false)
 
   async function signInWithGoogle() {
@@ -12,9 +12,19 @@ export function GoogleButton({ label = 'Continue with Google' }) {
     try {
       const supabase = createClient()
       const origin = window.location.origin
+      
+      // Store workspace_type in localStorage for OAuth callback
+      localStorage.setItem('pending_workspace_type', workspaceType)
+      console.log('[GoogleButton] Storing pending workspace_type:', workspaceType)
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${origin}/auth/callback?next=/dashboard` },
+        options: { 
+          redirectTo: `${origin}/auth/callback`,
+          queryParams: {
+            workspace_type: workspaceType
+          }
+        },
       })
       if (error) throw error
       // Browser will redirect to Google — no code beyond this point runs on success

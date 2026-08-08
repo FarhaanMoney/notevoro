@@ -8,6 +8,7 @@ export async function GET(request) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
   const next = url.searchParams.get('next') || '/dashboard'
+  const queryWorkspaceType = url.searchParams.get('workspace_type')
 
   if (code) {
     const supabase = await createClient()
@@ -15,6 +16,8 @@ export async function GET(request) {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
       if (!error && data?.user) {
         console.log('[auth/callback] User authenticated:', data.user.id, data.user.email)
+        console.log('[auth/callback] Query workspace_type:', queryWorkspaceType)
+        console.log('[auth/callback] Auth metadata workspace_type:', data.user.user_metadata?.workspace_type)
 
         // Ensure user has all required records
         const recordsCreated = await ensureUserRecords(
@@ -30,6 +33,21 @@ export async function GET(request) {
 
         console.log('[auth/callback] User records created successfully')
 
+        // If workspace_type was passed in query params (from GoogleButton), update the profile
+        if (queryWorkspaceType && queryWorkspaceType !== 'student') {
+          console.log('[auth/callback] Updating profile workspace_type from query:', queryWorkspaceType)
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ workspace_type: queryWorkspaceType })
+            .eq('id', data.user.id)
+          
+          if (updateError) {
+            console.error('[auth/callback] Failed to update workspace_type:', updateError)
+          } else {
+            console.log('[auth/callback] Profile workspace_type updated successfully')
+          }
+        }
+
         // Log the login activity
         try {
           await logActivity(data.user.id, 'login', 'user', data.user.id)
@@ -40,8 +58,10 @@ export async function GET(request) {
         // Determine redirect based on workspace type
         const { data: profile } = await supabase.from('profiles').select('workspace_type').eq('id', data.user.id).single()
         const workspaceType = profile?.workspace_type || 'student'
+        console.log('[auth/callback] Final workspace_type for redirect:', workspaceType)
         const defaultNext = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
         const redirectPath = next || defaultNext
+        console.log('[auth/callback] Redirecting to:', redirectPath)
 
         return NextResponse.redirect(new URL(redirectPath, url.origin))
       }

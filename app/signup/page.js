@@ -32,25 +32,35 @@ export default function SignupPage() {
     setLoading(true)
     try {
       const supabase = createClient()
+      console.log('[signup] Selected workspace_type:', form.workspaceType)
+      
       const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: { data: { full_name: form.fullName, display_name: form.displayName || form.fullName, workspace_type: form.workspaceType } },
       })
+      
       if (error) throw error
       if (data.user) {
-        await fetch('/api/profile', {
+        console.log('[signup] Auth user created:', data.user.id)
+        console.log('[signup] Auth metadata workspace_type:', data.user.user_metadata?.workspace_type)
+        
+        const profileResponse = await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ full_name: form.fullName, display_name: form.displayName || form.fullName, grade: form.grade, curriculum: form.curriculum, workspace_type: form.workspaceType }),
         })
+        const profileData = await profileResponse.json()
+        console.log('[signup] Profile update response:', profileData)
       }
       toast.success('Account created! Welcome to Notevoro.')
       // Redirect based on workspace type
       const redirectPath = form.workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+      console.log('[signup] Redirecting to:', redirectPath, 'based on workspace_type:', form.workspaceType)
       router.push(redirectPath)
       router.refresh()
     } catch (err) {
+      console.error('[signup] Error:', err)
       toast.error(err.message || 'Signup failed')
     } finally {
       setLoading(false)
@@ -71,7 +81,7 @@ export default function SignupPage() {
           <p className="text-sm text-muted-foreground mt-1">Choose your workspace and get started.</p>
 
           <div className="mt-6 space-y-3">
-            <GoogleButton label="Sign up with Google" />
+            <GoogleButton label="Sign up with Google" workspaceType={form.workspaceType} />
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-[11px] uppercase tracking-wide text-muted-foreground">or email</span>

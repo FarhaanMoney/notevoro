@@ -23,12 +23,17 @@ export default async function EducatorLayout({ children }) {
   }
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) {
+    console.log('[educator/layout] No user, redirecting to /login')
+    redirect('/login')
+  }
   
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  console.log('[educator/layout] User:', user.id, 'Profile workspace_type:', profile?.workspace_type)
   
   // Redirect to student workspace if user is not an educator
   if (profile?.workspace_type !== 'educator') {
+    console.log('[educator/layout] User is not educator, redirecting to /dashboard')
     redirect('/dashboard')
   }
 

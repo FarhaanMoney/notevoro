@@ -25,18 +25,63 @@ export async function middleware(request) {
 
   const url = request.nextUrl
   const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/signup')
-  const isProtected = url.pathname.startsWith('/dashboard')
+  const isStudentRoute = url.pathname.startsWith('/dashboard')
+  const isEducatorRoute = url.pathname.startsWith('/educator')
 
-  if (isProtected && !user) {
+  // Get user's workspace type if authenticated
+  let workspaceType = 'student'
+  if (user) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('workspace_type')
+        .eq('id', user.id)
+        .single()
+      workspaceType = profile?.workspace_type || 'student'
+      console.log('[middleware] User workspace_type:', workspaceType)
+    } catch (err) {
+      console.error('[middleware] Error fetching profile:', err)
+    }
+  }
+
+  // Protect student routes
+  if (isStudentRoute && !user) {
     const redirect = url.clone()
     redirect.pathname = '/login'
     redirect.searchParams.set('next', url.pathname)
     return NextResponse.redirect(redirect)
   }
-  if (isAuthPage && user) {
+
+  // Protect educator routes
+  if (isEducatorRoute && !user) {
+    const redirect = url.clone()
+    redirect.pathname = '/login'
+    redirect.searchParams.set('next', url.pathname)
+    return NextResponse.redirect(redirect)
+  }
+
+  // Prevent students from accessing educator routes
+  if (isEducatorRoute && user && workspaceType !== 'educator') {
+    console.log('[middleware] Student attempting to access educator route, redirecting to /dashboard')
     const redirect = url.clone()
     redirect.pathname = '/dashboard'
+    return NextResponse.redirect(redirect)
+  }
+
+  // Prevent educators from accessing student routes
+  if (isStudentRoute && user && workspaceType === 'educator') {
+    console.log('[middleware] Educator attempting to access student route, redirecting to /educator/dashboard')
+    const redirect = url.clone()
+    redirect.pathname = '/educator/dashboard'
+    return NextResponse.redirect(redirect)
+  }
+
+  // Redirect authenticated users from auth pages to their correct workspace
+  if (isAuthPage && user) {
+    const redirect = url.clone()
+    redirect.pathname = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
     redirect.search = ''
+    console.log('[middleware] Redirecting authenticated user from auth page to:', redirect.pathname)
     return NextResponse.redirect(redirect)
   }
 

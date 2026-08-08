@@ -30,16 +30,21 @@ function LoginForm() {
       // Get user profile to determine workspace type
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        console.log('[login] User authenticated:', user.id)
         const { data: profile } = await supabase.from('profiles').select('workspace_type').eq('id', user.id).single()
         const workspaceType = profile?.workspace_type || 'student'
+        console.log('[login] Profile workspace_type:', workspaceType)
         const defaultPath = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
         const next = params.get('next') || defaultPath
+        console.log('[login] Redirecting to:', next)
         router.push(next)
       } else {
+        console.log('[login] No user found, redirecting to /dashboard')
         router.push('/dashboard')
       }
       router.refresh()
     } catch (err) {
+      console.error('[login] Error:', err)
       toast.error(err.message || 'Login failed')
     } finally {
       setLoading(false)
