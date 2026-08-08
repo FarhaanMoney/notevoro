@@ -36,16 +36,35 @@ function LoginForm() {
         if (profileError) {
           console.error('[login] Profile query error:', profileError)
           console.error('[login] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
-          toast.error('Failed to load profile. Please try again.')
-          setLoading(false)
+          // DO NOT show error and return - this prevents login
+          // Instead, use default workspace_type
+          const defaultPath = '/dashboard'
+          const next = params.get('next') || defaultPath
+          console.log('[login] Profile error, redirecting to default:', next)
+          router.push(next)
           return
         }
         
         if (!profile) {
           console.error('[login] PROFILE NOT FOUND for user ID:', user.id)
           console.error('[login] This indicates the profile creation trigger may have failed')
-          toast.error('Profile not found. Please contact support.')
-          setLoading(false)
+          // DO NOT show error and return - this prevents login
+          // Instead, create profile and use default workspace_type
+          try {
+            await supabase.from('profiles').insert({
+              id: user.id,
+              email: user.email,
+              display_name: user.email?.split('@')[0] || 'User',
+              workspace_type: 'student'
+            })
+            console.log('[login] Created missing profile for user:', user.id)
+          } catch (insertError) {
+            console.error('[login] Failed to create profile:', insertError)
+          }
+          const defaultPath = '/dashboard'
+          const next = params.get('next') || defaultPath
+          console.log('[login] Profile missing, redirecting to default:', next)
+          router.push(next)
           return
         }
         

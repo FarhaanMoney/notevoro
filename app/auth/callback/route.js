@@ -61,19 +61,22 @@ export async function GET(request) {
         if (profileError) {
           console.error('[auth/callback] Profile query error:', profileError)
           console.error('[auth/callback] User ID:', data.user.id, 'Error details:', JSON.stringify(profileError))
+          // DO NOT redirect to login - this causes infinite loop
+          // Instead, use default workspace_type and let the page handle the error
         }
         
         if (!profile) {
           console.error('[auth/callback] PROFILE NOT FOUND for user ID:', data.user.id)
           console.error('[auth/callback] This indicates the profile creation trigger may have failed')
-          return NextResponse.redirect(new URL('/login?error=profile_not_found', url.origin))
+          // DO NOT redirect to login - this causes infinite loop
+          // Instead, use default workspace_type and let the page handle the error
         }
         
         const workspaceType = profile?.workspace_type || 'student'
         console.log('[auth/callback] Final workspace_type for redirect:', workspaceType)
         const defaultNext = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
         const redirectPath = next || defaultNext
-        console.log('[auth/callback] Found profile with workspace_type:', workspaceType, 'Redirecting to:', redirectPath)
+        console.log('[auth/callback] Redirecting to:', redirectPath, 'with workspace_type:', workspaceType)
 
         return NextResponse.redirect(new URL(redirectPath, url.origin))
       }
