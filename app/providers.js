@@ -10,8 +10,10 @@ export function Providers({ children }) {
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only refresh on SIGNED_OUT and TOKEN_REFRESHED
+      // Do NOT refresh on SIGNED_IN to avoid interfering with OAuth callback flow
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         router.refresh()
       }
     })
