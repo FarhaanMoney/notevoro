@@ -30,6 +30,13 @@ export default async function EducatorLayout({ children }) {
   
   const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
   
+  console.log('[EDUCATOR LAYOUT DEBUG]', {
+    userId: user.id,
+    profileExists: !!profile,
+    profileWorkspaceType: profile?.workspace_type,
+    profileError: profileError?.message
+  })
+  
   if (profileError) {
     console.error('[educator/layout] Profile query error:', profileError)
     console.error('[educator/layout] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
@@ -37,11 +44,15 @@ export default async function EducatorLayout({ children }) {
     // Instead, allow the page to load and handle the error gracefully
   }
   
-  console.log('[educator/layout] User:', user.id, 'Profile exists:', !!profile, 'Profile workspace_type:', profile?.workspace_type)
-  
   // Only redirect to student workspace if profile exists and user is not an educator
   // DO NOT redirect if profile lookup failed - this causes the production bug
   if (profile && profile.workspace_type !== 'educator') {
+    console.log('[REDIRECT DEBUG]', {
+      from: '/educator/dashboard',
+      to: '/dashboard',
+      reason: 'User is not educator in educator layout',
+      workspaceType: profile.workspace_type
+    })
     console.log('[educator/layout] User is not educator (workspace_type:', profile.workspace_type, '), redirecting to /dashboard')
     redirect('/dashboard')
   }

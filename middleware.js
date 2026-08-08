@@ -28,6 +28,13 @@ export async function middleware(request) {
   const isStudentRoute = url.pathname.startsWith('/dashboard')
   const isEducatorRoute = url.pathname.startsWith('/educator')
 
+  console.log('[ROUTE DEBUG]', {
+    pathname: url.pathname,
+    userId: user?.id,
+    isEducatorRoute,
+    isStudentRoute
+  })
+
   // Get user's workspace type if authenticated
   let workspaceType = 'student'
   if (user) {
@@ -73,6 +80,11 @@ export async function middleware(request) {
 
   // Protect student routes
   if (isStudentRoute && !user) {
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: '/login',
+      reason: 'Unauthenticated user accessing student route'
+    })
     const redirect = url.clone()
     redirect.pathname = '/login'
     redirect.searchParams.set('next', url.pathname)
@@ -81,6 +93,11 @@ export async function middleware(request) {
 
   // Protect educator routes
   if (isEducatorRoute && !user) {
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: '/login',
+      reason: 'Unauthenticated user accessing educator route'
+    })
     const redirect = url.clone()
     redirect.pathname = '/login'
     redirect.searchParams.set('next', url.pathname)
@@ -89,7 +106,12 @@ export async function middleware(request) {
 
   // Prevent students from accessing educator routes
   if (isEducatorRoute && user && workspaceType !== 'educator') {
-    console.log('[middleware] Student attempting to access educator route, redirecting to /dashboard')
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: '/dashboard',
+      reason: 'Student attempting to access educator route',
+      workspaceType
+    })
     const redirect = url.clone()
     redirect.pathname = '/dashboard'
     return NextResponse.redirect(redirect)
@@ -97,7 +119,12 @@ export async function middleware(request) {
 
   // Prevent educators from accessing student routes
   if (isStudentRoute && user && workspaceType === 'educator') {
-    console.log('[middleware] Educator attempting to access student route, redirecting to /educator/dashboard')
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: '/educator/dashboard',
+      reason: 'Educator attempting to access student route',
+      workspaceType
+    })
     const redirect = url.clone()
     redirect.pathname = '/educator/dashboard'
     return NextResponse.redirect(redirect)
@@ -105,10 +132,16 @@ export async function middleware(request) {
 
   // Redirect authenticated users from auth pages to their correct workspace
   if (isAuthPage && user) {
+    const redirectPath = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: redirectPath,
+      reason: 'Authenticated user on auth page',
+      workspaceType
+    })
     const redirect = url.clone()
-    redirect.pathname = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+    redirect.pathname = redirectPath
     redirect.search = ''
-    console.log('[middleware] Redirecting authenticated user from auth page to:', redirect.pathname)
     return NextResponse.redirect(redirect)
   }
 
