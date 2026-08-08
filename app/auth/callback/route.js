@@ -37,7 +37,13 @@ export async function GET(request) {
           console.error('[auth/callback] Activity log error (non-critical):', logError)
         }
 
-        return NextResponse.redirect(new URL(next, url.origin))
+        // Determine redirect based on workspace type
+        const { data: profile } = await supabase.from('profiles').select('workspace_type').eq('id', data.user.id).single()
+        const workspaceType = profile?.workspace_type || 'student'
+        const defaultNext = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+        const redirectPath = next || defaultNext
+
+        return NextResponse.redirect(new URL(redirectPath, url.origin))
       }
       console.error('[auth/callback] exchange error:', error.message)
     }

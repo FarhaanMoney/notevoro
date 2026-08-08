@@ -7,15 +7,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, GraduationCap, Users, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
 import { GoogleButton } from '@/components/GoogleButton'
 import { VoroThinking } from '@/components/voro/VoroThinking'
 
+const WORKSPACE_TYPES = [
+  { value: 'student', label: 'Student', icon: GraduationCap, description: 'Study, learn, and grow with AI-powered tools' },
+  { value: 'educator', label: 'Educator', icon: Users, description: 'Teach, manage classrooms, and create content' },
+  { value: 'professional', label: 'Working Professional', icon: Briefcase, description: 'Coming soon - workspace for professionals' },
+]
+
 export default function SignupPage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    fullName: '', displayName: '', email: '', password: '', grade: '', curriculum: 'CBSE',
+    fullName: '', displayName: '', email: '', password: '', grade: '', curriculum: 'CBSE', workspaceType: 'student',
   })
   const [loading, setLoading] = useState(false)
 
@@ -29,18 +35,20 @@ export default function SignupPage() {
       const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { full_name: form.fullName, display_name: form.displayName || form.fullName } },
+        options: { data: { full_name: form.fullName, display_name: form.displayName || form.fullName, workspace_type: form.workspaceType } },
       })
       if (error) throw error
       if (data.user) {
         await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ full_name: form.fullName, display_name: form.displayName || form.fullName, grade: form.grade, curriculum: form.curriculum }),
+          body: JSON.stringify({ full_name: form.fullName, display_name: form.displayName || form.fullName, grade: form.grade, curriculum: form.curriculum, workspace_type: form.workspaceType }),
         })
       }
       toast.success('Account created! Welcome to Notevoro.')
-      router.push('/dashboard')
+      // Redirect based on workspace type
+      const redirectPath = form.workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+      router.push(redirectPath)
       router.refresh()
     } catch (err) {
       toast.error(err.message || 'Signup failed')
@@ -60,7 +68,7 @@ export default function SignupPage() {
         </Link>
         <div className="rounded-2xl border border-border bg-card/60 backdrop-blur p-8">
           <h1 className="text-2xl font-bold">Create your account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Personalize your learning in 60 seconds.</p>
+          <p className="text-sm text-muted-foreground mt-1">Choose your workspace and get started.</p>
 
           <div className="mt-6 space-y-3">
             <GoogleButton label="Sign up with Google" />
@@ -68,6 +76,39 @@ export default function SignupPage() {
               <div className="h-px flex-1 bg-border" />
               <span className="text-[11px] uppercase tracking-wide text-muted-foreground">or email</span>
               <div className="h-px flex-1 bg-border" />
+            </div>
+          </div>
+
+          {/* Workspace Type Selection */}
+          <div className="mt-6">
+            <Label className="text-sm font-semibold">How will you use Notevoro?</Label>
+            <div className="grid grid-cols-1 gap-2 mt-3">
+              {WORKSPACE_TYPES.map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => update('workspaceType', type.value)}
+                  disabled={type.value === 'professional'}
+                  className={`p-3 rounded-lg border text-left transition ${
+                    form.workspaceType === type.value
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-card/40 hover:border-primary/40'
+                  } ${type.value === 'professional' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <type.icon className={`w-5 h-5 ${form.workspaceType === type.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold">{type.label}</div>
+                      <div className="text-[11px] text-muted-foreground">{type.description}</div>
+                    </div>
+                    {form.workspaceType === type.value && (
+                      <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 

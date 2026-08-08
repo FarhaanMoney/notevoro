@@ -26,8 +26,18 @@ function LoginForm() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       toast.success('Welcome back!')
-      const next = params.get('next') || '/dashboard'
-      router.push(next)
+      
+      // Get user profile to determine workspace type
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('workspace_type').eq('id', user.id).single()
+        const workspaceType = profile?.workspace_type || 'student'
+        const defaultPath = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+        const next = params.get('next') || defaultPath
+        router.push(next)
+      } else {
+        router.push('/dashboard')
+      }
       router.refresh()
     } catch (err) {
       toast.error(err.message || 'Login failed')

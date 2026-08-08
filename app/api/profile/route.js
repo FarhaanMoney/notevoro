@@ -58,7 +58,7 @@ async function handleProfileWrite(request, method) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     const body = await request.json().catch(() => ({}))
-    const { display_name, full_name, grade, curriculum, avatar_url, email, userId, preferred_explanation_style, difficulty_preference, learning_pace } = body
+    const { display_name, full_name, grade, curriculum, avatar_url, email, userId, preferred_explanation_style, difficulty_preference, learning_pace, workspace_type } = body
 
     const targetUser = user || (userId ? { id: userId, email: email || null, user_metadata: {} } : null)
     if (!targetUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -79,6 +79,7 @@ async function handleProfileWrite(request, method) {
     if (preferred_explanation_style !== undefined) upsertData.preferred_explanation_style = preferred_explanation_style
     if (difficulty_preference !== undefined) upsertData.difficulty_preference = difficulty_preference
     if (learning_pace !== undefined) upsertData.learning_pace = learning_pace
+    if (workspace_type !== undefined) upsertData.workspace_type = workspace_type
 
     const client = supabaseAdmin || supabase
     const { data: profile, error } = await client
