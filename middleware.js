@@ -38,7 +38,7 @@ export async function middleware(request) {
         .eq('id', user.id)
         .single()
       workspaceType = profile?.workspace_type || 'student'
-      console.log('[middleware] User workspace_type:', workspaceType)
+      console.log('[middleware] User ID:', user.id, 'workspace_type:', workspaceType, 'pathname:', url.pathname)
     } catch (err) {
       console.error('[middleware] Error fetching profile:', err)
     }

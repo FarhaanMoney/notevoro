@@ -45,6 +45,7 @@ export default function SignupPage() {
         console.log('[signup] Auth user created:', data.user.id)
         console.log('[signup] Auth metadata workspace_type:', data.user.user_metadata?.workspace_type)
         
+        // Wait for profile update to complete
         const profileResponse = await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -52,13 +53,19 @@ export default function SignupPage() {
         })
         const profileData = await profileResponse.json()
         console.log('[signup] Profile update response:', profileData)
+        
+        // Verify the profile was updated correctly
+        if (profileData.profile) {
+          console.log('[signup] Verified profile workspace_type:', profileData.profile.workspace_type)
+        }
       }
       toast.success('Account created! Welcome to Notevoro.')
-      // Redirect based on workspace type
+      
+      // Use window.location.href for full page reload to ensure session is established
+      // This avoids middleware timing issues with router.push
       const redirectPath = form.workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
-      console.log('[signup] Redirecting to:', redirectPath, 'based on workspace_type:', form.workspaceType)
-      router.push(redirectPath)
-      router.refresh()
+      console.log('[signup] Using window.location.href to redirect to:', redirectPath, 'based on workspace_type:', form.workspaceType)
+      window.location.href = redirectPath
     } catch (err) {
       console.error('[signup] Error:', err)
       toast.error(err.message || 'Signup failed')
