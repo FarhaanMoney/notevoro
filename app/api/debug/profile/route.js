@@ -16,33 +16,52 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
     }
     
-    // Check if profile exists (with RLS)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-    
     // Get current authenticated user
     const { data: { user: currentUser } } = await supabase.auth.getUser()
+    
+    // Check if profile exists (with RLS - as the authenticated user)
+    let profile = null
+    let profileError = null
+    let profileWithRLS = null
+    
+    if (currentUser) {
+      const result = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+      profileWithRLS = result.data
+      profileError = result.error
+    }
+    
+    // Try to get auth user metadata (this should work regardless of RLS)
+    let authUserMetadata = null
+    if (currentUser && currentUser.id === userId) {
+      authUserMetadata = currentUser.user_metadata
+    }
     
     return NextResponse.json({
       userId,
       currentUser: currentUser ? {
         id: currentUser.id,
-        email: currentUser.email
+        email: currentUser.email,
+        user_metadata: currentUser.user_metadata
       } : null,
-      profile: profile || null,
+      profileWithRLS: profileWithRLS || null,
       profileError: profileError ? {
         message: profileError.message,
         code: profileError.code,
-        details: profileError.details
+        details: profileError.details,
+        hint: profileError.hint
       } : null,
+      authUserMetadata: authUserMetadata,
       summary: {
-        profileExists: !!profile,
-        profileWorkspaceType: profile?.workspace_type,
+        profileExists: !!profileWithRLS,
+        profileWorkspaceType: profileWithRLS?.workspace_type,
+        authMetadataWorkspaceType: authUserMetadata?.workspace_type,
         isCurrentUser: currentUser?.id === userId,
-        canAccessProfile: !!profile || !profileError
+        canAccessProfile: !!profileWithRLS || !profileError,
+        rlsBlocking: !!profileError && !profileWithRLS
       }
     })
   } catch (error) {
