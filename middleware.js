@@ -54,7 +54,14 @@ export async function middleware(request) {
         workspaceType = profile?.workspace_type || 'student'
       }
       
-      console.log('[middleware] User ID:', user.id, 'workspace_type:', workspaceType, 'pathname:', url.pathname)
+      console.log('[WORKSPACE ROUTING]', {
+        pathname: url.pathname,
+        userId: user.id,
+        workspaceType,
+        isEducatorRoute,
+        isStudentRoute,
+        decision: 'ALLOW'
+      })
     } catch (err) {
       console.error('[middleware] Unexpected error fetching profile:', err)
       console.error('[middleware] User ID:', user.id, 'Error:', err.message)

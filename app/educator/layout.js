@@ -28,13 +28,28 @@ export default async function EducatorLayout({ children }) {
     redirect('/login')
   }
   
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  console.log('[educator/layout] User:', user.id, 'Profile workspace_type:', profile?.workspace_type)
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
   
-  // Redirect to student workspace if user is not an educator
-  if (profile?.workspace_type !== 'educator') {
-    console.log('[educator/layout] User is not educator, redirecting to /dashboard')
+  if (profileError) {
+    console.error('[educator/layout] Profile query error:', profileError)
+    console.error('[educator/layout] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
+    // DO NOT redirect to /dashboard - this causes the production bug
+    // Instead, allow the page to load and handle the error gracefully
+  }
+  
+  console.log('[educator/layout] User:', user.id, 'Profile exists:', !!profile, 'Profile workspace_type:', profile?.workspace_type)
+  
+  // Only redirect to student workspace if profile exists and user is not an educator
+  // DO NOT redirect if profile lookup failed - this causes the production bug
+  if (profile && profile.workspace_type !== 'educator') {
+    console.log('[educator/layout] User is not educator (workspace_type:', profile.workspace_type, '), redirecting to /dashboard')
     redirect('/dashboard')
+  }
+  
+  // If profile doesn't exist, log the error but don't redirect
+  if (!profile) {
+    console.error('[educator/layout] PROFILE NOT FOUND for user ID:', user.id)
+    console.error('[educator/layout] This indicates the profile creation trigger may have failed')
   }
 
   return (
