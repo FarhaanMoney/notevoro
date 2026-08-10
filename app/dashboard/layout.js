@@ -24,7 +24,25 @@ export default async function DashboardLayout({ children }) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+  
+  console.log('[DASHBOARD LAYOUT DEBUG]', {
+    userId: user.id,
+    profileExists: !!profile,
+    profileWorkspaceType: profile?.workspace_type,
+    profileError: profileError?.message
+  })
+  
+  if (profileError) {
+    console.error('[dashboard/layout] Profile query error:', profileError)
+    console.error('[dashboard/layout] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
+  }
+  
+  if (!profile) {
+    console.error('[dashboard/layout] PROFILE NOT FOUND for user ID:', user.id)
+    console.error('[dashboard/layout] This indicates the profile creation trigger may have failed')
+  }
 
   return (
     <div className="flex min-h-screen bg-background gradient-bg">
