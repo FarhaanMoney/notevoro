@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,15 +8,34 @@ import { Label } from '@/components/ui/label'
 import { Users, Plus, Copy, ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { VoroEmptyState } from '@/components/voro/VoroIllustration'
-import { mockClassroomList } from '@/lib/educator/mock/classroom-data'
+import * as classroomRepo from '@/lib/educator/classroom-repository'
 
 export default function ClassroomsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [classrooms, setClassrooms] = useState(mockClassroomList)
+  const [classrooms, setClassrooms] = useState([])
+  const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [newClassroom, setNewClassroom] = useState({
     name: '', subject: '', grade: '', description: '',
   })
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await classroomRepo.getEducatorClassrooms()
+        if (mounted) setClassrooms(res.classrooms || [])
+      } catch (err) {
+        console.error('Failed to load classrooms', err)
+        // fallback: leave empty
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   function generateCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -35,17 +54,9 @@ export default function ClassroomsPage() {
     try {
       // Mock creation - will be replaced with API call
       const code = `${newClassroom.subject.substring(0, 4).toUpperCase()}${newClassroom.grade}-${generateCode()}`
-      const created = {
-        id: Date.now().toString(),
-        name: newClassroom.name,
-        subject: newClassroom.subject,
-        grade: newClassroom.grade,
-        student_count: 0,
-        completion: 0,
-        next_deadline: null,
-        code,
-      }
-      setClassrooms([...classrooms, created])
+      // call repository to create classroom
+      const { classroom } = await classroomRepo.createClassroom({ name: newClassroom.name, subject: newClassroom.subject, grade: newClassroom.grade, description: newClassroom.description })
+      setClassrooms([...classrooms, classroom])
       setShowCreateModal(false)
       setNewClassroom({ name: '', subject: '', grade: '', description: '' })
       toast.success('Classroom created successfully!')
@@ -73,7 +84,9 @@ export default function ClassroomsPage() {
         </Button>
       </div>
 
-      {classrooms.length === 0 ? (
+      {loading ? (
+        <div className="p-6 text-center text-sm text-muted-foreground">Loading classrooms...</div>
+      ) : classrooms.length === 0 ? (
         <VoroEmptyState
           type="default"
           title="No classrooms yet"
@@ -101,12 +114,12 @@ export default function ClassroomsPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-2">
                     <Users className="w-3 h-3" />
-                    {classroom.student_count} Students
+                    { (classroom.student_count ?? classroom.studentCount) ?? '-'} Students
                   </span>
-                  <span className="text-muted-foreground">{classroom.completion}%</span>
+                  <span className="text-muted-foreground">{ (classroom.completion ?? classroom.completionRate ?? classroom.classAverage) ?? '-'}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-violet-500 to-pink-500" style={{ width: `${classroom.completion}%` }} />
+                  <div className="h-full bg-gradient-to-r from-violet-500 to-pink-500" style={{ width: `${(classroom.completion ?? classroom.completionRate ?? 0)}%` }} />
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Code: <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{classroom.code}</span>

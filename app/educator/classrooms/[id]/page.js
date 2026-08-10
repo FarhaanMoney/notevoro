@@ -1,12 +1,13 @@
 "use client"
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Users, FileText, BookOpen, BarChart3, Settings, Copy, ArrowLeft, Plus } from 'lucide-react'
 import { toast } from 'sonner'
-import { getMockClassroom, generateClassroomCode } from '@/lib/educator/mock/classroom-data'
+import { generateClassroomCode } from '@/lib/educator/mock/classroom-data'
+import * as classroomRepo from '@/lib/educator/classroom-repository'
 import { ChartContainer } from '@/components/ui/chart'
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
@@ -22,29 +23,93 @@ export default function ClassroomDetailPage() {
   const params = useParams()
   const [activeTab, setActiveTab] = useState('overview')
   
-  const classroom = useMemo(() => getMockClassroom(params.id) || {
-    id: params.id,
-    name: 'Classroom',
+  const [classroom, setClassroom] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [showInvite, setShowInvite] = useState(false)
+  const [showCreateAssignment, setShowCreateAssignment] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState(null)
+  const [assignmentDraft, setAssignmentDraft] = useState({
+    title: '',
+    description: '',
     subject: '',
-    grade: '',
-    studentCount: 0,
-    code: '----',
-    classAverage: 0,
-    activeAssignments: 0,
-    completionRate: 0,
-    progressData: [],
-    assignments: [],
-    students: [],
-    resources: [],
-    activities: [],
-    announcements: [],
-    needsAttention: [],
-    settings: {},
+    instructions: '',
+    dueDate: '',
+    dueTime: '',
+    points: 100,
+    type: 'Worksheet',
+  })
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await classroomRepo.getClassroomById(params.id)
+        if (mounted) setClassroom(res.classroom || null)
+      } catch (err) {
+        console.error('Failed to load classroom', err)
+        // fallback to mock for local dev
+        try {
+          const mock = await import('@/lib/educator/mock/classroom-data')
+          const m = mock.getMockClassroom(params.id)
+          if (mounted) setClassroom(m)
+        } catch (e) {
+          if (mounted) setClassroom(null)
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
   }, [params.id])
 
+  if (loading) {
+    return <div className="p-8 max-w-6xl mx-auto">Loading classroom...</div>
+  }
+  if (!classroom) {
+    return <div className="p-8 max-w-6xl mx-auto">Classroom not found or access denied.</div>
+  }
+
   function copyCode() {
-    navigator.clipboard.writeText(classroom.code)
+    const code = classroom.code ?? classroom.classroom_code ?? ''
+    navigator.clipboard.writeText(code)
     toast.success('Classroom code copied!')
+  }
+
+  function createAssignment() {
+    const dueDate = assignmentDraft.dueDate ? `${assignmentDraft.dueDate} ${assignmentDraft.dueTime || '23:59'}` : 'TBD'
+    const newAssignment = {
+      id: `a-${Date.now()}`,
+      title: assignmentDraft.title || 'New Assignment',
+      description: assignmentDraft.description || 'No description provided.',
+      subject: assignmentDraft.subject || classroom.subject || 'General',
+      instructions: assignmentDraft.instructions || 'Complete the assignment as instructed.',
+      dueDate,
+      type: assignmentDraft.type,
+      points: assignmentDraft.points,
+      submitted: 0,
+      total: classroom.studentCount || (classroom.students || []).length || 0,
+      status: 'Draft',
+      createdAt: new Date().toISOString(),
+    }
+
+    setClassroom((prev) => ({
+      ...prev,
+      assignments: [...(prev?.assignments || []), newAssignment],
+    }))
+    setShowCreateAssignment(false)
+    setAssignmentDraft({
+      title: '',
+      description: '',
+      subject: '',
+      instructions: '',
+      dueDate: '',
+      dueTime: '',
+      points: 100,
+      type: 'Worksheet',
+    })
+    toast.success('Assignment created in the classroom (mock)')
   }
 
   return (
@@ -65,19 +130,221 @@ export default function ClassroomDetailPage() {
             <Button variant="outline" onClick={copyCode}>
               <Copy className="w-4 h-4 mr-2" />Copy Code
             </Button>
-            <Button className="bg-gradient-to-r from-violet-500 to-pink-500">
+            <Button className="bg-gradient-to-r from-violet-500 to-pink-500" onClick={() => setShowInvite(true)}>
               <Plus className="w-4 h-4 mr-2" />Invite Students
             </Button>
           </div>
         </div>
       </div>
 
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowInvite(false)} />
+          <Card className="relative w-full max-w-lg p-6 bg-card/95 backdrop-blur">
+            <h3 className="text-xl font-semibold mb-2">Invite Students</h3>
+            <p className="text-sm text-muted-foreground mb-4">Students can join from their Student Workspace using this classroom code.</p>
+            <div className="mb-4">
+              <div className="font-mono text-2xl tracking-widest bg-muted px-4 py-3 rounded text-center">{classroom.classroom_code ?? classroom.code}</div>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <Button className="flex-1" onClick={() => {
+                const code = classroom.classroom_code ?? classroom.code ?? ''
+                navigator.clipboard.writeText(code)
+                toast.success('Classroom code copied')
+              }}>
+                Copy Code
+              </Button>
+              <Button className="flex-1" onClick={async () => {
+                const code = classroom.classroom_code ?? classroom.code ?? ''
+                const shareText = `Join my classroom ${classroom.name} using code ${code}`
+                const url = typeof window !== 'undefined' ? window.location.href : ''
+                if (navigator.share) {
+                  try {
+                    await navigator.share({ title: `Join ${classroom.name}`, text: shareText, url })
+                  } catch (e) {
+                    // user cancelled or no share
+                  }
+                } else {
+                  try {
+                    await navigator.clipboard.writeText(`${shareText} — ${url}`)
+                    toast.success('Invite copied to clipboard')
+                  } catch (e) {
+                    toast.error('Unable to share invite')
+                  }
+                }
+              }}>
+                Share Invite
+              </Button>
+            </div>
+            <div className="text-sm text-muted-foreground mb-4">Alternatively, instruct students to open their Student Workspace and enter the classroom code to join.</div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowInvite(false)}>Close</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {selectedStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedStudent(null)} />
+          <Card className="relative w-full max-w-xl p-6 bg-card/95 backdrop-blur">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-xl font-semibold">{selectedStudent.name}</h3>
+                <div className="text-sm text-muted-foreground">{selectedStudent.email}</div>
+              </div>
+              <Button variant="outline" onClick={() => setSelectedStudent(null)}>Close</Button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 mb-6">
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="text-sm text-muted-foreground">Average Score</div>
+                <div className="text-2xl font-semibold">{selectedStudent.average}%</div>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="text-sm text-muted-foreground">Assignments Completed</div>
+                <div className="text-2xl font-semibold">{selectedStudent.completed}</div>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="text-sm text-muted-foreground">Missing Assignments</div>
+                <div className="text-2xl font-semibold">{selectedStudent.missing}</div>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="text-sm text-muted-foreground">Last Active</div>
+                <div className="text-2xl font-semibold">{selectedStudent.lastActive}</div>
+              </div>
+            </div>
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold mb-2">Recent Activity</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                {(selectedStudent.recentActivity || []).map((activity, index) => (
+                  <li key={index} className="rounded-lg border border-border p-3 bg-background">{activity}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Teacher Notes</h4>
+              <div className="rounded-lg border border-border p-4 bg-background text-sm text-muted-foreground">
+                {selectedStudent.notes || 'No notes yet. Add a note in the next phase.'}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showCreateAssignment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreateAssignment(false)} />
+          <Card className="relative w-full max-w-2xl p-6 bg-card/95 backdrop-blur">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-xl font-semibold">Create Assignment</h3>
+                <p className="text-sm text-muted-foreground">Add a new assignment to this classroom. This is mock state only for now.</p>
+              </div>
+              <Button variant="outline" onClick={() => setShowCreateAssignment(false)}>Close</Button>
+            </div>
+            <div className="grid gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={assignmentDraft.title}
+                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                    placeholder="Worksheet 1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Subject</label>
+                  <input
+                    type="text"
+                    value={assignmentDraft.subject}
+                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, subject: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                    placeholder="Algebra"
+                  />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={assignmentDraft.dueDate}
+                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, dueDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Due Time</label>
+                  <input
+                    type="time"
+                    value={assignmentDraft.dueTime}
+                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, dueTime: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Assignment Type</label>
+                  <select
+                    value={assignmentDraft.type}
+                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, type: e.target.value }))}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                  >
+                    <option>Worksheet</option>
+                    <option>Quiz</option>
+                    <option>Project</option>
+                    <option>Discussion</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Points</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={assignmentDraft.points}
+                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, points: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={assignmentDraft.description}
+                  onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                  rows={3}
+                  placeholder="Explain the goals and output for this assignment."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Instructions</label>
+                <textarea
+                  value={assignmentDraft.instructions}
+                  onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, instructions: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-md"
+                  rows={4}
+                  placeholder="Provide step-by-step directions for students."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowCreateAssignment(false)}>Cancel</Button>
+              <Button className="bg-gradient-to-r from-violet-500 to-pink-500" onClick={createAssignment}>Create Assignment</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Classroom Info */}
       <Card className="p-6 bg-card/60 mb-6">
         <div className="grid md:grid-cols-4 gap-4">
           <div>
             <div className="text-sm text-muted-foreground">Classroom Code</div>
-            <div className="font-mono font-semibold">{classroom.code}</div>
+            <div className="font-mono font-semibold">{classroom.classroom_code ?? classroom.code}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Students</div>
@@ -115,8 +382,8 @@ export default function ClassroomDetailPage() {
       {/* Tab Content */}
       <div>
         {activeTab === 'overview' && <OverviewTab classroom={classroom} />}
-        {activeTab === 'students' && <StudentsTab classroom={classroom} />}
-        {activeTab === 'assignments' && <AssignmentsTab classroom={classroom} />}
+        {activeTab === 'students' && <StudentsTab classroom={classroom} onSelectStudent={setSelectedStudent} />}
+        {activeTab === 'assignments' && <AssignmentsTab classroom={classroom} onCreate={() => setShowCreateAssignment(true)} />}
         {activeTab === 'resources' && <ResourcesTab classroom={classroom} />}
         {activeTab === 'settings' && <SettingsTab classroom={classroom} />}
       </div>
@@ -182,7 +449,7 @@ function OverviewTab({ classroom }) {
   )
 }
 
-function StudentsTab({ classroom }) {
+function StudentsTab({ classroom, onSelectStudent }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -194,7 +461,12 @@ function StudentsTab({ classroom }) {
       <Card className="p-6 bg-card/60">
         <div className="space-y-2">
           {(classroom.students || []).map((student) => (
-            <div key={student.id} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition">
+            <button
+              key={student.id}
+              type="button"
+              onClick={() => onSelectStudent(student)}
+              className="w-full text-left flex items-center gap-4 p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition"
+            >
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-semibold">
                 {student.name ? student.name[0] : 'S'}
               </div>
@@ -206,7 +478,7 @@ function StudentsTab({ classroom }) {
                 <div className="font-semibold">{student.average}%</div>
                 <div className="text-xs text-muted-foreground">Avg Score</div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </Card>
@@ -214,12 +486,12 @@ function StudentsTab({ classroom }) {
   )
 }
 
-function AssignmentsTab({ classroom }) {
+function AssignmentsTab({ classroom, onCreate }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Assignments</h2>
-        <Button className="bg-gradient-to-r from-violet-500 to-pink-500">
+        <Button className="bg-gradient-to-r from-violet-500 to-pink-500" onClick={onCreate}>
           <Plus className="w-4 h-4 mr-2" />Create Assignment
         </Button>
       </div>
