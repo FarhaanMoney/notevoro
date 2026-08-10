@@ -12,6 +12,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { recoverMissingProfile } from '@/lib/auth/profile-recovery'
 
 /**
  * Ensure user has all required records
@@ -36,29 +37,29 @@ export async function ensureUserRecords(userId: string, email: string, metadata?
  * Manual fallback for user record creation
  */
 async function ensureUserRecordsManual(userId: string, email: string, metadata?: any, client?: any) {
-  const supabase = client || (supabaseAdmin || (await createClient()))
+  const supabase = client || supabaseAdmin || (await createClient())
   if (!supabase) return false
 
   try {
     console.log('[User Init] Using SQL function to initialize user records')
-    // Use SQL function to initialize all records (bypasses RLS)
     const { error: initError } = await supabase.rpc('initialize_user_records', {
       p_user_id: userId,
       p_email: email,
       p_metadata: metadata || {},
     })
 
-    if (initError) {
-      console.error('[User Init] initialize_user_records error:', initError)
-      throw initError
+    if (!initError) {
+      console.log('[User Init] User records initialized successfully via RPC')
+      return true
     }
 
-    console.log('[User Init] User records initialized successfully')
-    return true
+    console.error('[User Init] initialize_user_records error:', initError)
   } catch (error) {
-    console.error('[User Init] Error in manual fallback:', error)
-    return false
+    console.error('[User Init] RPC path failed:', error)
   }
+
+  const recovered = await recoverMissingProfile(userId, email, metadata || {})
+  return !!recovered
 }
 
 /**

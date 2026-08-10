@@ -27,48 +27,23 @@ function LoginForm() {
       if (error) throw error
       toast.success('Welcome back!')
       
-      // Get user profile to determine workspace type
+      // Get user profile to determine workspace type (with server-side recovery)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         console.log('[login] User authenticated:', user.id)
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('workspace_type').eq('id', user.id).maybeSingle()
-        
-        if (profileError) {
-          console.error('[login] Profile query error:', profileError)
-          console.error('[login] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
-          // DO NOT show error and return - this prevents login
-          // Instead, use default workspace_type
-          const defaultPath = '/dashboard'
-          const next = params.get('next') || defaultPath
-          console.log('[login] Profile error, redirecting to default:', next)
-          router.push(next)
-          return
-        }
-        
-        if (!profile) {
-          console.error('[login] PROFILE NOT FOUND for user ID:', user.id)
-          console.error('[login] This indicates the profile creation trigger may have failed')
-          // DO NOT show error and return - this prevents login
-          // Instead, create profile and use default workspace_type
-          try {
-            await supabase.from('profiles').insert({
-              id: user.id,
-              email: user.email,
-              display_name: user.email?.split('@')[0] || 'User',
-              workspace_type: 'student'
-            })
-            console.log('[login] Created missing profile for user:', user.id)
-          } catch (insertError) {
-            console.error('[login] Failed to create profile:', insertError)
+
+        const profileResponse = await fetch('/api/profile')
+        let workspaceType = user.user_metadata?.workspace_type || 'student'
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json()
+          if (profileData.profile?.workspace_type) {
+            workspaceType = profileData.profile.workspace_type
           }
-          const defaultPath = '/dashboard'
-          const next = params.get('next') || defaultPath
-          console.log('[login] Profile missing, redirecting to default:', next)
-          router.push(next)
-          return
+        } else {
+          console.error('[login] Profile recovery API failed:', profileResponse.status)
         }
-        
-        const workspaceType = profile?.workspace_type || 'student'
+
         console.log('[login] Profile workspace_type:', workspaceType)
         const defaultPath = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
         const next = params.get('next') || defaultPath

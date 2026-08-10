@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { resolveWorkspaceType } from '@/lib/auth/profile-recovery'
 
 export async function middleware(request) {
   const response = NextResponse.next({ request })
@@ -35,46 +36,29 @@ export async function middleware(request) {
     isStudentRoute
   })
 
-  // Get user's workspace type if authenticated
-  let workspaceType = 'student'
+  // null = unknown — must NOT be treated as student
+  let workspaceType = null
+
   if (user) {
     try {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('workspace_type')
-        .eq('id', user.id)
-        .maybeSingle()
-      
-      if (profileError) {
-        console.error('[middleware] Profile query error:', profileError)
-        console.error('[middleware] User ID:', user.id, 'Error details:', JSON.stringify(profileError))
-        // DO NOT redirect to login - this causes infinite loop
-        // Instead, use default workspace_type and let the page handle the error
-        workspaceType = 'student'
-      } else if (!profile) {
-        console.error('[middleware] PROFILE NOT FOUND for user ID:', user.id)
-        console.error('[middleware] This indicates the profile creation trigger may have failed')
-        // DO NOT redirect to login - this causes infinite loop
-        // Instead, use default workspace_type and let the page handle the error
-        workspaceType = 'student'
-      } else {
-        workspaceType = profile?.workspace_type || 'student'
+      const result = await resolveWorkspaceType(supabase, user)
+      workspaceType = result.workspaceType
+
+      if (result.recovered) {
+        console.log('[middleware] Profile recovered for user:', user.id, workspaceType)
       }
-      
+
       console.log('[WORKSPACE ROUTING]', {
         pathname: url.pathname,
         userId: user.id,
         workspaceType,
         isEducatorRoute,
         isStudentRoute,
-        decision: 'ALLOW'
+        decision: workspaceType ? 'ROUTE' : 'ALLOW_UNKNOWN'
       })
     } catch (err) {
-      console.error('[middleware] Unexpected error fetching profile:', err)
+      console.error('[middleware] Unexpected error resolving workspace:', err)
       console.error('[middleware] User ID:', user.id, 'Error:', err.message)
-      // DO NOT redirect to login - this causes infinite loop
-      // Instead, use default workspace_type and let the page handle the error
-      workspaceType = 'student'
     }
   }
 
@@ -104,12 +88,12 @@ export async function middleware(request) {
     return NextResponse.redirect(redirect)
   }
 
-  // Prevent students from accessing educator routes
-  if (isEducatorRoute && user && workspaceType !== 'educator') {
+  // Only enforce workspace separation when workspace type is known
+  if (isEducatorRoute && user && workspaceType && workspaceType !== 'educator') {
     console.log('[REDIRECT DEBUG]', {
       from: url.pathname,
       to: '/dashboard',
-      reason: 'Student attempting to access educator route',
+      reason: 'Non-educator attempting to access educator route',
       workspaceType
     })
     const redirect = url.clone()
@@ -117,7 +101,6 @@ export async function middleware(request) {
     return NextResponse.redirect(redirect)
   }
 
-  // Prevent educators from accessing student routes
   if (isStudentRoute && user && workspaceType === 'educator') {
     console.log('[REDIRECT DEBUG]', {
       from: url.pathname,

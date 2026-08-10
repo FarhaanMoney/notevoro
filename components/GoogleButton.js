@@ -13,17 +13,13 @@ export function GoogleButton({ label = 'Continue with Google', workspaceType = '
       const supabase = createClient()
       const origin = window.location.origin
       
-      // Store workspace_type in localStorage for OAuth callback
-      localStorage.setItem('pending_workspace_type', workspaceType)
-      console.log('[GoogleButton] Storing pending workspace_type:', workspaceType)
-      
+      const callbackUrl = `${origin}/auth/callback?workspace_type=${encodeURIComponent(workspaceType)}`
+      console.log('[GoogleButton] OAuth callback with workspace_type:', workspaceType)
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { 
-          redirectTo: `${origin}/auth/callback`,
-          queryParams: {
-            workspace_type: workspaceType
-          }
+        options: {
+          redirectTo: callbackUrl,
         },
       })
       if (error) throw error

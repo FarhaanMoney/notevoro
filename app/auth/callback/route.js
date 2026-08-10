@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { ensureUserRecords, logActivity } from '@/lib/auth/user-init'
+import { normalizeWorkspaceType, resolveWorkspaceType } from '@/lib/auth/profile-recovery'
 
 // Supabase OAuth callback — exchanges the auth code for a session cookie
-// Docs: https://supabase.com/docs/guides/auth/server-side/oauth-with-pkce-flow
 export async function GET(request) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
-  const next = url.searchParams.get('next') || '/dashboard'
+  const next = url.searchParams.get('next')
   const queryWorkspaceType = url.searchParams.get('workspace_type')
 
   if (code) {
@@ -19,11 +20,15 @@ export async function GET(request) {
         console.log('[auth/callback] Query workspace_type:', queryWorkspaceType)
         console.log('[auth/callback] Auth metadata workspace_type:', data.user.user_metadata?.workspace_type)
 
-        // Ensure user has all required records
+        const metadata = {
+          ...(data.user.user_metadata || {}),
+          ...(queryWorkspaceType ? { workspace_type: queryWorkspaceType } : {}),
+        }
+
         const recordsCreated = await ensureUserRecords(
           data.user.id,
           data.user.email,
-          data.user.user_metadata
+          metadata
         )
 
         if (!recordsCreated) {
@@ -33,50 +38,42 @@ export async function GET(request) {
 
         console.log('[auth/callback] User records created successfully')
 
-        // If workspace_type was passed in query params (from GoogleButton), update the profile
-        if (queryWorkspaceType && queryWorkspaceType !== 'student') {
-          console.log('[auth/callback] Updating profile workspace_type from query:', queryWorkspaceType)
-          const { error: updateError } = await supabase
+        const resolvedWorkspace = normalizeWorkspaceType(
+          queryWorkspaceType ||
+            data.user.user_metadata?.workspace_type ||
+            'student'
+        )
+
+        if (resolvedWorkspace !== 'student') {
+          const admin = supabaseAdmin || supabase
+          const { error: updateError } = await admin
             .from('profiles')
-            .update({ workspace_type: queryWorkspaceType })
+            .update({ workspace_type: resolvedWorkspace })
             .eq('id', data.user.id)
-          
+
           if (updateError) {
             console.error('[auth/callback] Failed to update workspace_type:', updateError)
           } else {
-            console.log('[auth/callback] Profile workspace_type updated successfully')
+            console.log('[auth/callback] Profile workspace_type set to:', resolvedWorkspace)
           }
         }
 
-        // Log the login activity
         try {
           await logActivity(data.user.id, 'login', 'user', data.user.id)
         } catch (logError) {
           console.error('[auth/callback] Activity log error (non-critical):', logError)
         }
 
-        // Determine redirect based on workspace type
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('workspace_type').eq('id', data.user.id).maybeSingle()
-        
-        if (profileError) {
-          console.error('[auth/callback] Profile query error:', profileError)
-          console.error('[auth/callback] User ID:', data.user.id, 'Error details:', JSON.stringify(profileError))
-          // DO NOT redirect to login - this causes infinite loop
-          // Instead, use default workspace_type and let the page handle the error
-        }
-        
-        if (!profile) {
-          console.error('[auth/callback] PROFILE NOT FOUND for user ID:', data.user.id)
-          console.error('[auth/callback] This indicates the profile creation trigger may have failed')
-          // DO NOT redirect to login - this causes infinite loop
-          // Instead, use default workspace_type and let the page handle the error
-        }
-        
-        const workspaceType = profile?.workspace_type || 'student'
-        console.log('[auth/callback] Final workspace_type for redirect:', workspaceType)
-        const defaultNext = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+        const { workspaceType } = await resolveWorkspaceType(supabase, {
+          ...data.user,
+          user_metadata: metadata,
+        })
+
+        const finalWorkspace = workspaceType || resolvedWorkspace
+        console.log('[auth/callback] Final workspace_type for redirect:', finalWorkspace)
+        const defaultNext = finalWorkspace === 'educator' ? '/educator/dashboard' : '/dashboard'
         const redirectPath = next || defaultNext
-        console.log('[auth/callback] Redirecting to:', redirectPath, 'with workspace_type:', workspaceType)
+        console.log('[auth/callback] Redirecting to:', redirectPath)
 
         return NextResponse.redirect(new URL(redirectPath, url.origin))
       }
