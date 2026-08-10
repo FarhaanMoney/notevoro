@@ -1,10 +1,14 @@
-'use client'
-import { useState } from 'react'
+"use client"
+import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Users, FileText, BookOpen, BarChart3, Settings, Copy, ArrowLeft, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { getMockClassroom, generateClassroomCode } from '@/lib/educator/mock/classroom-data'
+import { ChartContainer } from '@/components/ui/chart'
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -18,17 +22,25 @@ export default function ClassroomDetailPage() {
   const params = useParams()
   const [activeTab, setActiveTab] = useState('overview')
   
-  // Mock classroom data
-  const classroom = {
+  const classroom = useMemo(() => getMockClassroom(params.id) || {
     id: params.id,
-    name: 'Mathematics 8A',
-    subject: 'Mathematics',
-    grade: '8',
-    student_count: 24,
-    code: 'MATH8A-7K4P',
-    completion: 82,
-    next_deadline: 'Tomorrow, 4:00 PM',
-  }
+    name: 'Classroom',
+    subject: '',
+    grade: '',
+    studentCount: 0,
+    code: '----',
+    classAverage: 0,
+    activeAssignments: 0,
+    completionRate: 0,
+    progressData: [],
+    assignments: [],
+    students: [],
+    resources: [],
+    activities: [],
+    announcements: [],
+    needsAttention: [],
+    settings: {},
+  }, [params.id])
 
   function copyCode() {
     navigator.clipboard.writeText(classroom.code)
@@ -39,8 +51,10 @@ export default function ClassroomDetailPage() {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <Button variant="ghost" onClick={() => window.history.back()} className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />Back to Classrooms
+            <Button variant="ghost" asChild className="mb-4">
+          <Link href="/educator/classrooms">
+            <ArrowLeft className="w-4 h-4 mr-2" />Back to Classrooms
+          </Link>
         </Button>
         <div className="flex items-start justify-between">
           <div>
@@ -52,7 +66,7 @@ export default function ClassroomDetailPage() {
               <Copy className="w-4 h-4 mr-2" />Copy Code
             </Button>
             <Button className="bg-gradient-to-r from-violet-500 to-pink-500">
-              <Plus className="w-4 h-4 mr-2" />Add Student
+              <Plus className="w-4 h-4 mr-2" />Invite Students
             </Button>
           </div>
         </div>
@@ -67,15 +81,15 @@ export default function ClassroomDetailPage() {
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Students</div>
-            <div className="font-semibold">{classroom.student_count}</div>
+            <div className="font-semibold">{classroom.studentCount}</div>
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Class Average</div>
+            <div className="font-semibold">{classroom.classAverage}%</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Completion Rate</div>
-            <div className="font-semibold">{classroom.completion}%</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Next Deadline</div>
-            <div className="font-semibold">{classroom.next_deadline}</div>
+            <div className="font-semibold">{classroom.completionRate}%</div>
           </div>
         </div>
       </Card>
@@ -117,37 +131,49 @@ function OverviewTab({ classroom }) {
         <h2 className="text-lg font-semibold mb-4">Class Statistics</h2>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="p-4 bg-muted/50 rounded-lg">
-            <div className="text-2xl font-bold">{classroom.student_count}</div>
-            <div className="text-sm text-muted-foreground">Total Students</div>
+            <div className="text-2xl font-bold">{classroom.studentCount}</div>
+            <div className="text-sm text-muted-foreground">Students</div>
           </div>
           <div className="p-4 bg-muted/50 rounded-lg">
-            <div className="text-2xl font-bold">{classroom.completion}%</div>
-            <div className="text-sm text-muted-foreground">Assignment Completion</div>
+            <div className="text-2xl font-bold">{classroom.classAverage}%</div>
+            <div className="text-sm text-muted-foreground">Class Average</div>
           </div>
           <div className="p-4 bg-muted/50 rounded-lg">
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{classroom.activeAssignments}</div>
             <div className="text-sm text-muted-foreground">Active Assignments</div>
           </div>
         </div>
       </Card>
 
       <Card className="p-6 bg-card/60">
-        <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+        <h2 className="text-lg font-semibold mb-4">Class Progress</h2>
+        <div className="h-48">
+          <ChartContainer id={`progress-${classroom.id}`} className="h-full" config={{ line: { color: 'linear-gradient(90deg,#7c3aed,#ec4899)' } }}>
+            <LineChart data={classroom.progressData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.06} />
+              <XAxis dataKey="day" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={3} dot={{ r: 3 }} />
+            </LineChart>
+          </ChartContainer>
+        </div>
+      </Card>
+
+      <Card className="p-6 bg-card/60">
+        <h2 className="text-lg font-semibold mb-4">Upcoming Assignments</h2>
         <div className="space-y-3">
-          {[
-            { student: 'Ahmed', action: 'submitted Algebra Assignment', time: '2 hours ago' },
-            { student: 'Sara', action: 'completed Biology Quiz', time: '3 hours ago' },
-            { student: 'John', action: 'joined the classroom', time: '5 hours ago' },
-          ].map((activity, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white text-xs font-semibold">
-                {activity.student[0]}
-              </div>
+          {(classroom.assignments || []).map((assignment) => (
+            <div key={assignment.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
               <div className="flex-1">
-                <span className="text-sm font-medium">{activity.student}</span>
-                <span className="text-sm text-muted-foreground"> {activity.action}</span>
+                <div className="font-medium">{assignment.title}</div>
+                <div className="text-sm text-muted-foreground">Due: {assignment.dueDate}</div>
               </div>
-              <span className="text-xs text-muted-foreground">{activity.time}</span>
+              <div className="w-40 text-right">
+                <div className="font-semibold">{assignment.submitted}/{assignment.total}</div>
+                <div className="text-xs text-muted-foreground">Submitted</div>
+              </div>
+              <Button size="sm" variant="outline">Open</Button>
             </div>
           ))}
         </div>
@@ -160,24 +186,24 @@ function StudentsTab({ classroom }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Student Roster ({classroom.student_count})</h2>
+        <h2 className="text-lg font-semibold">Student Roster ({classroom.studentCount || (classroom.students || []).length})</h2>
         <Button className="bg-gradient-to-r from-violet-500 to-pink-500">
           <Plus className="w-4 h-4 mr-2" />Add Student
         </Button>
       </div>
       <Card className="p-6 bg-card/60">
         <div className="space-y-2">
-          {['Ahmed Khan', 'Sara Patel', 'John Smith', 'Emma Wilson', 'Michael Brown'].map((student, i) => (
-            <div key={i} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition">
+          {(classroom.students || []).map((student) => (
+            <div key={student.id} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                {student[0]}
+                {student.name ? student.name[0] : 'S'}
               </div>
               <div className="flex-1">
-                <div className="font-medium">{student}</div>
-                <div className="text-sm text-muted-foreground">Last active: {['2 hours ago', '1 day ago', '3 days ago', '1 week ago', '2 weeks ago'][i]}</div>
+                <div className="font-medium">{student.name}</div>
+                <div className="text-sm text-muted-foreground">Last active: {student.lastActive}</div>
               </div>
               <div className="text-right">
-                <div className="font-semibold">{[85, 92, 78, 88, 95][i]}%</div>
+                <div className="font-semibold">{student.average}%</div>
                 <div className="text-xs text-muted-foreground">Avg Score</div>
               </div>
             </div>
@@ -199,15 +225,11 @@ function AssignmentsTab({ classroom }) {
       </div>
       <Card className="p-6 bg-card/60">
         <div className="space-y-3">
-          {[
-            { title: 'Algebra Assignment', due: 'Tomorrow, 4:00 PM', submitted: 20, total: 24 },
-            { title: 'Geometry Quiz', due: 'Friday, 2:00 PM', submitted: 15, total: 24 },
-            { title: 'Word Problems Set', due: 'Next Monday', submitted: 5, total: 24 },
-          ].map((assignment, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+          {(classroom.assignments || []).map((assignment) => (
+            <div key={assignment.id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
               <div className="flex-1">
                 <div className="font-medium">{assignment.title}</div>
-                <div className="text-sm text-muted-foreground">Due: {assignment.due}</div>
+                <div className="text-sm text-muted-foreground">Due: {assignment.dueDate}</div>
               </div>
               <div className="text-right">
                 <div className="font-semibold">{assignment.submitted}/{assignment.total}</div>
@@ -231,19 +253,55 @@ function ResourcesTab({ classroom }) {
           <Plus className="w-4 h-4 mr-2" />Add Resource
         </Button>
       </div>
-      <Card className="p-8 bg-card/60 text-center">
-        <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-        <h3 className="text-lg font-semibold mb-1">No resources yet</h3>
-        <p className="text-sm text-muted-foreground mb-4">Add lesson plans, worksheets, and other teaching materials.</p>
-        <Button className="bg-gradient-to-r from-violet-500 to-pink-500">
-          <Plus className="w-4 h-4 mr-2" />Add Resource
-        </Button>
-      </Card>
+      {(classroom.resources || []).length === 0 ? (
+        <Card className="p-8 bg-card/60 text-center">
+          <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+          <h3 className="text-lg font-semibold mb-1">No resources yet</h3>
+          <p className="text-sm text-muted-foreground mb-4">Add lesson plans, worksheets, and other teaching materials.</p>
+          <Button className="bg-gradient-to-r from-violet-500 to-pink-500">
+            <Plus className="w-4 h-4 mr-2" />Add Resource
+          </Button>
+        </Card>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {(classroom.resources || []).map((res) => (
+            <Card key={res.id} className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-medium">{res.name}</div>
+                  <div className="text-sm text-muted-foreground">{res.type} • {res.date}</div>
+                </div>
+                <div className="text-right">
+                  <Button size="sm" variant="outline">Open</Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
 function SettingsTab({ classroom }) {
+  const [code, setCode] = useState(classroom.code)
+  const [viewResources, setViewResources] = useState(Boolean(classroom?.settings?.viewResources))
+  const [submitLate, setSubmitLate] = useState(Boolean(classroom?.settings?.submitLateWork))
+  const [commentOn, setCommentOn] = useState(Boolean(classroom?.settings?.commentOnAssignments))
+  const [viewAnnouncements, setViewAnnouncements] = useState(Boolean(classroom?.settings?.viewAnnouncements))
+
+  function handleCopy() {
+    navigator.clipboard.writeText(code)
+    toast.success('Classroom code copied!')
+  }
+
+  function handleRegenerate() {
+    const parts = classroom.subject ? classroom.subject : 'CLS'
+    const newCode = generateClassroomCode(parts, classroom.grade || '')
+    setCode(newCode)
+    toast.success('Classroom code regenerated (mock)')
+  }
+
   return (
     <div className="space-y-6">
       <Card className="p-6 bg-card/60">
@@ -264,6 +322,32 @@ function SettingsTab({ classroom }) {
               rows={3}
               placeholder="Add a description for this classroom..."
             />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Classroom Code</label>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="font-mono px-3 py-2 bg-muted rounded-md">{code}</div>
+              <Button size="sm" variant="outline" onClick={handleCopy}>Copy</Button>
+              <Button size="sm" onClick={handleRegenerate}>Regenerate</Button>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <label className="flex items-center justify-between">
+              <span>Students can view class resources</span>
+              <input type="checkbox" checked={viewResources} onChange={(e) => setViewResources(e.target.checked)} />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Students can submit late work</span>
+              <input type="checkbox" checked={submitLate} onChange={(e) => setSubmitLate(e.target.checked)} />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Students can comment on assignments</span>
+              <input type="checkbox" checked={commentOn} onChange={(e) => setCommentOn(e.target.checked)} />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Students can view announcements</span>
+              <input type="checkbox" checked={viewAnnouncements} onChange={(e) => setViewAnnouncements(e.target.checked)} />
+            </label>
           </div>
           <Button className="bg-gradient-to-r from-violet-500 to-pink-500">Save Changes</Button>
         </div>

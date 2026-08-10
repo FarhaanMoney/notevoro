@@ -1,19 +1,18 @@
-'use client'
+"use client"
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, Plus, Copy, Share, ArrowRight, Loader2 } from 'lucide-react'
+import { Users, Plus, Copy, ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { VoroEmptyState } from '@/components/voro/VoroIllustration'
+import { mockClassroomList } from '@/lib/educator/mock/classroom-data'
 
 export default function ClassroomsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [classrooms, setClassrooms] = useState([
-    { id: '1', name: 'Mathematics 8A', subject: 'Mathematics', grade: '8', student_count: 24, completion: 82, next_deadline: 'Tomorrow, 4:00 PM', code: 'MATH8A-7K4P' },
-    { id: '2', name: 'Biology 10B', subject: 'Biology', grade: '10', student_count: 28, completion: 65, next_deadline: 'Friday, 2:00 PM', code: 'BIO10B-3X9Q' },
-  ])
+  const [classrooms, setClassrooms] = useState(mockClassroomList)
   const [creating, setCreating] = useState(false)
   const [newClassroom, setNewClassroom] = useState({
     name: '', subject: '', grade: '', description: '',
@@ -118,9 +117,11 @@ export default function ClassroomsPage() {
                 <Button size="sm" variant="outline" className="flex-1" onClick={() => copyCode(classroom.code)}>
                   <Copy className="w-3 h-3 mr-1" />Copy Code
                 </Button>
-                <Button size="sm" className="flex-1 bg-gradient-to-r from-violet-500 to-pink-500">
-                  Open <ArrowRight className="w-3 h-3 ml-1" />
-                </Button>
+                <Link href={`/educator/classrooms/${classroom.id}`} className="flex-1">
+                  <Button size="sm" className="w-full bg-gradient-to-r from-violet-500 to-pink-500">
+                    Open <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </Link>
               </div>
             </Card>
           ))}
