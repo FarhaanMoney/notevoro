@@ -22,7 +22,7 @@ import ResourceDetailDrawer from './components/ResourceDetailDrawer'
 import CreateResourceDialog from './components/CreateResourceDialog'
 import ImportResourceDialog from './components/ImportResourceDialog'
 import ShareResourceDialog from './components/ShareResourceDialog'
-import CollectionPanel from './components/CollectionPanel'
+// CollectionPanel removed per declutter request
 
 const TYPE_OPTIONS = [
   { id: 'lesson', label: 'Lesson Plans', icon: BookOpen },
@@ -447,106 +447,16 @@ export default function ResourcesHub() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-semibold">
-                    <span>Tags</span>
-                    <button type="button" className="text-primary" onClick={() => setFilters((current) => ({ ...current, tags: [] }))}>Clear</button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {tagOptions.length === 0 ? (
-                      <Badge variant="outline">No tags</Badge>
-                    ) : tagOptions.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => setFilters((current) => {
-                          const exists = current.tags.includes(tag)
-                          return {
-                            ...current,
-                            tags: exists ? current.tags.filter((value) => value !== tag) : [...current.tags, tag],
-                          }
-                        })}
-                        className={`rounded-full border px-3 py-1 text-sm transition ${filters.tags.includes(tag) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/60'}`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <Select value={filters.collection} onValueChange={(value) => setFilters((current) => ({ ...current, collection: value }))}>
-                    <SelectTrigger>
-                      <SelectValue>{filters.collection === 'all' ? 'All Collections' : filters.collection === 'favorites' ? '⭐ Favorites' : collections.find((col) => col.id === filters.collection)?.name || 'Collection'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Collections</SelectItem>
-                      <SelectItem value="favorites">⭐ Favorites</SelectItem>
-                      {collections.map((collection) => (
-                        <SelectItem key={collection.id} value={collection.id}>{collection.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="rounded-3xl border border-border bg-background p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">My Collections</p>
-                      <h2 className="text-lg font-semibold">Organize by collection</h2>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => setShowCollection(true)}>New</Button>
-                  </div>
-                  <div className="mt-6 space-y-3">
-                    {collections.map((collection) => (
-                      <button
-                        key={collection.id}
-                        type="button"
-                        onClick={() => setFilters((current) => ({ ...current, collection: collection.id }))}
-                        className={`group w-full rounded-3xl border px-4 py-4 text-left transition ${filters.collection === collection.id ? 'border-primary bg-primary/10' : 'border-border bg-card/60 hover:border-primary/40'}`}
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <div className="font-semibold">{collection.name}</div>
-                            <p className="text-sm text-muted-foreground">{collection.description}</p>
-                          </div>
-                          <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">View</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Tags removed to declutter UI per request */}
+                {/* Collections select retained for filtering but My Collections card removed */}
               </div>
             </div>
           </Card>
 
-          <div className="rounded-3xl border border-border bg-card/70 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Resource activity</p>
-                <h2 className="text-lg font-semibold">Quick actions</h2>
-              </div>
-              <span className="text-sm text-muted-foreground">{selectedIds.length} selected</span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button variant="outline" onClick={() => handleBulkAction('share')} disabled={!selectedIds.length}>Share</Button>
-              <Button variant="outline" onClick={() => handleBulkAction('move')} disabled={!selectedIds.length}>Move</Button>
-              <Button variant="outline" onClick={() => handleBulkAction('archive')} disabled={!selectedIds.length}>Archive</Button>
-              <Button variant="destructive" onClick={() => handleBulkAction('delete')} disabled={!selectedIds.length}>Delete</Button>
-            </div>
-            <div className="mt-4 text-sm text-muted-foreground">
-              Selected resources remain in mock state only. No database updates are performed.
-            </div>
-          </div>
+          {/* Resource activity removed to declutter UI per request */}
         </div>
 
         <aside className="space-y-6 xl:sticky xl:top-8">
-          <CollectionPanel
-            collections={collections}
-            selectedCollection={filters.collection}
-            onCreate={handleAddCollection}
-            onSelect={(collectionId) => setFilters((current) => ({ ...current, collection: collectionId }))}
-          />
           <Card className="rounded-3xl border border-border bg-card/70 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
