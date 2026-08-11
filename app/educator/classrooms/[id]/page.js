@@ -8,6 +8,7 @@ import { Users, FileText, BookOpen, BarChart3, Settings, Copy, ArrowLeft, Plus }
 import { toast } from 'sonner'
 import { generateClassroomCode } from '@/lib/educator/mock/classroom-data'
 import * as classroomRepo from '@/lib/educator/classroom-repository'
+import * as assignmentRepo from '@/lib/educator/assignment-repository'
 import { ChartContainer } from '@/components/ui/chart'
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
@@ -26,18 +27,9 @@ export default function ClassroomDetailPage() {
   const [classroom, setClassroom] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
-  const [showCreateAssignment, setShowCreateAssignment] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState(null)
-  const [assignmentDraft, setAssignmentDraft] = useState({
-    title: '',
-    description: '',
-    subject: '',
-    instructions: '',
-    dueDate: '',
-    dueTime: '',
-    points: 100,
-    type: 'Worksheet',
-  })
+  const [classroomAssignments, setClassroomAssignments] = useState([])
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
@@ -64,6 +56,29 @@ export default function ClassroomDetailPage() {
     return () => { mounted = false }
   }, [params.id])
 
+  useEffect(() => {
+    let mounted = true
+    async function loadAssignments() {
+      if (!classroom?.id) {
+        setClassroomAssignments([])
+        setAssignmentsLoading(false)
+        return
+      }
+      setAssignmentsLoading(true)
+      try {
+        const assignments = await assignmentRepo.getAssignmentsByClassroom(classroom.id)
+        if (mounted) setClassroomAssignments(assignments)
+      } catch (err) {
+        console.error('Failed to load classroom assignments', err)
+        if (mounted) setClassroomAssignments([])
+      } finally {
+        if (mounted) setAssignmentsLoading(false)
+      }
+    }
+    loadAssignments()
+    return () => { mounted = false }
+  }, [classroom?.id])
+
   if (loading) {
     return <div className="p-8 max-w-6xl mx-auto">Loading classroom...</div>
   }
@@ -75,41 +90,6 @@ export default function ClassroomDetailPage() {
     const code = classroom.code ?? classroom.classroom_code ?? ''
     navigator.clipboard.writeText(code)
     toast.success('Classroom code copied!')
-  }
-
-  function createAssignment() {
-    const dueDate = assignmentDraft.dueDate ? `${assignmentDraft.dueDate} ${assignmentDraft.dueTime || '23:59'}` : 'TBD'
-    const newAssignment = {
-      id: `a-${Date.now()}`,
-      title: assignmentDraft.title || 'New Assignment',
-      description: assignmentDraft.description || 'No description provided.',
-      subject: assignmentDraft.subject || classroom.subject || 'General',
-      instructions: assignmentDraft.instructions || 'Complete the assignment as instructed.',
-      dueDate,
-      type: assignmentDraft.type,
-      points: assignmentDraft.points,
-      submitted: 0,
-      total: classroom.studentCount || (classroom.students || []).length || 0,
-      status: 'Draft',
-      createdAt: new Date().toISOString(),
-    }
-
-    setClassroom((prev) => ({
-      ...prev,
-      assignments: [...(prev?.assignments || []), newAssignment],
-    }))
-    setShowCreateAssignment(false)
-    setAssignmentDraft({
-      title: '',
-      description: '',
-      subject: '',
-      instructions: '',
-      dueDate: '',
-      dueTime: '',
-      points: 100,
-      type: 'Worksheet',
-    })
-    toast.success('Assignment created in the classroom (mock)')
   }
 
   return (
@@ -231,114 +211,6 @@ export default function ClassroomDetailPage() {
         </div>
       )}
 
-      {showCreateAssignment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreateAssignment(false)} />
-          <Card className="relative w-full max-w-2xl p-6 bg-card/95 backdrop-blur">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h3 className="text-xl font-semibold">Create Assignment</h3>
-                <p className="text-sm text-muted-foreground">Add a new assignment to this classroom. This is mock state only for now.</p>
-              </div>
-              <Button variant="outline" onClick={() => setShowCreateAssignment(false)}>Close</Button>
-            </div>
-            <div className="grid gap-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={assignmentDraft.title}
-                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                    placeholder="Worksheet 1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Subject</label>
-                  <input
-                    type="text"
-                    value={assignmentDraft.subject}
-                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, subject: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                    placeholder="Algebra"
-                  />
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Due Date</label>
-                  <input
-                    type="date"
-                    value={assignmentDraft.dueDate}
-                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, dueDate: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Due Time</label>
-                  <input
-                    type="time"
-                    value={assignmentDraft.dueTime}
-                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, dueTime: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                  />
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Assignment Type</label>
-                  <select
-                    value={assignmentDraft.type}
-                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, type: e.target.value }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                  >
-                    <option>Worksheet</option>
-                    <option>Quiz</option>
-                    <option>Project</option>
-                    <option>Discussion</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Points</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={assignmentDraft.points}
-                    onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, points: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea
-                  value={assignmentDraft.description}
-                  onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                  rows={3}
-                  placeholder="Explain the goals and output for this assignment."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Instructions</label>
-                <textarea
-                  value={assignmentDraft.instructions}
-                  onChange={(e) => setAssignmentDraft((prev) => ({ ...prev, instructions: e.target.value }))}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-md"
-                  rows={4}
-                  placeholder="Provide step-by-step directions for students."
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setShowCreateAssignment(false)}>Cancel</Button>
-              <Button className="bg-gradient-to-r from-violet-500 to-pink-500" onClick={createAssignment}>Create Assignment</Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
       {/* Classroom Info */}
       <Card className="p-6 bg-card/60 mb-6">
         <div className="grid md:grid-cols-4 gap-4">
@@ -381,9 +253,9 @@ export default function ClassroomDetailPage() {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'overview' && <OverviewTab classroom={classroom} />}
+        {activeTab === 'overview' && <OverviewTab classroom={classroom} assignments={classroomAssignments} />}
         {activeTab === 'students' && <StudentsTab classroom={classroom} onSelectStudent={setSelectedStudent} />}
-        {activeTab === 'assignments' && <AssignmentsTab classroom={classroom} onCreate={() => setShowCreateAssignment(true)} />}
+        {activeTab === 'assignments' && <AssignmentsTab classroom={classroom} assignments={classroomAssignments} />}
         {activeTab === 'resources' && <ResourcesTab classroom={classroom} />}
         {activeTab === 'settings' && <SettingsTab classroom={classroom} />}
       </div>
@@ -391,7 +263,7 @@ export default function ClassroomDetailPage() {
   )
 }
 
-function OverviewTab({ classroom }) {
+function OverviewTab({ classroom, assignments }) {
   return (
     <div className="space-y-6">
       <Card className="p-6 bg-card/60">
@@ -430,7 +302,7 @@ function OverviewTab({ classroom }) {
       <Card className="p-6 bg-card/60">
         <h2 className="text-lg font-semibold mb-4">Upcoming Assignments</h2>
         <div className="space-y-3">
-          {(classroom.assignments || []).map((assignment) => (
+          {(assignments || []).map((assignment) => (
             <div key={assignment.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
               <div className="flex-1">
                 <div className="font-medium">{assignment.title}</div>
@@ -486,30 +358,39 @@ function StudentsTab({ classroom, onSelectStudent }) {
   )
 }
 
-function AssignmentsTab({ classroom, onCreate }) {
+function AssignmentsTab({ classroom, assignments }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Assignments</h2>
-        <Button className="bg-gradient-to-r from-violet-500 to-pink-500" onClick={onCreate}>
-          <Plus className="w-4 h-4 mr-2" />Create Assignment
+        <Button className="bg-gradient-to-r from-violet-500 to-pink-500" asChild>
+          <Link href={`/educator/assignments/create?classroomId=${classroom.id}`}>
+            <span>
+              <Plus className="w-4 h-4 mr-2" />Create Assignment
+            </span>
+          </Link>
         </Button>
       </div>
       <Card className="p-6 bg-card/60">
         <div className="space-y-3">
-          {(classroom.assignments || []).map((assignment) => (
+          {(assignments || []).map((assignment) => (
             <div key={assignment.id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
               <div className="flex-1">
                 <div className="font-medium">{assignment.title}</div>
-                <div className="text-sm text-muted-foreground">Due: {assignment.dueDate}</div>
+                <div className="text-sm text-muted-foreground">Due: {assignment.dueDate} {assignment.dueTime}</div>
               </div>
               <div className="text-right">
-                <div className="font-semibold">{assignment.submitted}/{assignment.total}</div>
-                <div className="text-xs text-muted-foreground">Submitted</div>
+                <div className="font-semibold">{assignment.assignedStudentIds?.length ?? 0} assigned</div>
+                <div className="text-xs text-muted-foreground">{assignment.status}</div>
               </div>
-              <Button size="sm" variant="outline">View</Button>
+              <Button size="sm" variant="outline" asChild>
+                <Link href={`/educator/assignments/${assignment.id}`}>View</Link>
+              </Button>
             </div>
           ))}
+          {(!assignments || assignments.length === 0) && (
+            <div className="text-sm text-muted-foreground">No assignments have been created for this classroom yet.</div>
+          )}
         </div>
       </Card>
     </div>
