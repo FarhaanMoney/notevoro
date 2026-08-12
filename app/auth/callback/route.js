@@ -71,7 +71,11 @@ export async function GET(request) {
 
         const finalWorkspace = workspaceType || resolvedWorkspace
         console.log('[auth/callback] Final workspace_type for redirect:', finalWorkspace)
-        const defaultNext = finalWorkspace === 'educator' ? '/educator/dashboard' : '/dashboard'
+        const defaultNext = finalWorkspace === 'educator'
+          ? '/educator/dashboard'
+          : finalWorkspace === 'professional'
+          ? '/professional/dashboard'
+          : '/dashboard'
         const redirectPath = next || defaultNext
         console.log('[auth/callback] Redirecting to:', redirectPath)
 

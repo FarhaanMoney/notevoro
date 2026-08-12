@@ -45,7 +45,11 @@ function LoginForm() {
         }
 
         console.log('[login] Profile workspace_type:', workspaceType)
-        const defaultPath = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+        const defaultPath = workspaceType === 'educator'
+          ? '/educator/dashboard'
+          : workspaceType === 'professional'
+          ? '/professional/dashboard'
+          : '/dashboard'
         const next = params.get('next') || defaultPath
         console.log('[login] Redirecting to:', next)
         router.push(next)

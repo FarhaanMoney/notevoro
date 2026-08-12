@@ -15,7 +15,7 @@ import { VoroThinking } from '@/components/voro/VoroThinking'
 const WORKSPACE_TYPES = [
   { value: 'student', label: 'Student', icon: GraduationCap, description: 'Study, learn, and grow with AI-powered tools' },
   { value: 'educator', label: 'Educator', icon: Users, description: 'Teach, manage classrooms, and create content' },
-  { value: 'professional', label: 'Working Professional', icon: Briefcase, description: 'Coming soon - workspace for professionals' },
+  { value: 'professional', label: 'Working Professional', icon: Briefcase, description: 'Manage projects, research, documents, and AI workflows' },
 ]
 
 export default function SignupPage() {
@@ -63,7 +63,11 @@ export default function SignupPage() {
       
       // Use window.location.href for full page reload to ensure session is established
       // This avoids middleware timing issues with router.push
-      const redirectPath = form.workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+      const redirectPath = form.workspaceType === 'educator'
+        ? '/educator/dashboard'
+        : form.workspaceType === 'professional'
+        ? '/professional/dashboard'
+        : '/dashboard'
       console.log('[signup] Using window.location.href to redirect to:', redirectPath, 'based on workspace_type:', form.workspaceType)
       window.location.href = redirectPath
     } catch (err) {
@@ -105,12 +109,11 @@ export default function SignupPage() {
                   key={type.value}
                   type="button"
                   onClick={() => update('workspaceType', type.value)}
-                  disabled={type.value === 'professional'}
                   className={`p-3 rounded-lg border text-left transition ${
                     form.workspaceType === type.value
                       ? 'border-primary bg-primary/10'
                       : 'border-border bg-card/40 hover:border-primary/40'
-                  } ${type.value === 'professional' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <type.icon className={`w-5 h-5 ${form.workspaceType === type.value ? 'text-primary' : 'text-muted-foreground'}`} />

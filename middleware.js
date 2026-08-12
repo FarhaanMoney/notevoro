@@ -28,6 +28,7 @@ export async function middleware(request) {
   const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/signup')
   const isStudentRoute = url.pathname.startsWith('/dashboard')
   const isEducatorRoute = url.pathname.startsWith('/educator')
+  const isProfessionalRoute = url.pathname.startsWith('/professional')
 
   console.log('[ROUTE DEBUG]', {
     pathname: url.pathname,
@@ -88,16 +89,29 @@ export async function middleware(request) {
     return NextResponse.redirect(redirect)
   }
 
-  // Only enforce workspace separation when workspace type is known
-  if (isEducatorRoute && user && workspaceType && workspaceType !== 'educator') {
+  if (isProfessionalRoute && !user) {
     console.log('[REDIRECT DEBUG]', {
       from: url.pathname,
-      to: '/dashboard',
+      to: '/login',
+      reason: 'Unauthenticated user accessing professional route'
+    })
+    const redirect = url.clone()
+    redirect.pathname = '/login'
+    redirect.searchParams.set('next', url.pathname)
+    return NextResponse.redirect(redirect)
+  }
+
+  // Only enforce workspace separation when workspace type is known
+  if (isEducatorRoute && user && workspaceType && workspaceType !== 'educator') {
+    const target = workspaceType === 'professional' ? '/professional/dashboard' : '/dashboard'
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: target,
       reason: 'Non-educator attempting to access educator route',
       workspaceType
     })
     const redirect = url.clone()
-    redirect.pathname = '/dashboard'
+    redirect.pathname = target
     return NextResponse.redirect(redirect)
   }
 
@@ -110,6 +124,31 @@ export async function middleware(request) {
     })
     const redirect = url.clone()
     redirect.pathname = '/educator/dashboard'
+    return NextResponse.redirect(redirect)
+  }
+
+  if (isStudentRoute && user && workspaceType === 'professional') {
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: '/professional/dashboard',
+      reason: 'Professional attempting to access student route',
+      workspaceType
+    })
+    const redirect = url.clone()
+    redirect.pathname = '/professional/dashboard'
+    return NextResponse.redirect(redirect)
+  }
+
+  if (isProfessionalRoute && user && workspaceType && workspaceType !== 'professional') {
+    const target = workspaceType === 'educator' ? '/educator/dashboard' : '/dashboard'
+    console.log('[REDIRECT DEBUG]', {
+      from: url.pathname,
+      to: target,
+      reason: 'Non-professional attempting to access professional route',
+      workspaceType
+    })
+    const redirect = url.clone()
+    redirect.pathname = target
     return NextResponse.redirect(redirect)
   }
 
@@ -132,5 +171,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/educator/:path*', '/login', '/signup'],
+  matcher: ['/dashboard/:path*', '/educator/:path*', '/professional/:path*', '/login', '/signup'],
 }
