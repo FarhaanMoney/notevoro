@@ -5,11 +5,23 @@ import Link from 'next/link'
 import { getProjects, createProject } from '@/lib/professional/professional-repository'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Search, Folder, Archive } from 'lucide-react'
+import { Plus, Search, Folder, Archive, MoreHorizontal, Star } from 'lucide-react'
 import { toast } from 'sonner'
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
+}
+
+const STATUS_COLORS = {
+  'Planning': 'bg-blue-500/10 text-blue-700',
+  'Active': 'bg-green-500/10 text-green-700',
+  'On Hold': 'bg-amber-500/10 text-amber-700',
+  'Completed': 'bg-gray-500/10 text-gray-700',
+}
 
 export default function ProfessionalProjectsPage() {
   const [projects, setProjects] = useState([])
@@ -46,87 +58,88 @@ export default function ProfessionalProjectsPage() {
     toast('Project archived')
   }
 
+  const getStatus = (progress) => {
+    if (progress === 100) return 'Completed'
+    if (progress >= 50) return 'Active'
+    if (progress > 0) return 'Active'
+    return 'Planning'
+  }
+
   return (
-    <div className="p-8 max-w-8xl mx-auto space-y-8">
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Projects</p>
-          <h1 className="text-4xl font-semibold tracking-tight">Your active workspaces</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Your workspaces</h1>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={() => setOpenCreate(true)} className="rounded-3xl px-5 py-4 gap-2">
-            <Plus className="w-4 h-4" /> New Project
-          </Button>
+        <Button onClick={() => setOpenCreate(true)} className="rounded-2xl px-5 py-3 gap-2 bg-gradient-to-r from-violet-500 to-pink-500">
+          <Plus className="w-4 h-4" /> New Project
+        </Button>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card/60 p-4">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Search className="w-4 h-4" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search projects..."
+            className="w-full bg-transparent text-sm text-foreground outline-none"
+          />
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
-          <div className="rounded-3xl border border-border bg-card/80 p-4">
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Search className="w-4 h-4" />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search projects"
-                className="w-full bg-transparent text-sm text-foreground outline-none"
-              />
-            </div>
+      {filteredProjects.length === 0 ? (
+        <Card className="p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Folder className="w-8 h-8 text-muted-foreground" />
           </div>
-          {filteredProjects.length === 0 ? (
-            <Card className="p-8 bg-card/40 text-center">
-              <p className="text-sm text-muted-foreground">No matching projects found.</p>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {filteredProjects.map((project) => (
-                <Card key={project.id} className="rounded-3xl border border-border bg-background/80 p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground mb-1">{project.category}</div>
-                      <Link href={`/professional/projects/${project.id}`} className="text-xl font-semibold hover:text-primary">{project.name}</Link>
-                      <p className="mt-3 text-sm text-muted-foreground">{project.description}</p>
+          <h3 className="text-lg font-semibold mb-2">{query ? 'No projects found' : 'No projects yet'}</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {query ? 'Try a different search term.' : 'Create your first project to organize your work.'}
+          </p>
+          {!query && (
+            <Button onClick={() => setOpenCreate(true)}>Create Project</Button>
+          )}
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredProjects.map((project) => {
+            const status = getStatus(project.progress)
+            return (
+              <Link key={project.id} href={`/professional/projects/${project.id}`}>
+                <Card className="rounded-xl border border-border bg-card/60 p-6 hover:border-primary/40 transition cursor-pointer h-full">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground mb-1">{project.category}</p>
+                      <h3 className="font-semibold truncate">{project.name}</h3>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => handleArchive(project.id)} title="Archive project">
-                      <Archive className="w-4 h-4" />
-                    </Button>
+                    <Badge variant="secondary" className={STATUS_COLORS[status] || ''}>
+                      {status}
+                    </Badge>
                   </div>
-                  <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    <span>Progress: {project.progress}%</span>
-                    <span>Updated: {new Date(project.updatedAt).toLocaleDateString()}</span>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Updated {formatDate(project.updatedAt)}</span>
+                    <span>{project.progress}% complete</span>
+                  </div>
+                  <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all"
+                      style={{ width: `${project.progress}%` }}
+                    />
                   </div>
                 </Card>
-              ))}
-            </div>
-          )}
+              </Link>
+            )
+          })}
         </div>
-
-        <div className="space-y-4">
-          <Card className="rounded-3xl border border-border bg-card/80 p-6">
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Folder className="w-5 h-5" />
-              <span className="text-sm font-semibold">Project count</span>
-            </div>
-            <p className="mt-4 text-4xl font-semibold">{projects.length}</p>
-          </Card>
-          <Card className="rounded-3xl border border-border bg-card/80 p-6">
-            <div className="text-sm uppercase tracking-[0.3em] text-muted-foreground mb-3">Project categories</div>
-            <div className="space-y-2">
-              {[...new Set(projects.map((project) => project.category))].map((category) => (
-                <div key={category} className="flex items-center justify-between rounded-2xl bg-background/60 p-3 text-sm">
-                  <span>{category}</span>
-                  <span>{projects.filter((project) => project.category === category).length}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </div>
+      )}
 
       {openCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-3xl border border-border bg-background p-8 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-background p-8 shadow-2xl">
             <div className="flex items-center justify-between gap-3 mb-6">
               <div>
                 <h2 className="text-2xl font-semibold">Create new project</h2>
