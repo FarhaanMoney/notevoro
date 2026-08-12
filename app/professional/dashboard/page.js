@@ -46,9 +46,11 @@ export default async function ProfessionalDashboardPage() {
           <p className="text-sm text-muted-foreground">{today}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.href = '/professional/voro'}>
-            <Sparkles className="w-4 h-4" /> Ask Voro
-          </Button>
+          <Link href="/professional/voro">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Sparkles className="w-4 h-4" /> Ask Voro
+            </Button>
+          </Link>
           <Button size="sm" className="gap-2 bg-gradient-to-r from-violet-500 to-pink-500">
             <Plus className="w-4 h-4" /> New
           </Button>

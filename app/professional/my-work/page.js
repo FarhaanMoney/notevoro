@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { getProjects, getTasks, getDocuments } from '@/lib/professional/professional-repository'
 import { Card } from '@/components/ui/card'
@@ -63,8 +64,12 @@ export default function MyWorkPage() {
               <h3 className="text-lg font-semibold mb-2">No recent work</h3>
               <p className="text-sm text-muted-foreground mb-4">Start by creating a project, task, or document.</p>
               <div className="flex gap-3 justify-center">
-                <Button size="sm" onClick={() => window.location.href = '/professional/projects'}>New Project</Button>
-                <Button size="sm" variant="outline" onClick={() => window.location.href = '/professional/tasks'}>New Task</Button>
+                <Link href="/professional/projects">
+                  <Button size="sm">New Project</Button>
+                </Link>
+                <Link href="/professional/tasks">
+                  <Button size="sm" variant="outline">New Task</Button>
+                </Link>
               </div>
             </Card>
           ) : (

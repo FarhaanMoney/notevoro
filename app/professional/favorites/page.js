@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Star, Folder, CheckSquare, FileText } from 'lucide-react'
@@ -21,14 +22,18 @@ export default function FavoritesPage() {
           Star projects, tasks, or documents to quickly access them here.
         </p>
         <div className="flex gap-3 justify-center">
-          <Button variant="outline" onClick={() => window.location.href = '/professional/projects'}>
-            <Folder className="w-4 h-4 mr-2" />
-            Browse Projects
-          </Button>
-          <Button variant="outline" onClick={() => window.location.href = '/professional/tasks'}>
-            <CheckSquare className="w-4 h-4 mr-2" />
-            Browse Tasks
-          </Button>
+          <Link href="/professional/projects">
+            <Button variant="outline">
+              <Folder className="w-4 h-4 mr-2" />
+              Browse Projects
+            </Button>
+          </Link>
+          <Link href="/professional/tasks">
+            <Button variant="outline">
+              <CheckSquare className="w-4 h-4 mr-2" />
+              Browse Tasks
+            </Button>
+          </Link>
         </div>
       </Card>
     </div>
