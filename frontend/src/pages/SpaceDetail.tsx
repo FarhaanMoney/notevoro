@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Tasks from "@/pages/Tasks";
 import Knowledge from "@/pages/Knowledge";
 import CalendarPage from "@/pages/CalendarPage";
+import SpaceTeam from "@/components/SpaceTeam";
 import { useWorkspace } from "@/lib/workspace";
 import { useNewSpace } from "@/lib/newSpace";
 import { getTemplate } from "@/lib/templates";
@@ -20,6 +21,8 @@ const greeting = () => {
 };
 
 const CORE_TABS = ["Overview", "Knowledge", "Tasks", "Calendar"];
+/** Modules that the shared membership engine serves, whatever the template calls them. */
+const TEAM_TABS = ["Team", "Students"];
 
 export default function SpaceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -174,7 +177,8 @@ export default function SpaceDetail() {
           {tab === "Tasks" && <Tasks spaceId={space.id} embedded />}
           {tab === "Knowledge" && <Knowledge spaceId={space.id} embedded />}
           {tab === "Calendar" && <CalendarPage spaceId={space.id} embedded />}
-          {!CORE_TABS.includes(tab) && (
+          {TEAM_TABS.includes(tab) && <SpaceTeam space={space} label={tab} />}
+          {!CORE_TABS.includes(tab) && !TEAM_TABS.includes(tab) && (
             <EmptyState
               title={`${tab} — powered by the shared engines`}
               body={`This module is part of the ${template.name} template. ${tab} items are stored as Knowledge and Tasks scoped to this Space, so use the Knowledge and Tasks modules with the "${tab}" folder or tag. Dedicated ${tab} views arrive in a later phase — nothing here is faked.`}

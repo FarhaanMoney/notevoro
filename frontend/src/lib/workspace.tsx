@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { currentUser, signOut as authSignOut } from "@/lib/auth";
-import { listSpaces } from "@/lib/repo";
-import type { AuthUser, Space } from "@/types";
+import { currentUser, signOut } from "@/lib/auth";
+import { listSpaces } from "@/lib/spacesApi";
+import { inboxCounts } from "@/lib/messagesApi";
+import type { AuthUser, InboxCounts, Space } from "@/types";
 
 type Theme = "light" | "dark" | "system";
 
@@ -15,10 +16,11 @@ interface WorkspaceValue {
   activeSpaceId: string | null;
   setActiveSpaceId: (id: string | null) => void;
   activeSpace: Space | null;
+  counts: InboxCounts | null;
   theme: Theme;
   setTheme: (t: Theme) => void;
   refreshUser: () => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
@@ -57,15 +59,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setActive(id);
   };
 
-  const userQuery = useQuery({ queryKey: ["auth", "me"], queryFn: currentUser });
+  const userQuery = useQuery({ queryKey: ["auth", "me"], queryFn: currentUser, retry: false });
   const user = userQuery.data ?? null;
 
   const spacesQuery = useQuery({
     queryKey: ["spaces", user?.id],
-    queryFn: () => listSpaces(user!.id),
+    queryFn: listSpaces,
     enabled: Boolean(user),
   });
   const spaces = spacesQuery.data ?? [];
+
+  // Light poll so an invitation or message that arrives elsewhere shows up without a reload.
+  const countsQuery = useQuery({
+    queryKey: ["inbox", "counts", user?.id],
+    queryFn: inboxCounts,
+    enabled: Boolean(user),
+    refetchInterval: 12000,
+  });
 
   const activeSpace = useMemo(
     () => spaces.find((s) => s.id === activeSpaceId) ?? null,
@@ -80,13 +90,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     activeSpaceId: activeSpace?.id ?? null,
     setActiveSpaceId,
     activeSpace,
+    counts: countsQuery.data ?? null,
     theme,
     setTheme,
     refreshUser: () => void queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
-    logout: () => {
-      authSignOut();
-      setActiveSpaceId(null);
-      queryClient.clear();
+    // Never hand-roll logout: clearing only the server session would leave the previous
+    // account's react-query cache rendering for the next login in this browser.
+    logout: async () => {
+      try {
+        await signOut();
+      } finally {
+        setActiveSpaceId(null);
+        queryClient.clear();
+      }
     },
   };
 

@@ -59,8 +59,14 @@ async def get_status_checks():
     return [StatusCheck(**status_check) for status_check in status_checks]
 
 from routers.voro import router as voro_router
+from routers.auth import router as auth_router
+from routers.spaces import router as spaces_router
+from routers.messaging import router as messaging_router
 
 api_router.include_router(voro_router)
+api_router.include_router(auth_router)
+api_router.include_router(spaces_router)
+api_router.include_router(messaging_router)
 
 # Include the router in the main app
 app.include_router(api_router)

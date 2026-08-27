@@ -1,14 +1,11 @@
 import { all, put, remove, newId } from "@/lib/idb";
-import { getTemplate } from "@/lib/templates";
 import type {
   CalendarEvent,
   ChatMessage,
   Conversation,
   KnowledgeItem,
   Priority,
-  Space,
   Task,
-  TemplateId,
 } from "@/types";
 
 /**
@@ -23,35 +20,13 @@ export const todayIso = (): string => new Date().toISOString().slice(0, 10);
 const mine = <T extends { userId: string }>(rows: T[], userId: string) =>
   rows.filter((r) => r.userId === userId);
 
-/* ---------------------------------- spaces --------------------------------- */
+/* ------------------------------- space cleanup ------------------------------ */
 
-export async function listSpaces(userId: string): Promise<Space[]> {
-  const rows = mine(await all<Space>("spaces"), userId);
-  return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-}
-
-export async function createSpace(
-  userId: string,
-  name: string,
-  templateId: TemplateId,
-): Promise<Space> {
-  const template = getTemplate(templateId);
-  const space: Space = {
-    id: newId(),
-    userId,
-    name: name.trim(),
-    templateId,
-    icon: template.icon,
-    color: template.color,
-    modules: [...template.modules],
-    createdAt: iso(),
-  };
-  await put("spaces", space);
-  return space;
-}
-
-export async function deleteSpace(userId: string, spaceId: string): Promise<void> {
-  await remove("spaces", spaceId);
+/**
+ * Spaces themselves live on the server (membership/roles), but their personal content
+ * is local — so deleting or leaving a Space must also purge the local rows.
+ */
+export async function purgeSpaceData(userId: string, spaceId: string): Promise<void> {
   for (const t of mine(await all<Task>("tasks"), userId)) {
     if (t.spaceId === spaceId) await remove("tasks", t.id);
   }
@@ -243,7 +218,6 @@ export async function addMessage(
 export async function exportAll(userId: string) {
   return {
     exportedAt: iso(),
-    spaces: await listSpaces(userId),
     tasks: mine(await all<Task>("tasks"), userId),
     events: mine(await all<CalendarEvent>("events"), userId),
     knowledge: mine(await all<KnowledgeItem>("knowledge"), userId),

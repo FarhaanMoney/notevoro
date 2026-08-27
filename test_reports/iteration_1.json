@@ -1,0 +1,139 @@
+{
+  "iteration": 1,
+  "summary": "8 browser checks (one per UI-facing acceptance criterion) and 8 backend pytest files covering the API-bearing criteria. 18 of 19 check entries passed; 1 backend test documents a real bug (DM thread title is not personalized per viewer).",
+  "passed": 18,
+  "failed": 1,
+  "bugs": [
+    {
+      "severity": "medium",
+      "criterion": "Messaging: DM and Space team chat, both send paths",
+      "title": "DM conversation title is static (creator's perspective only) instead of personalized per viewer",
+      "description": "POST /conversations for a direct thread stores a single `title` field set to the OTHER participant's name as seen by the CREATOR at creation time. Every subsequent viewer of that same conversation (including the recipient) is served that same stored title, so the recipient's Inbox shows THEIR OWN name as the thread title instead of the sender's name. The acceptance criterion requires 'New Message -> DM by email starts a thread titled with the other person's name' for both sides of the conversation.",
+      "evidence": "backend test tests/test_tscheck_messaging_mentions.py::test_dm_send_receive_and_thread_isolation — httpx POST /api/conversations (kind=direct) as user A ('Msg Sender A') to user B ('Msg Recipient B') returns id X; GET /api/conversations as user B for the same id X returns title='Msg Recipient B' (B's own name) instead of 'Msg Sender A'. Raw assertion failure: \"recipient should see the other person's name ('Msg Sender A') as the thread title, but the API returned 'Msg Recipient B'\". Confirmed independently via curl against http://localhost:8001/api/conversations with two fresh signups.",
+      "workaround_in_checks": "The browser check messaging-dm-and-team-chat locates B's thread by message body instead of by title to keep exercising real message delivery/isolation without being blocked by this bug."
+    }
+  ],
+  "action_items": [],
+  "retest_needed": true,
+  "checks": [
+    {
+      "criterion": "Signup, session persistence and logout",
+      "name": "signup-session-persist-logout",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Signup lands on /dashboard/spaces (welcome card visible); full page reload keeps user signed in; sign-out returns to '/'; direct nav to /dashboard/my-day after logout redirects to '/' instead of rendering the shell."
+    },
+    {
+      "criterion": "Signup, session persistence and logout",
+      "name": "test_signup_session_persists_and_logout_clears_it",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/auth/signup -> 200; GET /api/auth/me -> 200 (session persists); POST /api/auth/login with wrong password -> 401; POST /api/auth/logout -> 200; subsequent GET /api/auth/me -> 401."
+    },
+    {
+      "criterion": "Space creation, switching and template-driven modules",
+      "name": "space-templates-and-switching",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Created student/professional/educator Spaces; student shows Courses/Flashcards/Quizzes tabs, professional shows Team/Projects, educator shows Students/Classes; switching back to student via sidebar updates header, search placeholder and tabs with no full reload."
+    },
+    {
+      "criterion": "Space creation, switching and template-driven modules",
+      "name": "test_create_space_each_template_and_membership",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/spaces -> 200 for each of student/educator/professional/blank with correct template_id echoed back; GET /api/spaces lists all four; GET /api/spaces/{id}/members returns the creator as the sole 'owner'."
+    },
+    {
+      "criterion": "Invite by email, accept, and membership visible to both users",
+      "name": "invite-email-accept-membership",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Owner invited a second account's email as editor; invite shown under Pending; invitee saw it in Inbox -> Invitations and accepted; Space appeared in invitee's sidebar; owner's Team list (after tab remount) showed both members with roles Owner and Editor."
+    },
+    {
+      "criterion": "Invite by email, accept, and membership visible to both users",
+      "name": "test_invite_by_email_accept_and_both_see_membership / test_invite_declined_does_not_grant_membership",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/spaces/{id}/invitations -> 200 pending; GET /api/invitations (invitee) contains it; POST /api/invitations/{id}/accept -> 200; GET /api/spaces/{id}/members shows owner+editor roles. Decline case: POST .../decline -> 200, then GET /api/spaces/{id}/members for the decliner -> 404 (never joined)."
+    },
+    {
+      "criterion": "Invite by code",
+      "name": "invite-by-code-join",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "'Create invite code' produced a code under Pending; a third account pasted it into the 'Have an invite code?' card on /dashboard/spaces and the Space appeared in their sidebar."
+    },
+    {
+      "criterion": "Invite by code",
+      "name": "test_invite_by_code_redeemed_by_third_account / test_redeem_invalid_code_rejected",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/spaces/{id}/invitations (email=null) -> 200 with a code; POST /api/invitations/redeem {code} as a third account -> 200; GET /api/spaces (that account) lists the Space with role='viewer'. Invalid code -> POST /api/invitations/redeem -> 404."
+    },
+    {
+      "criterion": "Role enforcement (owner vs editor vs viewer)",
+      "name": "role-enforcement-ui",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Viewer's Team tab shows the 'cannot invite' notice and 0 invite-email inputs; editor's Team tab shows 0 role selectors and 0 remove buttons; owner sees role selectors and remove buttons; owner changed editor -> viewer and it persisted after a full page reload."
+    },
+    {
+      "criterion": "Role enforcement (owner vs editor vs viewer)",
+      "name": "test_editor_and_viewer_cannot_manage_roles_or_delete_space",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Viewer POST invitations -> 403; editor POST invitations -> 200 (editor can invite); editor PATCH member role -> 403; editor DELETE member -> 403; editor DELETE space -> 403; owner PATCH role -> 200 and persists on re-GET; owner DELETE member -> 200."
+    },
+    {
+      "criterion": "Messaging: DM and Space team chat, both send paths",
+      "name": "messaging-dm-and-team-chat",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "DM sent via Enter and via the send button both appear immediately in sender's thread and reach the recipient's thread (matched by body, see bug note on title); Space team thread '<Space> — team' created and its message never leaked into the DM thread when switching conversations."
+    },
+    {
+      "criterion": "Messaging: DM and Space team chat, both send paths",
+      "name": "test_dm_send_receive_and_thread_isolation",
+      "lane": "backend",
+      "status": "failed",
+      "evidence": "See bugs[0]: recipient's GET /api/conversations shows title='Msg Recipient B' instead of 'Msg Sender A'. Message delivery and cross-thread isolation assertions in the same file passed; only the personalized-title assertion fails."
+    },
+    {
+      "criterion": "Messaging: DM and Space team chat, both send paths",
+      "name": "test_space_team_thread_and_title",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/conversations (kind=space) -> 200, title contains the Space name; POST message to it -> 200."
+    },
+    {
+      "criterion": "Mentions, activity and unread counts",
+      "name": "mentions-and-unread-badge",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "@email mention message appears in recipient's Inbox -> Mentions tab and as a 'mentioned you' Activity row; sidebar Inbox badge shows a positive numeric count; thread row shows an unread badge that clears (count 0) after opening the thread."
+    },
+    {
+      "criterion": "Mentions, activity and unread counts",
+      "name": "test_mention_and_unread_badge_clears_on_read",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST message containing @email -> 200; GET /api/mentions (recipient) contains the message; GET /api/inbox/counts shows messages>=1, total>=1; POST /api/conversations/{id}/read -> 200; re-GET /api/conversations shows unread=0 for that thread."
+    },
+    {
+      "criterion": "Cross-user data isolation and URL tampering",
+      "name": "cross-user-isolation-url-tamper",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Run against the ingress APP_URL. Non-member navigating to /dashboard/spaces/<id> was redirected to /dashboard/spaces and the Spaces page rendered (Space detail never rendered)."
+    },
+    {
+      "criterion": "Cross-user data isolation and URL tampering",
+      "name": "test_non_member_gets_404_from_members_and_cannot_act_on_space",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Outsider GET /api/spaces/{id}/members -> 404; outsider POST invitations -> 404; outsider DELETE space -> 404; the same GET as the actual owner -> 200 (sanity check)."
+    }
+  ]
+}

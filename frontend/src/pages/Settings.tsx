@@ -132,9 +132,11 @@ export default function Settings() {
               <h3 className="font-heading text-base font-semibold">Data &amp; Storage</h3>
             </div>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Local-first: your Spaces, tasks, events, Knowledge and conversations are stored in this
-              browser&apos;s IndexedDB behind a repository abstraction. Cloud sync and BYODB adapters
-              plug into the same interface without touching the UI.
+              Local-first where it counts: your tasks, notes, calendar and Voro chats are stored in
+              this browser&apos;s IndexedDB behind a repository abstraction. Only genuinely shared
+              things — your account, Spaces, membership, invitations and messages — live on the
+              server, because other people need to see them. Cloud sync and BYODB adapters plug into
+              the same interface without touching the UI.
             </p>
             <Button variant="outline" size="sm" className="mt-4" onClick={download} data-testid="settings-export-button">
               <Download className="size-4" />
@@ -151,11 +153,12 @@ export default function Settings() {
               Active auth provider: <span className="text-foreground">{activeProvider()}</span>.
               {supabaseConfigured
                 ? " Supabase Auth is handling identity."
-                : " Supabase Auth activates automatically once VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set (add them in Vercel env vars) — until then a local identity provider keeps the app usable."}
+                : " Sessions are httpOnly cookies set by the Notevoro backend — no token ever reaches JavaScript. Supabase Auth takes over automatically once VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set (add them in Vercel env vars)."}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Every read and write is scoped to your user id and, where relevant, to a single Space —
-              so one Space&apos;s data can never appear in another.
+              Space access is checked server-side on every request: a Space you are not a member of
+              returns not-found, so editing the URL reveals nothing. Roles are enforced too — only an
+              owner can change roles or remove members, and viewers cannot invite.
             </p>
           </section>
         </div>

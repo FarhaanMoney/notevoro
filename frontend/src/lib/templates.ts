@@ -37,6 +37,7 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
       "Assignments",
       "Exams",
       "Progress",
+      "Team",
     ],
     metrics: [
       { key: "eventsToday", label: "Classes Today" },
@@ -122,7 +123,7 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
     description: "Start empty and add only the modules you need.",
     icon: "Square",
     color: "#a3a3a3",
-    modules: ["Overview", "Knowledge", "Tasks", "Calendar"],
+    modules: ["Overview", "Knowledge", "Tasks", "Calendar", "Team"],
     metrics: [
       { key: "eventsToday", label: "Events Today" },
       { key: "tasksDue", label: "Tasks Due" },

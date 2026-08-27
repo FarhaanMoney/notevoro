@@ -1,0 +1,159 @@
+{
+  "iteration": 2,
+  "mode": "retest",
+  "summary": "Retest of the DM-title-personalization fix. Backend suite (12 tests, extended the existing messaging file with a participant-alignment/idempotency test and a space-membership-sync test) all pass. All 8 previously-existing browser checks re-run and pass, including messaging-dm-and-team-chat which was UPDATED to assert B's personalized title directly (dropping the prior body-only workaround) now that the bug is fixed. No regressions found across any other criterion.",
+  "passed": 20,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "DM conversation title is personalized per viewer (previously failing check)",
+      "name": "test_dm_send_receive_and_thread_isolation",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/conversations (kind=direct) as A('Msg Sender A') to B('Msg Recipient B') -> 200; GET /api/conversations as B for the same id now returns title == 'Msg Sender A' (fixed; previously returned B's own name). Message delivery and thread-isolation assertions in the same test also pass."
+    },
+    {
+      "criterion": "DM conversation title is personalized per viewer (previously failing check)",
+      "name": "messaging-dm-and-team-chat",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Updated the check to assert directly on the fix: B's Inbox thread row and thread-title header both show 'Msg A' (never 'Msg B') after receiving the DM, replacing the prior body-only match workaround. Screenshot b-received-both-messages.png confirms the header text."
+    },
+    {
+      "criterion": "participant_names alignment",
+      "name": "test_dm_participant_names_aligned_and_idempotent_reopen",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "New test added to test_tscheck_messaging_mentions.py. POST /api/conversations returns participant_ids/participant_names of equal length (2) with participant_ids[i] <-> participant_names[i] correctly zipped for both A and B; A's view title == B's name, never A's own name."
+    },
+    {
+      "criterion": "Idempotent re-request of a direct conversation returns the same id with viewer-specific title",
+      "name": "test_dm_participant_names_aligned_and_idempotent_reopen",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Re-POST /api/conversations {kind:'direct'} from A returns the same conversation id with title == B's name; re-POST from B returns the same id with title == A's name (never B's own name)."
+    },
+    {
+      "criterion": "No regression in Space team chat titles or message delivery, incl. participant sync on new member",
+      "name": "test_space_team_thread_and_title",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Extended existing test: POST /api/conversations (kind=space) -> 200, title contains Space name; message send -> 200; owner creates an invite code, a new account redeems it (POST /api/invitations/redeem -> 200), reopening the team thread (POST /api/conversations kind=space) returns the SAME thread id with the new member now present in participant_ids/participant_names (aligned), and the new member's GET /api/conversations/{id}/messages -> 200 includes the earlier message."
+    },
+    {
+      "criterion": "No regression in Space team chat titles or message delivery",
+      "name": "messaging-dm-and-team-chat",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Space team thread '<Space> — team' created and its message never leaked into the DM thread when switching conversations (dm-thread-isolated-from-team-thread.png)."
+    },
+    {
+      "criterion": "No regression: signup/session/logout",
+      "name": "signup-session-persist-logout",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run persisted check: signup lands on /dashboard/spaces; reload keeps session; logout clears it and /dashboard/my-day redirects to '/'."
+    },
+    {
+      "criterion": "No regression: signup/session/logout",
+      "name": "test_signup_session_persists_and_logout_clears_it",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Full suite run: POST /api/auth/signup -> 200; GET /api/auth/me -> 200; wrong-password login -> 401; logout -> 200; GET /api/auth/me after logout -> 401."
+    },
+    {
+      "criterion": "No regression: space templates and switching",
+      "name": "space-templates-and-switching",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run persisted check: student/professional/educator template tabs correct; switching back to student updates header/tabs without a full reload."
+    },
+    {
+      "criterion": "No regression: space templates and switching",
+      "name": "test_create_space_each_template_and_membership",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Full suite run: POST /api/spaces -> 200 for each template; GET /api/spaces/{id}/members returns creator as owner."
+    },
+    {
+      "criterion": "No regression: invite by email",
+      "name": "invite-email-accept-membership",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run persisted check: invite shown Pending, invitee accepted from Inbox, Space appears in invitee's sidebar, owner's Team list shows both members."
+    },
+    {
+      "criterion": "No regression: invite by email",
+      "name": "test_invite_by_email_accept_and_both_see_membership / test_invite_declined_does_not_grant_membership",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Full suite run: invite -> pending -> accept -> members list shows owner+editor; decline case -> 404 members for decliner."
+    },
+    {
+      "criterion": "No regression: invite by code",
+      "name": "invite-by-code-join",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run persisted check: code created under Pending; third account redeemed it and Space appeared in sidebar."
+    },
+    {
+      "criterion": "No regression: invite by code",
+      "name": "test_invite_by_code_redeemed_by_third_account / test_redeem_invalid_code_rejected",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Full suite run: valid code redeemed -> 200, viewer role granted; invalid code -> 404."
+    },
+    {
+      "criterion": "No regression: role enforcement",
+      "name": "role-enforcement-ui",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run persisted check: viewer sees cannot-invite notice; editor has no role/remove controls; owner's role change persists after reload."
+    },
+    {
+      "criterion": "No regression: role enforcement",
+      "name": "test_editor_and_viewer_cannot_manage_roles_or_delete_space",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Full suite run: viewer invite -> 403; editor invite -> 200; editor role/delete actions -> 403; owner role change -> 200 and persists."
+    },
+    {
+      "criterion": "No regression: mentions/activity/unread",
+      "name": "mentions-and-unread-badge",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run persisted check: @mention appears in Mentions tab + Activity row; sidebar badge non-zero; clears to 0 after opening thread."
+    },
+    {
+      "criterion": "No regression: mentions/activity/unread",
+      "name": "test_mention_and_unread_badge_clears_on_read",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Full suite run: mention delivered via GET /api/mentions; inbox counts >=1 before read; unread==0 after POST /conversations/{id}/read."
+    },
+    {
+      "criterion": "No regression: cross-user isolation and URL tampering",
+      "name": "cross-user-isolation-url-tamper",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run persisted check (against ingress APP_URL): non-member navigating to /dashboard/spaces/<id> redirected to /dashboard/spaces."
+    },
+    {
+      "criterion": "No regression: cross-user isolation and URL tampering",
+      "name": "test_non_member_gets_404_from_members_and_cannot_act_on_space",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Full suite run: outsider GET members -> 404, POST invitations -> 404, DELETE space -> 404; owner sanity GET -> 200."
+    },
+    {
+      "criterion": "Overall backend suite health",
+      "name": "full pytest run",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "cd /app/backend && python -m pytest -q -p no:cacheprovider -> '12 passed in 3.77s'."
+    }
+  ]
+}

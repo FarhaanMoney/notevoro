@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { activeProvider, requestPasswordReset, signIn, signUp } from "@/lib/auth";
+import { activeProvider, apiErrorMessage, requestPasswordReset, signIn, signUp } from "@/lib/auth";
 import { useWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,7 @@ export default function Auth() {
         refreshUser();
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+      toast.error(apiErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -75,7 +75,8 @@ export default function Auth() {
           </p>
         </div>
         <p className="relative text-xs text-muted-foreground">
-          Local-first: your workspace data lives in your browser. Auth provider:{" "}
+          Local-first: tasks, notes and calendar live in your browser. Accounts, Spaces and
+          messaging are shared. Auth provider:{" "}
           <span className="text-foreground">{activeProvider()}</span>
         </p>
       </section>

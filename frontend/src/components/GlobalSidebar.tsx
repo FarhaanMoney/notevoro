@@ -23,7 +23,7 @@ const GLOBAL = [
 ];
 
 export default function GlobalSidebar({ onNewSpace }: { onNewSpace: () => void }) {
-  const { user, spaces, activeSpaceId, setActiveSpaceId, logout } = useWorkspace();
+  const { user, spaces, activeSpaceId, setActiveSpaceId, logout, counts } = useWorkspace();
   const navigate = useNavigate();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -122,7 +122,15 @@ export default function GlobalSidebar({ onNewSpace }: { onNewSpace: () => void }
       <div className="flex flex-col gap-1 border-t border-border px-3 py-3">
         <NavLink to="/dashboard/inbox" className={linkClass} data-testid="nav-inbox">
           <Inbox className="size-[17px]" />
-          Inbox
+          <span className="flex-1">Inbox</span>
+          {Boolean(counts?.total) && (
+            <span
+              className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground"
+              data-testid="inbox-unread-badge"
+            >
+              {counts?.total}
+            </span>
+          )}
         </NavLink>
         <NavLink to="/dashboard/settings" className={linkClass} data-testid="nav-settings">
           <SettingsIcon className="size-[17px]" />
@@ -142,7 +150,7 @@ export default function GlobalSidebar({ onNewSpace }: { onNewSpace: () => void }
         </div>
         <button
           type="button"
-          onClick={logout}
+          onClick={() => void logout()}
           aria-label="Sign out"
           className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           data-testid="sign-out-button"

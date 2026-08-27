@@ -1,59 +1,66 @@
 # Notevoro V2 — Unified Spaces (living spec)
 
 ## What the app is
-A unified personal knowledge, productivity and AI workspace. There is ONE application
-under `/dashboard`. Student / Educator / Professional are **Space templates**
-(configuration), never separate apps.
+A unified personal knowledge, productivity and AI workspace. ONE application under
+`/dashboard`. Student / Educator / Professional are **Space templates** (configuration),
+never separate apps.
 
-## Architecture
-- **Frontend** (`/app/frontend`) — Vite + React 19 + TS strict, Tailwind v4, shadcn/base-ui.
-  - `src/lib/idb.ts` — the only module that knows IndexedDB exists (storage primitive).
-  - `src/lib/repo.ts` — repository layer. Every read/write scoped by `userId` and, where
-    relevant, `spaceId`. Swapping in a Postgres/BYODB adapter means replacing these two
-    files, not the UI.
-  - `src/lib/auth.ts` — auth provider abstraction. Reports `supabase` when
-    `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` exist; otherwise a local IndexedDB
-    identity provider keeps the app usable. Session id in `localStorage`.
-  - `src/lib/templates.ts` — `SPACE_TEMPLATES`: data-driven templates (modules, metrics,
-    Voro suggestions). Adding a template = appending a record; this is what makes future
-    AI-generated Spaces possible.
-  - `src/lib/workspace.tsx` — user + spaces + activeSpace + theme context.
-  - `src/components/` — GlobalSidebar, VoroPanel, AppShell, TopBar, CreateSpaceDialog, Primitives.
-  - `src/pages/` — Auth, MyDay, Knowledge, Tasks, CalendarPage, VoroPage, Spaces,
-    SpaceDetail, Settings, Inbox.
-- **Backend** (`/app/backend`) — FastAPI. Only responsibility right now is the AI layer,
-  so provider credentials never reach the browser.
-  - `routers/voro.py` → `GET /api/voro/provider`, `POST /api/voro/chat`
-    (any OpenAI-compatible endpoint via `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`).
-  - Returns `503` with an actionable `detail` when no provider is configured.
+## Storage split (deliberate)
+- **Local-first (IndexedDB)** — personal workspace data: tasks, calendar events,
+  Knowledge items, Voro AI chats. `src/lib/idb.ts` (primitive) → `src/lib/repo.ts`
+  (repository). Scoped by `userId` + `spaceId`.
+- **Server (FastAPI + MongoDB)** — only genuinely shared things: accounts/sessions,
+  Spaces, membership + roles, invitations, conversations, messages, mentions, activity.
+  Other people must be able to see these, so they cannot live in one browser.
+- Supabase Auth drops into `src/lib/auth.ts` when `VITE_SUPABASE_URL` +
+  `VITE_SUPABASE_ANON_KEY` are set; nothing else changes.
+
+## Backend endpoints (all on api_router under /api)
+- `POST /auth/signup|login|logout`, `GET /auth/me`, `POST /auth/recover`, `GET /auth/directory`
+  — httpOnly cookie session (`nv_session`), PBKDF2-SHA256 passwords.
+- `GET|POST /spaces`, `DELETE /spaces/{id}`, `GET /spaces/{id}/members`,
+  `PATCH|DELETE /spaces/{id}/members/{userId}`
+- `POST|GET /spaces/{id}/invitations`, `GET /invitations`,
+  `POST /invitations/{id}/accept|decline`, `POST /invitations/redeem`
+- `GET|POST /conversations`, `GET|POST /conversations/{id}/messages`,
+  `POST /conversations/{id}/read`, `GET /mentions`, `GET /activity`, `GET /inbox/counts`
+- `GET /voro/provider`, `POST /voro/chat` (any OpenAI-compatible endpoint via
+  `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`; 503 with actionable detail when unset)
+
+## Roles
+`owner` > `editor` > `viewer`. Owner: full control (roles, remove, delete Space).
+Editor: can invite, message, work. Viewer: read-only, cannot invite.
+Enforced server-side; a Space you are not a member of returns **404**, so URL tampering
+reveals nothing.
 
 ## Shared engines (one implementation each)
-`Tasks`, `Knowledge`, `CalendarPage` are single components that take an optional
-`spaceId` + `embedded` prop. `SpaceDetail` renders them inside a Space's module tabs.
-There is no per-template engine anywhere.
-
-## Data model (IndexedDB stores)
-`users`, `spaces`, `tasks`, `events`, `knowledge`, `conversations`, `messages`, `settings`.
-All ids are `uuid4` strings. Space-owned records carry `spaceId` (nullable = "No Space").
+`Tasks`, `Knowledge`, `CalendarPage` are single components taking optional
+`spaceId` + `embedded`. `SpaceDetail` embeds them as module tabs. `SpaceTeam` serves both
+the "Team" (Professional/Student/Blank) and "Students" (Educator) modules.
 
 ## Key flows
-1. Signup → `/dashboard/spaces` welcome → Create Space (name + template) → Space opens.
-2. Space switch from the sidebar → updates route, header, search scope, module tabs,
-   metrics and Voro context. No page reload.
-3. Tasks / Events / Knowledge CRUD, persisted locally, surfaced in My Day.
-4. My Day is the ONE deliberately global context (aggregates all Spaces).
-5. Voro panel (right, 300px): conversations scoped per Space, rename/delete/switch,
-   context label + template-specific suggestions.
-6. Knowledge item → Voro actions (Summarize / Explain / Flashcards / Quiz / Extract tasks).
-7. Settings: theme (light designed, not inverted), AI provider status, JSON export.
+1. Signup → `/dashboard/spaces` welcome → Create Space (name + template).
+2. Space switch from the sidebar → route, header, search scope, module tabs, metrics and
+   Voro context all update. No reload.
+3. Tasks / Events / Knowledge CRUD (local), aggregated by My Day (the one global context).
+4. Invite: Team module → by email (lands in invitee's Inbox → Invitations) or by invite
+   code (Spaces page → "Have an invite code?"). Accept → Space appears in their sidebar.
+5. Messaging: Inbox → New Message → DM by email, or a Space team chat. Enter or the send
+   button sends. `@their-email` creates a mention. Unread badges on the sidebar + threads.
+6. Voro panel: per-Space conversations, context label, template suggestions, Knowledge→AI
+   actions.
 
-## Data isolation
-Verified: a task created in University does not appear in Startup. A Space id not owned by
-the signed-in user resolves to not-found (redirect to `/dashboard/spaces`).
+## Known non-goals / not built yet (declared, not faked)
+- Non-core template modules (Courses, Flashcards, Quizzes, Grading, Projects, Analytics…)
+  render an explicit placeholder pointing at Knowledge/Tasks.
+- No email delivery: invitations and password recovery are in-app only.
+- Messaging polls (5–12s) rather than using websockets.
+- Calendar has month + agenda; day/week and recurring events are later.
+- Supabase not connected (no credentials supplied yet).
 
-## Not built yet (declared, not faked)
-- Inbox messaging / invitations / Space members — Phase 4. The page states this plainly.
-- Non-core template modules (Courses, Flashcards, Quizzes, Grading, Projects, Team,
-  Analytics…) render an explicit "use Knowledge/Tasks with this folder" placeholder.
-- Supabase Auth is wired as an abstraction, not yet connected (no credentials supplied).
-- Calendar has month + agenda views; day/week and recurring events are later.
+## Fixes made during this phase (do not regress)
+- Toaster is `top-center`: bottom-right toasts covered the Inbox and Voro send buttons.
+- `SpaceTeam` and `Inbox` use `refetchQueries` + optimistic `setQueryData`; a plain
+  invalidate that lands mid-flight gets deduped and the stale empty result wins.
+- Inbox seeds a newly created thread into the cache **before** selecting it, and sends to
+  `activeThread.id`, so a message can never land in the previously selected thread.

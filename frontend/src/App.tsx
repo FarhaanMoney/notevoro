@@ -32,7 +32,9 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <Toaster position="bottom-right" richColors />
+      {/* Top-center: the bottom-right corner holds the Inbox and Voro send buttons, and a
+          transient toast there swallows real clicks. */}
+      <Toaster position="top-center" richColors />
     </WorkspaceProvider>
   );
 }

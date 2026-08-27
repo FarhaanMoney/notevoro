@@ -13,8 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SPACE_TEMPLATES } from "@/lib/templates";
-import { createSpace } from "@/lib/repo";
+import { SPACE_TEMPLATES, getTemplate } from "@/lib/templates";
+import { createSpace } from "@/lib/spacesApi";
+import { apiErrorMessage } from "@/lib/auth";
 import { useWorkspace } from "@/lib/workspace";
 import { spaceIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,16 @@ export default function CreateSpaceDialog({ open, onOpenChange }: Props) {
   const [templateId, setTemplateId] = useState<TemplateId>("student");
 
   const create = useMutation({
-    mutationFn: () => createSpace(user!.id, name, templateId),
+    mutationFn: () => {
+      const template = getTemplate(templateId);
+      return createSpace({
+        name,
+        templateId,
+        icon: template.icon,
+        color: template.color,
+        modules: [...template.modules],
+      });
+    },
     onSuccess: async (space) => {
       await queryClient.invalidateQueries({ queryKey: ["spaces", user?.id] });
       setActiveSpaceId(space.id);
@@ -42,7 +52,7 @@ export default function CreateSpaceDialog({ open, onOpenChange }: Props) {
       toast.success(`${space.name} is ready`);
       navigate(`/dashboard/spaces/${space.id}`);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create Space"),
+    onError: (e) => toast.error(apiErrorMessage(e, "Could not create Space")),
   });
 
   return (
