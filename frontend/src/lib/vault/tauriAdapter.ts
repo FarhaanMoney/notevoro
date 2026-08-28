@@ -38,6 +38,21 @@ const invoke = async <T>(cmd: string, args?: Record<string, unknown>): Promise<T
   return (await internals.invoke(cmd, args)) as T;
 };
 
+interface DirectoryInfo {
+  name: string;
+  path: string;
+  is_file: boolean;
+}
+
+interface VaultStats {
+  total_files: number;
+  markdown_files: number;
+  spaces: string[];
+  knowledge_count: number;
+  task_count: number;
+  event_count: number;
+}
+
 export class TauriVaultAdapter implements VaultAdapter {
   async info(): Promise<VaultInfo> {
     const info = await invoke<{ path: string; writable: boolean; watching: boolean }>(
@@ -56,6 +71,10 @@ export class TauriVaultAdapter implements VaultAdapter {
     return invoke<string[]>("vault_list", { dir });
   }
 
+  async listDirs(dir: string): Promise<DirectoryInfo[]> {
+    return invoke<DirectoryInfo[]>("vault_list_dirs", { dir });
+  }
+
   read(path: string): Promise<string | null> {
     return invoke<string | null>("vault_read", { path });
   }
@@ -68,6 +87,19 @@ export class TauriVaultAdapter implements VaultAdapter {
     return invoke<void>("vault_remove", { path });
   }
 
+  createFolder(path: string): Promise<void> {
+    return invoke<void>("vault_create_folder", { path });
+  }
+
+  async rename(oldPath: string, newPath: string): Promise<void> {
+    return invoke<void>("vault_rename", { old_path: oldPath, new_path: newPath });
+  }
+
+  async createVault(name: string): Promise<VaultInfo> {
+    await invoke<void>("vault_create_vault", { name });
+    return await this.info();
+  }
+
   async selectVault(): Promise<VaultInfo | null> {
     const picked = await invoke<{ path: string } | null>("vault_select");
     return picked ? await this.info() : null;
@@ -78,5 +110,17 @@ export class TauriVaultAdapter implements VaultAdapter {
     const listen = window.__TAURI__?.event?.listen;
     if (!listen) return () => {};
     return await listen("vault://changed", onChange);
+  }
+
+  async search(query: string): Promise<any[]> {
+    return invoke<any[]>("vault_search", { query });
+  }
+
+  async reindex(): Promise<number> {
+    return invoke<number>("vault_reindex");
+  }
+
+  async getStats(): Promise<VaultStats> {
+    return invoke<VaultStats>("vault_get_stats");
   }
 }

@@ -69,12 +69,13 @@ export class SpacesRepository {
     // Create space directory structure
     const spacePath = `spaces/${spaceId}`;
     const adapter = vault();
-    if (adapter.createFolder) {
-      await adapter.createFolder(`${spacePath}/tasks`);
-      await adapter.createFolder(`${spacePath}/knowledge`);
-      await adapter.createFolder(`${spacePath}/calendar`);
-      await adapter.createFolder(`${spacePath}/documents`);
-      await adapter.createFolder(`${spacePath}/voro`);
+    
+    // Create folders using the vault adapter
+    const folders = ['tasks', 'knowledge', 'calendar', 'documents', 'voro'];
+    for (const folder of folders) {
+      const folderPath = `${spacePath}/${folder}`;
+      // Write a placeholder file to represent the folder
+      await adapter.write(`${folderPath}/.gitkeep`, '');
     }
     
     // Create space metadata file
