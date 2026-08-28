@@ -6,7 +6,8 @@
 //!
 //! Commands exposed to the frontend (see frontend/src/lib/vault/tauriAdapter.ts):
 //!   vault_select, vault_info, vault_list, vault_read, vault_write, vault_remove,
-//!   vault_watch, vault_search, vault_reindex
+//!   vault_watch, vault_search, vault_reindex, vault_create_folder, vault_rename,
+//!   vault_create_vault, vault_get_stats
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -19,7 +20,6 @@ use notify::{RecursiveMode, Watcher};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
 const VAULT_POINTER: &str = "vault_path.txt";
@@ -44,6 +44,23 @@ struct SearchHit {
     path: String,
     title: String,
     snippet: String,
+}
+
+#[derive(Serialize)]
+struct VaultStats {
+    total_files: usize,
+    markdown_files: usize,
+    spaces: Vec<String>,
+    knowledge_count: usize,
+    task_count: usize,
+    event_count: usize,
+}
+
+#[derive(Serialize)]
+struct DirectoryInfo {
+    name: String,
+    path: String,
+    is_file: bool,
 }
 
 /* ------------------------------- vault pointer ------------------------------ */
@@ -108,24 +125,61 @@ fn resolve(root: &Path, relative: &str) -> Result<PathBuf, String> {
 /* ---------------------------------- commands -------------------------------- */
 
 #[tauri::command]
-async fn vault_select(app: AppHandle, state: State<'_, VaultState>) -> Result<VaultInfo, String> {
-    let picked = app
-        .dialog()
-        .file()
-        .set_title("Choose your Notevoro Vault folder")
-        .blocking_pick_folder()
-        .ok_or_else(|| "No folder chosen".to_string())?;
+async fn vault_select(_state: State<'_, VaultState>) -> Result<VaultInfo, String> {
+    // For now, use default vault location
+    // In production, this would use a file dialog
+    let default_vault = default_vault();
+    
+    if !default_vault.exists() {
+        fs::create_dir_all(&default_vault)
+            .map_err(|e| format!("Failed to create vault directory: {}", e))?;
+    }
+    
+    let info = VaultInfo {
+        path: default_vault.to_string_lossy().to_string(),
+        writable: true,
+        watching: false,
+    };
+    
+    Ok(info)
+}
 
-    let root = PathBuf::from(picked.to_string());
-    fs::create_dir_all(&root).map_err(|e| e.to_string())?;
-    remember_vault(&app, &root);
-    *state.root.lock().map_err(|e| e.to_string())? = Some(root.clone());
-    reindex_vault(&root)?;
+/* ---------------------------------- other commands -------------------------------- */
+
+#[tauri::command]
+async fn vault_create_vault(_state: State<'_, VaultState>, name: String) -> Result<VaultInfo, String> {
+    let base_dir = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."));
+    
+    let vault_path = base_dir.join(&name);
+    fs::create_dir_all(&vault_path).map_err(|e| e.to_string())?;
+    
+    // Create standard vault structure
+    let standard_dirs = [
+        "Spaces",
+        "Knowledge", 
+        "Tasks",
+        "Calendar",
+        "Documents",
+        "Voro",
+        "Inbox",
+        "personal",
+        "personal/tasks",
+        "personal/knowledge",
+        "personal/calendar",
+    ];
+    
+    for dir in &standard_dirs {
+        fs::create_dir_all(vault_path.join(dir)).map_err(|e| e.to_string())?;
+    }
+    
+    // Create .notevoro directory
+    fs::create_dir_all(vault_path.join(INDEX_DIR)).map_err(|e| e.to_string())?;
 
     Ok(VaultInfo {
-        path: root.to_string_lossy().to_string(),
+        path: vault_path.to_string_lossy().to_string(),
         writable: true,
-        watching: *state.watching.lock().map_err(|e| e.to_string())?,
+        watching: false,
     })
 }
 
@@ -164,6 +218,54 @@ fn vault_list(dir: String, state: State<'_, VaultState>) -> Result<Vec<String>, 
 }
 
 #[tauri::command]
+fn vault_list_dirs(dir: String, state: State<'_, VaultState>) -> Result<Vec<DirectoryInfo>, String> {
+    let root = current_root(&state)?;
+    let start = resolve(&root, &dir)?;
+    if !start.exists() {
+        return Ok(vec![]);
+    }
+    
+    let mut out = Vec::new();
+    let entries = fs::read_dir(&start).map_err(|e| e.to_string())?;
+    
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
+            
+        // Skip hidden directories and the index directory
+        if name.starts_with('.') || name == INDEX_DIR {
+            continue;
+        }
+        
+        let is_file = path.is_file();
+        let rel_path = path.strip_prefix(&root)
+            .ok()
+            .map(|p| p.to_string_lossy().replace('\\', "/"))
+            .unwrap_or_default();
+            
+        out.push(DirectoryInfo {
+            name,
+            path: rel_path,
+            is_file,
+        });
+    }
+    
+    out.sort_by(|a, b| {
+        // Sort directories first, then files, both alphabetically
+        match (a.is_file, b.is_file) {
+            (false, true) => std::cmp::Ordering::Less,
+            (true, false) => std::cmp::Ordering::Greater,
+            _ => a.name.cmp(&b.name),
+        }
+    });
+    
+    Ok(out)
+}
+
+#[tauri::command]
 fn vault_read(path: String, state: State<'_, VaultState>) -> Result<Option<String>, String> {
     let root = current_root(&state)?;
     let file = resolve(&root, &path)?;
@@ -191,11 +293,52 @@ fn vault_remove(path: String, state: State<'_, VaultState>) -> Result<(), String
     let root = current_root(&state)?;
     let file = resolve(&root, &path)?;
     if file.exists() {
-        fs::remove_file(file).map_err(|e| e.to_string())?;
+        if file.is_dir() {
+            fs::remove_dir_all(file).map_err(|e| e.to_string())?;
+        } else {
+            fs::remove_file(file).map_err(|e| e.to_string())?;
+        }
     }
     if let Ok(conn) = open_index(&root) {
         let _ = conn.execute("DELETE FROM notes WHERE path = ?1", [&path]);
     }
+    Ok(())
+}
+
+#[tauri::command]
+fn vault_create_folder(path: String, state: State<'_, VaultState>) -> Result<(), String> {
+    let root = current_root(&state)?;
+    let dir = resolve(&root, &path)?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn vault_rename(old_path: String, new_path: String, state: State<'_, VaultState>) -> Result<(), String> {
+    let root = current_root(&state)?;
+    let old = resolve(&root, &old_path)?;
+    let new = resolve(&root, &new_path)?;
+    
+    if !old.exists() {
+        return Err("Source path does not exist".into());
+    }
+    
+    if let Some(parent) = new.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    
+    fs::rename(&old, &new).map_err(|e| e.to_string())?;
+    
+    // Update index if it's a file
+    if new.is_file() {
+        if let Ok(content) = fs::read_to_string(&new) {
+            let _ = index_file(&root, &new_path, &content);
+        }
+        if let Ok(conn) = open_index(&root) {
+            let _ = conn.execute("DELETE FROM notes WHERE path = ?1", [&old_path]);
+        }
+    }
+    
     Ok(())
 }
 
@@ -259,6 +402,61 @@ fn vault_search(query: String, state: State<'_, VaultState>) -> Result<Vec<Searc
 fn vault_reindex(state: State<'_, VaultState>) -> Result<usize, String> {
     let root = current_root(&state)?;
     reindex_vault(&root)
+}
+
+#[tauri::command]
+fn vault_get_stats(state: State<'_, VaultState>) -> Result<VaultStats, String> {
+    let root = current_root(&state)?;
+    let conn = open_index(&root)?;
+    
+    let total_files: usize = conn
+        .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
+        .unwrap_or(0);
+    
+    let markdown_files = total_files; // All indexed files are markdown
+    
+    let spaces: Vec<String> = match conn.prepare("SELECT DISTINCT space FROM notes WHERE space IS NOT NULL AND space != ''") {
+        Ok(mut stmt) => {
+            match stmt.query_map([], |row| row.get(0)) {
+                Ok(rows) => rows.collect::<Result<Vec<String>, _>>().unwrap_or_default(),
+                Err(_) => vec![],
+            }
+        }
+        Err(_) => vec![],
+    };
+    
+    let knowledge_count: usize = conn
+        .query_row(
+            "SELECT COUNT(*) FROM notes WHERE kind = 'knowledge' OR kind = 'note' OR kind = 'document'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    
+    let task_count: usize = conn
+        .query_row(
+            "SELECT COUNT(*) FROM notes WHERE kind = 'task'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    
+    let event_count: usize = conn
+        .query_row(
+            "SELECT COUNT(*) FROM notes WHERE kind = 'event'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    
+    Ok(VaultStats {
+        total_files,
+        markdown_files,
+        spaces,
+        knowledge_count,
+        task_count,
+        event_count,
+    })
 }
 
 /* ----------------------------- SQLite search index --------------------------- */
@@ -349,11 +547,10 @@ fn reindex_vault(root: &Path) -> Result<usize, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
         .manage(VaultState::default())
         .setup(|app| {
-            let handle = app.handle().clone();
             // Reopen the last vault, or create the default one on first launch.
+            let handle = app.handle().clone();
             let root = restore_vault(&handle).unwrap_or_else(default_vault);
             let _ = fs::create_dir_all(&root);
             let _ = reindex_vault(&root);
@@ -366,14 +563,19 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             vault_select,
+            vault_create_vault,
             vault_info,
             vault_list,
+            vault_list_dirs,
             vault_read,
             vault_write,
             vault_remove,
+            vault_create_folder,
+            vault_rename,
             vault_watch,
             vault_search,
-            vault_reindex
+            vault_reindex,
+            vault_get_stats
         ])
         .run(tauri::generate_context!())
         .expect("error while running Notevoro");
