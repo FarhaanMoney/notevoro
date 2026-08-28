@@ -1,5 +1,5 @@
 import { vault } from "@/lib/vault";
-import type { LocalSpace } from "@/types";
+import type { Space } from "@/types";
 
 /**
  * Spaces Repository
@@ -11,7 +11,7 @@ export class SpacesRepository {
   /**
    * Get all spaces
    */
-  async listSpaces(): Promise<LocalSpace[]> {
+  async listSpaces(): Promise<Space[]> {
     const adapter = vault();
     const paths = await adapter.list("spaces");
     const spaceIds = new Set<string>();
@@ -24,7 +24,7 @@ export class SpacesRepository {
       }
     }
     
-    const spaces: LocalSpace[] = [];
+    const spaces: Space[] = [];
     for (const spaceId of spaceIds) {
       const spaceInfo = await this.getSpaceInfo(spaceId);
       if (spaceInfo) {
@@ -38,7 +38,7 @@ export class SpacesRepository {
   /**
    * Get a specific space by ID
    */
-  async getSpace(id: string): Promise<LocalSpace | null> {
+  async getSpace(id: string): Promise<Space | null> {
     return this.getSpaceInfo(id);
   }
 
@@ -50,18 +50,20 @@ export class SpacesRepository {
     name: string;
     template: "student" | "educator" | "professional" | "blank";
     description?: string;
-  }): Promise<LocalSpace> {
+  }): Promise<Space> {
     const spaceId = crypto.randomUUID();
     const now = new Date().toISOString();
     
-    const space: LocalSpace = {
+    const space: Space = {
       id: spaceId,
-      userId: input.userId,
+      ownerId: input.userId,
       name: input.name.trim(),
-      template: input.template,
-      description: input.description?.trim() || "",
+      templateId: input.template,
+      icon: "📁",
+      color: "blue",
+      modules: [],
       createdAt: now,
-      updatedAt: now,
+      role: "owner" as any,
     };
     
     // Create space directory structure
@@ -89,8 +91,8 @@ export class SpacesRepository {
   /**
    * Update an existing space
    */
-  async updateSpace(space: LocalSpace): Promise<LocalSpace> {
-    const updated = { ...space, updatedAt: new Date().toISOString() };
+  async updateSpace(space: Space): Promise<Space> {
+    const updated = { ...space, createdAt: new Date().toISOString() };
     const metadataPath = `spaces/${space.id}/space.md`;
     const metadataContent = this.serializeSpace(updated);
     await vault().write(metadataPath, metadataContent);
@@ -136,7 +138,7 @@ export class SpacesRepository {
     };
   }
 
-  private async getSpaceInfo(spaceId: string): Promise<LocalSpace | null> {
+  private async getSpaceInfo(spaceId: string): Promise<Space | null> {
     const adapter = vault();
     const metadataPath = `spaces/${spaceId}/space.md`;
     const content = await adapter.read(metadataPath);
@@ -148,12 +150,14 @@ export class SpacesRepository {
     // Fallback: create basic space info from directory structure
     return {
       id: spaceId,
-      userId: "",
+      ownerId: "",
       name: spaceId,
-      template: "blank",
-      description: "",
+      templateId: "blank" as any,
+      icon: "📁",
+      color: "blue",
+      modules: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      role: "owner" as any,
     };
   }
 
@@ -240,31 +244,31 @@ export class SpacesRepository {
     }
   }
 
-  private parseSpace(content: string, spaceId: string): LocalSpace {
+  private parseSpace(content: string, spaceId: string): Space {
     const { frontmatter } = this.parseMarkdown(content);
     
     return {
       id: spaceId,
-      userId: frontmatter.owner || "",
+      ownerId: frontmatter.owner || "",
       name: frontmatter.name || spaceId,
-      template: frontmatter.template || "blank",
-      description: frontmatter.description || "",
+      templateId: (frontmatter.template || "blank") as any,
+      icon: "📁",
+      color: "blue",
+      modules: [],
       createdAt: frontmatter.created || new Date().toISOString(),
-      updatedAt: frontmatter.updated || new Date().toISOString(),
+      role: "owner" as any,
     };
   }
 
-  private serializeSpace(space: LocalSpace): string {
+  private serializeSpace(space: Space): string {
     const frontmatter = [
       "---",
       `id: ${space.id}`,
       `type: space`,
-      `owner: ${space.userId}`,
+      `owner: ${space.ownerId}`,
       `name: ${space.name}`,
-      `template: ${space.template}`,
-      `description: ${space.description}`,
+      `template: ${space.templateId}`,
       `created: ${space.createdAt}`,
-      `updated: ${space.updatedAt}`,
       "---",
       ""
     ].filter(Boolean).join("\n");

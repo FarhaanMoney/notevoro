@@ -73,16 +73,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const localSpaces = spacesQuery.data ?? [];
 
   // Convert LocalSpace to Space for compatibility with existing UI
-  const spaces: Space[] = localSpaces.map(ls => ({
+  const spaces: Space[] = localSpaces.map((ls: Space) => ({
     id: ls.id,
-    ownerId: ls.userId,
+    ownerId: ls.ownerId,
     name: ls.name,
-    templateId: ls.template as any,
-    icon: "📁",
-    color: "blue",
-    modules: [],
+    templateId: ls.templateId,
+    icon: ls.icon,
+    color: ls.color,
+    modules: ls.modules,
     createdAt: ls.createdAt,
-    role: "owner" as any,
+    role: ls.role,
   }));
 
   // Light poll so an invitation or message that arrives elsewhere shows up without a reload.
