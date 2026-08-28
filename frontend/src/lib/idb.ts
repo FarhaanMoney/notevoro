@@ -5,7 +5,7 @@
  * Postgres adapter can replace this file without touching UI code.
  */
 const DB_NAME = "notevoro";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const STORES = [
   "users",
@@ -16,6 +16,8 @@ export const STORES = [
   "conversations",
   "messages",
   "settings",
+  // The virtual vault: one record per Markdown file, keyed by its relative path.
+  "files",
 ] as const;
 
 export type StoreName = (typeof STORES)[number];

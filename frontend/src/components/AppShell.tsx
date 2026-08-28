@@ -11,6 +11,8 @@ export default function AppShell() {
   const { user, userLoading } = useWorkspace();
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  // The dedicated Voro page IS the chat, so the right rail would be a duplicate there.
+  const showVoroPanel = !location.pathname.startsWith("/dashboard/voro");
 
   if (userLoading) {
     return (
@@ -31,7 +33,7 @@ export default function AppShell() {
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Outlet />
         </main>
-        <VoroPanel />
+        {showVoroPanel && <VoroPanel />}
         <CreateSpaceDialog open={open} onOpenChange={setOpen} />
       </div>
     </NewSpaceContext.Provider>

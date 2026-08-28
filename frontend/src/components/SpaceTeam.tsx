@@ -22,8 +22,10 @@ import {
   updateMemberRole,
 } from "@/lib/spacesApi";
 import { startSpaceThread } from "@/lib/messagesApi";
+import { getSpacePresence, sendHeartbeat } from "@/lib/presenceApi";
 import { useWorkspace } from "@/lib/workspace";
 import type { Invitation, Role, Space } from "@/types";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -53,6 +55,17 @@ export default function SpaceTeam({ space, label }: { space: Space; label: strin
     queryKey: ["space-invitations", space.id],
     queryFn: () => listSpaceInvitations(space.id),
   });
+
+  // Who on this team is online right now.
+  const presence = useQuery({
+    queryKey: ["presence", "space", space.id],
+    queryFn: async () => {
+      await sendHeartbeat(null, false).catch(() => undefined);
+      return getSpacePresence(space.id);
+    },
+    refetchInterval: 10000,
+  });
+  const onlineIds = presence.data?.online_user_ids ?? [];
 
   const refresh = () => {
     // refetchQueries, not invalidateQueries: an invalidation that lands while the first
@@ -133,14 +146,27 @@ export default function SpaceTeam({ space, label }: { space: Space; label: strin
               className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-3.5 py-3"
               data-testid={`space-member-${m.user_id}`}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-                {m.name.slice(0, 1).toUpperCase()}
+              <span className="relative shrink-0">
+                <span className="grid size-8 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                  {m.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span
+                  className={cn(
+                    "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-card",
+                    onlineIds.includes(m.user_id) ? "bg-emerald-500" : "bg-muted-foreground/40",
+                  )}
+                  title={onlineIds.includes(m.user_id) ? "Online" : "Offline"}
+                  data-testid={`member-presence-${m.user_id}`}
+                />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
                   {m.name}
                   {m.user_id === user?.id && (
                     <span className="ml-2 text-[11px] text-muted-foreground">you</span>
+                  )}
+                  {onlineIds.includes(m.user_id) && m.user_id !== user?.id && (
+                    <span className="ml-2 text-[11px] text-emerald-500">online</span>
                   )}
                 </p>
                 <p className="truncate text-[11px] text-muted-foreground">{m.email}</p>

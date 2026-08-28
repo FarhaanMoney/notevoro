@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { currentUser, signOut } from "@/lib/auth";
 import { listSpaces } from "@/lib/spacesApi";
 import { inboxCounts } from "@/lib/messagesApi";
+import { migrateLegacyDataToVault } from "@/lib/repo";
+import { vault, vaultKind } from "@/lib/vault";
 import type { AuthUser, InboxCounts, Space } from "@/types";
 
 type Theme = "light" | "dark" | "system";
@@ -17,6 +19,7 @@ interface WorkspaceValue {
   setActiveSpaceId: (id: string | null) => void;
   activeSpace: Space | null;
   counts: InboxCounts | null;
+  vaultKind: "browser" | "tauri";
   theme: Theme;
   setTheme: (t: Theme) => void;
   refreshUser: () => void;
@@ -82,6 +85,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [spaces, activeSpaceId],
   );
 
+  // Move any pre-vault records into Markdown files, once.
+  useEffect(() => {
+    if (!user) return;
+    void migrateLegacyDataToVault(user.id).then((moved) => {
+      if (moved > 0) {
+        void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        void queryClient.invalidateQueries({ queryKey: ["events"] });
+        void queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+      }
+    });
+  }, [user, queryClient]);
+
+  // External vault edits (Obsidian, VS Code, git pull) must show up live. The browser
+  // adapter has nothing to watch, so this is a no-op there and real under Tauri.
+  useEffect(() => {
+    let dispose: (() => void) | undefined;
+    void vault()
+      .watch(() => {
+        void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        void queryClient.invalidateQueries({ queryKey: ["events"] });
+        void queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+      })
+      .then((off) => {
+        dispose = off;
+      });
+    return () => dispose?.();
+  }, [queryClient]);
+
   const value: WorkspaceValue = {
     user,
     userLoading: userQuery.isLoading,
@@ -91,6 +122,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setActiveSpaceId,
     activeSpace,
     counts: countsQuery.data ?? null,
+    vaultKind: vaultKind(),
     theme,
     setTheme,
     refreshUser: () => void queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),

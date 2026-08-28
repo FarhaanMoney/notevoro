@@ -51,6 +51,7 @@ import {
   listActivity,
   listMyInvitations,
 } from "@/lib/spacesApi";
+import { usePresence } from "@/lib/usePresence";
 import type { MessageThread } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -205,6 +206,7 @@ export default function InboxPage() {
       )
     : allThreads;
   const activeThread = allThreads.find((t) => t.id === threadId) ?? null;
+  const { onlineIds, typingUsers } = usePresence(threadId, draft);
 
   const submit = () => {
     const body = draft.trim();
@@ -321,21 +323,45 @@ export default function InboxPage() {
               ) : (
                 <>
                   <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-                    <span className="grid size-9 place-items-center rounded-full bg-secondary text-xs font-semibold">
-                      {activeThread.kind === "space" ? (
-                        <Users className="size-4" />
-                      ) : (
-                        initials(activeThread.title)
+                    <span className="relative">
+                      <span className="grid size-9 place-items-center rounded-full bg-secondary text-xs font-semibold">
+                        {activeThread.kind === "space" ? (
+                          <Users className="size-4" />
+                        ) : (
+                          initials(activeThread.title)
+                        )}
+                      </span>
+                      {activeThread.participant_ids.some(
+                        (id) => id !== user?.id && onlineIds.includes(id),
+                      ) && (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card bg-emerald-500"
+                          data-testid="thread-online-dot"
+                        />
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium" data-testid="thread-title">
                         {activeThread.title}
                       </p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {activeThread.kind === "space"
-                          ? `${activeThread.participant_names.length} members`
-                          : "Direct message"}
+                      <p className="truncate text-[11px] text-muted-foreground" data-testid="thread-presence">
+                        {typingUsers.length > 0 ? (
+                          <span className="text-primary" data-testid="typing-indicator">
+                            {typingUsers.length === 1
+                              ? `${typingUsers[0].name} is typing…`
+                              : `${typingUsers.length} people are typing…`}
+                          </span>
+                        ) : activeThread.kind === "space" ? (
+                          `${activeThread.participant_names.length} members · ${
+                            activeThread.participant_ids.filter((id) => onlineIds.includes(id)).length
+                          } online`
+                        ) : activeThread.participant_ids.some(
+                            (id) => id !== user?.id && onlineIds.includes(id),
+                          ) ? (
+                          "Online"
+                        ) : (
+                          "Direct message"
+                        )}
                       </p>
                     </div>
                   </header>
