@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWorkspace } from "@/lib/workspace";
 import { useNewSpace } from "@/lib/newSpace";
-import { activeProvider, supabaseConfigured } from "@/lib/auth";
 import { exportAll, exportVaultFiles } from "@/lib/repo";
 import { vault } from "@/lib/vault";
 import { apiGet } from "@/lib/api";
@@ -253,10 +252,8 @@ export default function Settings() {
               <h3 className="font-heading text-base font-semibold">Security &amp; Auth</h3>
             </div>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Active auth provider: <span className="text-foreground">{activeProvider()}</span>.
-              {supabaseConfigured
-                ? " Supabase Auth is handling identity."
-                : " Sessions are httpOnly cookies set by the Notevoro backend — no token ever reaches JavaScript. Supabase Auth takes over automatically once VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set (add them in Vercel env vars)."}
+              Active auth provider: <span className="text-foreground">Supabase</span>.
+              Supabase Auth is handling identity.
             </p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Space access is checked server-side on every request: a Space you are not a member of

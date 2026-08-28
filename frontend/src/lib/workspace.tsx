@@ -2,11 +2,11 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { currentUser, signOut } from "@/lib/auth";
-import { listSpaces } from "@/lib/spacesApi";
+import { spacesRepository } from "@/lib/repositories";
 import { inboxCounts } from "@/lib/messagesApi";
 import { migrateLegacyDataToVault } from "@/lib/repo";
 import { vault, vaultKind } from "@/lib/vault";
-import type { AuthUser, InboxCounts, Space } from "@/types";
+import type { AuthUser, Space, InboxCounts } from "@/types";
 
 type Theme = "light" | "dark" | "system";
 
@@ -67,10 +67,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const spacesQuery = useQuery({
     queryKey: ["spaces", user?.id],
-    queryFn: listSpaces,
+    queryFn: () => spacesRepository.listSpaces(),
     enabled: Boolean(user),
   });
-  const spaces = spacesQuery.data ?? [];
+  const localSpaces = spacesQuery.data ?? [];
+
+  // Convert LocalSpace to Space for compatibility with existing UI
+  const spaces: Space[] = localSpaces.map(ls => ({
+    id: ls.id,
+    ownerId: ls.userId,
+    name: ls.name,
+    templateId: ls.template as any,
+    icon: "📁",
+    color: "blue",
+    modules: [],
+    createdAt: ls.createdAt,
+    role: "owner" as any,
+  }));
 
   // Light poll so an invitation or message that arrives elsewhere shows up without a reload.
   const countsQuery = useQuery({

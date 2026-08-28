@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { activeProvider, apiErrorMessage, requestPasswordReset, signIn, signUp } from "@/lib/auth";
+import { apiErrorMessage, requestPasswordReset, signIn, signUp } from "@/lib/auth";
 import { useWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 
@@ -76,8 +76,7 @@ export default function Auth() {
         </div>
         <p className="relative text-xs text-muted-foreground">
           Local-first: tasks, notes and calendar live in your browser. Accounts, Spaces and
-          messaging are shared. Auth provider:{" "}
-          <span className="text-foreground">{activeProvider()}</span>
+          messaging are shared. Auth provider: Supabase
         </p>
       </section>
 
