@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,11 +58,17 @@ export default function Auth() {
           className="pointer-events-none absolute -left-24 top-10 size-[420px] rounded-full blur-[120px]"
           style={{ background: "color-mix(in oklab, var(--primary) 30%, transparent)" }}
         />
-        <div className="relative flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-lg bg-primary/15 text-primary">
-            <Sparkles className="size-5" />
-          </span>
-          <span className="font-heading text-lg font-semibold">Notevoro</span>
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-lg bg-primary/15 text-primary">
+              <Sparkles className="size-5" />
+            </span>
+            <span className="font-heading text-lg font-semibold">Notevoro</span>
+          </div>
+          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="size-4" />
+            Back to home
+          </Link>
         </div>
         <div className="relative max-w-md">
           <h2 className="font-heading text-4xl font-semibold leading-[1.1]">

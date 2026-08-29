@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Notevoro",
   "version": "2.0.0",
-  "identifier": "com.notevoro.app",
+  "identifier": "com.notevoro.desktop",
   "build": {
     "beforeDevCommand": "cd ../frontend && npm run dev",
     "devUrl": "http://localhost:3000",
@@ -34,17 +34,25 @@
   "bundle": {
     "active": true,
     "targets": ["dmg", "msi", "nsis", "appimage", "deb"],
-    "icon": [],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.icns", "icons/icon.ico"],
     "copyright": "© Notevoro",
     "category": "Productivity",
     "shortDescription": "Local-first knowledge, productivity and AI workspace",
     "longDescription": "Notevoro — Unified Spaces. Your vault of Markdown files stays on your device; Notevoro is the interface and intelligence layer.",
     "macOS": {
-      "minimumSystemVersion": "10.13"
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": null,
+      "entitlements": null,
+      "providerShortName": null
     },
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256"
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
     }
   }
 }

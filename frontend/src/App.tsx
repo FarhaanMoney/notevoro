@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { WorkspaceProvider } from "@/lib/workspace";
 import AppShell from "@/components/AppShell";
 import Auth from "@/pages/Auth";
+import Landing from "@/pages/Landing";
 import MyDay from "@/pages/MyDay";
 import Knowledge from "@/pages/Knowledge";
 import Tasks from "@/pages/Tasks";
@@ -17,7 +18,8 @@ export default function App() {
   return (
     <WorkspaceProvider>
       <Routes>
-        <Route path="/" element={<Auth />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/auth" element={<Auth />} />
         <Route path="/dashboard" element={<AppShell />}>
           <Route index element={<Navigate to="/dashboard/my-day" replace />} />
           <Route path="my-day" element={<MyDay />} />
