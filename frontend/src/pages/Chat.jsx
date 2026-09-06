@@ -67,6 +67,7 @@ function Thread({ conv, user, presence, showInfo, setShowInfo, spaceId, space })
   const nav = useNavigate();
   const typingMap = useApp((s) => s.typing[conv.id]);
   const typing = typingMap || {};
+  const typingCount = Object.keys(typing).length;
   const [msgs, setMsgs] = useState([]);
   const [readMarks, setReadMarks] = useState({});
   const [text, setText] = useState('');
@@ -90,7 +91,7 @@ function Thread({ conv, user, presence, showInfo, setShowInfo, spaceId, space })
     if (event === 'message.status') setMsgs((m) => m.map((x) => (x.id === p.message_id ? { ...x, status: p.status } : x)));
     if (event === 'conversation.read' && p.user_id !== user.id) setReadMarks((r) => ({ ...r, [p.user_id]: p.read_at }));
   }), [conv.id, user.id]);
-  useEffect(() => { bottom.current?.scrollIntoView({ block: 'end' }); }, [msgs.length, Object.keys(typing).length]);
+  useEffect(() => { bottom.current?.scrollIntoView({ block: 'end' }); }, [msgs.length, typingCount]);
   const send = async () => {
     const content = text.trim();
     if (!content && !pendingFile) return;
