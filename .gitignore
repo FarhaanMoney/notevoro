@@ -85,3 +85,10 @@ backend/.storage/
 .pgdata/
 frontend/node_modules/.cache/default-development/16.pack
 frontend/node_modules/.cache/default-development/5.pack
+.env
+.env.*
+*.env
+credentials.json
+*.key
+.credentials
+frontend/node_modules/.cache/default-development/0.pack
