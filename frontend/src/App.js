@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { useApp } from './lib/store';
 import { loadAuthConfig } from './lib/auth';
 import { connectRealtime, disconnectRealtime, onEvent } from './lib/ws';
+import { initCollab } from './lib/supabase';
 import { Loading } from './lib/ui';
 import AuthPage from './pages/AuthPage';
 import BrainLayout from './pages/BrainLayout';
@@ -41,6 +42,7 @@ function RealtimeBridge() {
   useEffect(() => {
     if (!user) return;
     connectRealtime();
+    initCollab();
     const off = onEvent((event, payload) => {
       if (event.startsWith('message.') || event.startsWith('conversation.')) queryClient.invalidateQueries({ queryKey: ['conversations'] });
       if (event === 'notification.created') queryClient.invalidateQueries({ queryKey: ['notifications'] });

@@ -9,7 +9,7 @@
   },
   "app": {
     "windows": [{ "title": "Notevoro", "width": 1440, "height": 900, "minWidth": 1100, "minHeight": 700, "resizable": true }],
-    "security": { "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ipc: http://ipc.localhost https://*.notevoro.com https://*.amazonaws.com https://*.amazoncognito.com wss://*.notevoro.com https://*.liveblocks.io wss://*.liveblocks.io" }
+    "security": { "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ipc: http://ipc.localhost https://*.notevoro.com https://*.amazonaws.com https://*.amazoncognito.com wss://*.notevoro.com https://*.supabase.co wss://*.supabase.co" }
   },
   "bundle": { "active": true, "targets": ["dmg", "app", "msi", "nsis", "appimage", "deb"], "icon": ["icons/icon.png"] }
 }

@@ -16,9 +16,22 @@ class Settings(BaseSettings):
     local_storage_dir: str = "/app/backend/.storage"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
-    liveblocks_secret_key: str = ""
+    # --- Supabase Realtime (used for collaboration; blank => 503 REALTIME_NOT_CONFIGURED) ---
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_role_key: str = ""
+    supabase_jwt_secret: str = ""
     zoom_client_id: str = ""
     zoom_client_secret: str = ""
+
+    @property
+    def supabase_configured(self) -> bool:
+        return bool(self.supabase_url.strip() and self.supabase_anon_key.strip())
+
+    @property
+    def supabase_admin_configured(self) -> bool:
+        return bool(self.supabase_configured and self.supabase_service_role_key.strip())
+
     google_client_id: str = ""
     google_client_secret: str = ""
     microsoft_client_id: str = ""

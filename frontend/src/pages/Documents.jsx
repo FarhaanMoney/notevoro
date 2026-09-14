@@ -9,6 +9,7 @@ import { ago, Empty, ErrorState, Loading } from '../lib/ui';
 import { Field, Select, useCrud } from '../components/Forms';
 import { PageHeader, useSpace } from './SpaceShell';
 import { SaveState, useAutosave } from './Notes';
+import CollaborativeDocEditor, { CollabStatusPill } from '../components/CollaborativeDocEditor';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 export function renderMarkdown(md = '') {
@@ -43,7 +44,7 @@ export default function Documents({ gallery }) {
   if (current) return <DocEditor key={current.id} doc={current} docs={docs} projects={projects.items} canWrite={canWrite} spaceId={spaceId} onBack={() => nav(base)} />;
   return (
     <div className="fade-up" data-testid="documents-page">
-      <PageHeader icon="file" title={gallery ? 'Gallery' : 'Documents'} subtitle="Rich documents with version history. Collaborative editing via Liveblocks when configured." actions={canWrite && <button className="nv-btn nv-btn-primary" onClick={create} data-testid="documents-new-button"><Icon name="plus" size={14} /> New Document</button>} />
+      <PageHeader icon="file" title={gallery ? 'Gallery' : 'Documents'} subtitle="Rich collaborative documents. Realtime editing via Supabase + Yjs when configured; offline-first with local persistence." actions={canWrite && <button className="nv-btn nv-btn-primary" onClick={create} data-testid="documents-new-button"><Icon name="plus" size={14} /> New Document</button>} />
       <div className="px-7 pb-8">
         {docs.isLoading && <Loading />}{docs.error && <ErrorState error={docs.error} onRetry={docs.refetch} />}
         {!docs.isLoading && !docs.items.length && <Empty icon="file" title="No documents yet" hint="Specs, plans, meeting notes, essays — everything versioned." action={canWrite && <button className="nv-btn nv-btn-primary nv-btn-sm" onClick={create} data-testid="documents-empty-new">Create a document</button>} />}
@@ -55,11 +56,12 @@ export default function Documents({ gallery }) {
 
 function DocEditor({ doc, docs, projects, canWrite, spaceId, onBack }) {
   const [f, setF] = useState({ title: doc.title, content: doc.content || '', project_id: doc.project_id || '' });
-  const [mode, setMode] = useState('split');
+  const [mode, setMode] = useState('rich');
   const [showVersions, setShowVersions] = useState(false);
+  const [collabStatus, setCollabStatus] = useState('local');
+  const me = useApp((s) => s.user);
   const state = useAutosave(f, (v) => docs.update.mutateAsync({ id: doc.id, title: v.title, content: v.content, project_id: v.project_id || null }));
   const { data: versions = [] } = useQuery({ queryKey: ['doc-versions', doc.id, doc.version], queryFn: () => api.get(`/spaces/${spaceId}/documents/${doc.id}/versions`).then((r) => r.data), enabled: showVersions });
-  const collab = useApp((s) => s.wsStatus) === 'connected';
   const exportMd = () => { const blob = new Blob([f.content], { type: 'text/markdown' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${f.title}.md`; a.click(); };
   const print = () => { const w = window.open('', '_blank'); w.document.write(`<html><head><title>${esc(f.title)}</title><style>body{font-family:Manrope,system-ui;max-width:760px;margin:40px auto;line-height:1.6}</style></head><body>${renderMarkdown(f.content)}</body></html>`); w.document.close(); w.print(); };
   return (
@@ -68,18 +70,28 @@ function DocEditor({ doc, docs, projects, canWrite, spaceId, onBack }) {
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={onBack} aria-label="Back" data-testid="document-back"><Icon name="arrow-left" size={16} /></button>
         <input className="flex-1 text-[20px] font-extrabold tracking-tight outline-none bg-transparent" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} disabled={!canWrite} data-testid="document-title-input" />
         <SaveState state={state} /><span className="text-[11px] nv-faint">v{doc.version}</span>
-        <span className="text-[11px] nv-muted flex items-center gap-1" title={collab ? 'Realtime connected' : 'Offline — edits saved when reconnected'}><span className={`w-1.5 h-1.5 rounded-full ${collab ? 'bg-[#22b573]' : 'bg-[#f2a531]'}`} />{collab ? 'Live' : 'Offline'}</span>
-        <div className="flex bg-[#f3f2fa] rounded-lg p-0.5">{[['edit', 'pen-line'], ['split', 'columns-2'], ['read', 'book-open']].map(([m, i]) => <button key={m} onClick={() => setMode(m)} className={`h-8 w-9 rounded-md grid place-items-center ${mode === m ? 'bg-white shadow-sm text-[#5b43e6]' : 'nv-muted'}`} aria-label={m} data-testid={`doc-mode-${m}`}><Icon name={i} size={14} /></button>)}</div>
+        <CollabStatusPill status={collabStatus} />
+        <div className="flex bg-[#f3f2fa] rounded-lg p-0.5">{[['rich', 'pen-line'], ['markdown', 'columns-2'], ['read', 'book-open']].map(([m, i]) => <button key={m} onClick={() => setMode(m)} className={`h-8 w-9 rounded-md grid place-items-center ${mode === m ? 'bg-white shadow-sm text-[#5b43e6]' : 'nv-muted'}`} aria-label={m} data-testid={`doc-mode-${m}`}><Icon name={i} size={14} /></button>)}</div>
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={() => setShowVersions(!showVersions)} aria-label="History" data-testid="doc-history"><Icon name="history" size={15} /></button>
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={exportMd} aria-label="Export Markdown" data-testid="doc-export"><Icon name="download" size={15} /></button>
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={print} aria-label="Print / PDF" data-testid="doc-print"><Icon name="printer" size={15} /></button>
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied'); }} aria-label="Share" data-testid="doc-share"><Icon name="share-2" size={15} /></button>
         {canWrite && <button className="nv-btn nv-btn-ghost w-8 px-0 text-[#ee5a5a]" onClick={() => window.confirm('Delete this document?') && (docs.remove.mutate(doc.id), onBack())} aria-label="Delete" data-testid="doc-delete"><Icon name="trash-2" size={15} /></button>}
       </div>
-      <div className="px-7 py-2 flex items-center gap-3 text-xs border-b border-[var(--nv-border)]"><Field label=""><Select value={f.project_id} onChange={(v) => setF({ ...f, project_id: v })} options={[['', 'No project'], ...projects.map((p) => [p.id, p.name])]} testId="doc-project-select" /></Field><span className="nv-muted">Markdown · headings, lists, tables, code, links, [[backlinks]]</span></div>
+      <div className="px-7 py-2 flex items-center gap-3 text-xs border-b border-[var(--nv-border)]"><Field label=""><Select value={f.project_id} onChange={(v) => setF({ ...f, project_id: v })} options={[['', 'No project'], ...projects.map((p) => [p.id, p.name])]} testId="doc-project-select" /></Field><span className="nv-muted">{mode === 'rich' ? 'Collaborative editor · Tiptap + Yjs' : 'Markdown · headings, lists, tables, code, links, [[backlinks]]'}</span></div>
       <div className="flex-1 min-h-0 flex">
-        {mode !== 'read' && <textarea className={`${mode === 'split' ? 'w-1/2 border-r border-[var(--nv-border)]' : 'flex-1'} resize-none outline-none bg-transparent px-8 py-5 text-[14px] leading-relaxed font-mono nv-scroll`} value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} disabled={!canWrite} data-testid="document-content-input" />}
-        {mode !== 'edit' && <div className={`${mode === 'split' ? 'w-1/2' : 'flex-1'} overflow-auto nv-scroll px-10 py-5 prose-nv`} dangerouslySetInnerHTML={{ __html: renderMarkdown(f.content) }} data-testid="document-preview" />}
+        {mode === 'rich' && (
+          <CollaborativeDocEditor
+            documentId={doc.id}
+            user={me}
+            canWrite={canWrite}
+            initialContent={doc.content || ''}
+            onLocalChange={(_json, text) => setF((prev) => (prev.content === text ? prev : { ...prev, content: text }))}
+            onStatusChange={setCollabStatus}
+          />
+        )}
+        {mode === 'markdown' && <textarea className="flex-1 resize-none outline-none bg-transparent px-8 py-5 text-[14px] leading-relaxed font-mono nv-scroll" value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} disabled={!canWrite} data-testid="document-content-input" />}
+        {mode === 'read' && <div className="flex-1 overflow-auto nv-scroll px-10 py-5 prose-nv" dangerouslySetInnerHTML={{ __html: renderMarkdown(f.content) }} data-testid="document-preview" />}
         {showVersions && <aside className="w-[260px] border-l border-[var(--nv-border)] p-4 overflow-auto nv-scroll" data-testid="doc-versions-panel"><div className="nv-eyebrow mb-2">Version history</div>{!versions.length && <div className="text-xs nv-muted">No previous versions yet.</div>}{versions.map((v) => <button key={v.id} className="w-full text-left p-2 rounded-lg hover:bg-[#f7f6fd] mb-1" onClick={() => canWrite && window.confirm(`Restore version ${v.version}?`) && setF({ ...f, content: v.content })} data-testid="doc-version"><div className="text-[12.5px] font-bold">Version {v.version}</div><div className="text-[11px] nv-muted">{ago(v.created_at)}</div></button>)}</aside>}
       </div>
     </div>

@@ -99,6 +99,20 @@ class DocumentVersion(Base, IdMixin, TimestampMixin):
     author_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
 
 
+class DocumentYjsUpdate(Base, IdMixin, TimestampMixin):
+    """Append-only log of Yjs binary update chunks for a Document.
+    Aurora remains the durable source of truth; this table lets a newly-connecting
+    client bootstrap the CRDT state from a signed backend endpoint even when
+    Supabase Realtime has garbage-collected the ephemeral broadcast."""
+    __tablename__ = "document_yjs_updates"
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    space_id: Mapped[str] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    client_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    update_b64: Mapped[str] = mapped_column(Text, nullable=False)  # base64-encoded Yjs update bytes
+    author_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
+
 class Project(Base, IdMixin, TimestampMixin, SpaceScoped):
     __tablename__ = "projects"
     name: Mapped[str] = mapped_column(String(200), nullable=False)

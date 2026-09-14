@@ -15,7 +15,7 @@ from app.config import settings  # noqa: E402
 from app.core import RequestContextMiddleware, http_exception_handler, validation_exception_handler  # noqa: E402
 from app.db import Base, engine  # noqa: E402
 from app.realtime import hub  # noqa: E402
-from app.routers import account, auth, chat, items, spaces, voro  # noqa: E402
+from app.routers import account, auth, chat, collab, items, spaces, voro  # noqa: E402
 from app.storage import storage  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -35,7 +35,7 @@ app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in settings.co
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
-for r in (auth.router, spaces.router, items.router, chat.router, voro.router, account.router):
+for r in (auth.router, spaces.router, items.router, chat.router, voro.router, account.router, collab.router):
     app.include_router(r, prefix="/api/v1")
 
 
@@ -47,7 +47,7 @@ async def live():
 @app.get("/api/health/ready")
 async def ready():
     checks = {"database": "ok", "storage": storage.name, "auth_provider": __import__("app.auth", fromlist=["provider"]).provider.name,
-              "ai": "configured" if settings.openai_api_key else "not_configured", "liveblocks": "configured" if settings.liveblocks_secret_key else "not_configured", "realtime_connections": len(hub.online_users())}
+              "ai": "configured" if settings.openai_api_key else "not_configured", "realtime": "configured" if settings.supabase_configured else "not_configured", "realtime_connections": len(hub.online_users())}
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
