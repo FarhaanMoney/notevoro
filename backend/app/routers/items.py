@@ -7,8 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..authz import SpaceContext, space_ctx, writer_ctx
-from ..core import ApiError, dump, not_found
+from ..authz import (SpaceContext, can_access_object, can_edit_object,
+                     filter_accessible, require_object_read, require_object_write,
+                     sanitize_shared_with, space_ctx, writer_ctx,
+                     VISIBILITY_VALUES)
+from ..core import ApiError, dump, forbidden, not_found
 from ..db import get_db, now
 from ..entitlements import entitlements
 from ..models import CalendarEvent, Document, DocumentVersion, FileObject, Note, Project, Record, Task, User
@@ -82,6 +85,11 @@ class RecordIn(BaseModel):
     position: Optional[int] = None
 
 
+class VisibilityIn(BaseModel):
+    visibility: str  # 'private' | 'specific' | 'team'
+    shared_with: Optional[list[dict]] = None  # [{user_id, role}]
+
+
 async def _members(db, space_id):
     return (await db.execute(select(SpaceMember.user_id).where(SpaceMember.space_id == space_id, SpaceMember.status == "active"))).scalars().all()
 
@@ -90,11 +98,35 @@ async def _emit(db, ctx: SpaceContext, event: str, payload: dict):
     await hub.send_to_users(await _members(db, ctx.space.id), event, {**payload, "space_id": ctx.space.id})
 
 
+async def _recipients_for(db, ctx: SpaceContext, obj) -> list[str]:
+    """Users who may see this object — closes WebSocket/notification leakage."""
+    vis = getattr(obj, "visibility", "team") or "team"
+    if vis == "team":
+        return await _members(db, ctx.space.id)
+    recipients = {obj.created_by}
+    if vis == "specific":
+        for entry in (getattr(obj, "shared_with", None) or []):
+            if isinstance(entry, dict) and entry.get("user_id"):
+                recipients.add(entry["user_id"])
+    admins = (await db.execute(select(SpaceMember.user_id).where(
+        SpaceMember.space_id == ctx.space.id,
+        SpaceMember.status == "active",
+        SpaceMember.role.in_(("owner", "admin")),
+    ))).scalars().all()
+    recipients.update(admins)
+    return list(recipients)
+
+
+async def _emit_scoped(db, ctx: SpaceContext, obj, event: str, payload: dict):
+    recipients = await _recipients_for(db, ctx, obj)
+    await hub.send_to_users(recipients, event, {**payload, "space_id": ctx.space.id})
+
+
 def crud(model, prefix: str, label: str, schema, capability: str, order_by, on_create=None):
     name = model.__tablename__
 
     @router.get(f"/{prefix}", name=f"list_{name}")
-    async def list_items(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = Depends(get_db), q: str | None = None, project_id: str | None = None, status: str | None = None, limit: int = 200, offset: int = 0):
+    async def list_items(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = Depends(get_db), q: str | None = None, project_id: str | None = None, status: str | None = None, limit: int = 200, offset: int = 0, visibility: str | None = None, mine: bool = False):
         stmt = select(model).where(model.space_id == ctx.space.id, model.deleted_at.is_(None))
         if q:
             cols = [getattr(model, c) for c in ("title", "name", "content", "description", "body") if hasattr(model, c)]
@@ -103,12 +135,22 @@ def crud(model, prefix: str, label: str, schema, capability: str, order_by, on_c
             stmt = stmt.where(model.project_id == project_id)
         if status and hasattr(model, "status"):
             stmt = stmt.where(model.status == status)
+        if visibility in VISIBILITY_VALUES and hasattr(model, "visibility"):
+            stmt = stmt.where(model.visibility == visibility)
+        if mine and hasattr(model, "created_by"):
+            # "My Work" filter — the caller's private + owned specific-share items
+            stmt = stmt.where(model.created_by == ctx.user.id)
         rows = (await db.execute(stmt.order_by(*order_by(model)).limit(min(limit, 500)).offset(offset))).scalars().all()
+        # ACL: strip out rows the caller cannot see even if they're in the same Space.
+        rows = filter_accessible(ctx, rows)
         return [dump(r) for r in rows]
 
     @router.post(f"/{prefix}", status_code=201, name=f"create_{name}")
     async def create_item(body: schema, ctx: SpaceContext = Depends(writer_ctx), db: AsyncSession = Depends(get_db)):
         data = body.model_dump(exclude_none=True)
+        # Extract ACL fields if the caller sent them (creator can set on create)
+        visibility_in = data.pop("visibility", None)
+        shared_with_in = data.pop("shared_with", None)
         obj = model(space_id=ctx.space.id, created_by=ctx.user.id, **data)
         if hasattr(obj, "title") and not getattr(obj, "title", None):
             obj.title = "Untitled"
@@ -117,29 +159,47 @@ def crud(model, prefix: str, label: str, schema, capability: str, order_by, on_c
         if hasattr(obj, "start_at") and (not obj.start_at or not obj.end_at):
             obj.start_at = obj.start_at or now()
             obj.end_at = obj.end_at or obj.start_at + timedelta(hours=1)
+        # Default visibility rule:
+        #   Personal Space -> private (never accidentally exposed)
+        #   Team Space     -> team    (matches user's expectation of team collab)
+        if hasattr(obj, "visibility"):
+            if visibility_in in VISIBILITY_VALUES:
+                obj.visibility = visibility_in
+            else:
+                obj.visibility = "private" if ctx.space.type == "personal" else "team"
+        if hasattr(obj, "shared_with"):
+            obj.shared_with = sanitize_shared_with(shared_with_in)
         db.add(obj)
         await db.flush()
         title = getattr(obj, "title", None) or getattr(obj, "name", "")
-        await record_activity(db, ctx.space.id, ctx.user, f"{name}.created", label, obj.id, f"{ctx.user.name} created {label} \"{title}\"")
+        # Activity feeds only surface team-visible objects — private/specific
+        # creations should not leak to the whole Space activity stream.
+        if getattr(obj, "visibility", "team") == "team":
+            await record_activity(db, ctx.space.id, ctx.user, f"{name}.created", label, obj.id, f"{ctx.user.name} created {label} \"{title}\"")
         if on_create:
             await on_create(db, ctx, obj)
         await db.commit()
-        await _emit(db, ctx, f"{name}.changed", {"id": obj.id, "op": "create"})
+        # Realtime "changed" events must only be emitted to users who can see
+        # this object — otherwise UIs would light up with unreachable IDs.
+        await _emit_scoped(db, ctx, obj, f"{name}.changed", {"id": obj.id, "op": "create"})
         return dump(obj)
 
     @router.get(f"/{prefix}/{{item_id}}", name=f"get_{name}")
     async def get_item(item_id: str, ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = Depends(get_db)):
         obj = (await db.execute(select(model).where(model.id == item_id, model.space_id == ctx.space.id, model.deleted_at.is_(None)))).scalar_one_or_none()
-        if not obj:
-            raise not_found(label.capitalize())
+        require_object_read(ctx, obj)
         return dump(obj)
 
     @router.patch(f"/{prefix}/{{item_id}}", name=f"update_{name}")
     async def update_item(item_id: str, body: schema, ctx: SpaceContext = Depends(writer_ctx), db: AsyncSession = Depends(get_db)):
         obj = (await db.execute(select(model).where(model.id == item_id, model.space_id == ctx.space.id, model.deleted_at.is_(None)))).scalar_one_or_none()
-        if not obj:
-            raise not_found(label.capitalize())
+        require_object_write(ctx, obj)
         data = body.model_dump(exclude_unset=True)
+        # Never allow visibility/ACL to be mutated through the generic PATCH
+        # — the dedicated /visibility endpoint enforces the promote-to-team
+        # semantics and audit logging.
+        data.pop("visibility", None)
+        data.pop("shared_with", None)
         if model is Document and "content" in data and data["content"] != obj.content:
             db.add(DocumentVersion(document_id=obj.id, version=obj.version, content=obj.content, author_id=ctx.user.id))
             obj.version += 1
@@ -148,23 +208,60 @@ def crud(model, prefix: str, label: str, schema, capability: str, order_by, on_c
         if model is Task and data.get("status") == "done":
             await record_activity(db, ctx.space.id, ctx.user, "task.completed", "task", obj.id, f"{ctx.user.name} completed \"{obj.title}\"")
         if model is Task and data.get("assignee_id") and data["assignee_id"] != ctx.user.id:
-            await notify(db, [data["assignee_id"]], "assignment", f"{ctx.user.name} assigned you a task", obj.title, f"/dashboard/spaces/{ctx.space.id}/tasks", ctx.space.id)
+            # Notifications only fire if the assignee can actually access the task.
+            if can_access_object(ctx, obj) or getattr(obj, "visibility", "team") == "team":
+                await notify(db, [data["assignee_id"]], "assignment", f"{ctx.user.name} assigned you a task", obj.title, f"/dashboard/spaces/{ctx.space.id}/tasks", ctx.space.id)
         await db.commit()
-        await _emit(db, ctx, f"{name}.changed", {"id": obj.id, "op": "update"})
+        await _emit_scoped(db, ctx, obj, f"{name}.changed", {"id": obj.id, "op": "update"})
         return dump(obj)
 
     @router.delete(f"/{prefix}/{{item_id}}", name=f"delete_{name}")
     async def delete_item(item_id: str, ctx: SpaceContext = Depends(writer_ctx), db: AsyncSession = Depends(get_db)):
         obj = (await db.execute(select(model).where(model.id == item_id, model.space_id == ctx.space.id, model.deleted_at.is_(None)))).scalar_one_or_none()
-        if not obj:
-            raise not_found(label.capitalize())
+        require_object_write(ctx, obj)
         obj.deleted_at = now()
         if model is FileObject:
             await storage.delete(obj.storage_key)
-        await record_activity(db, ctx.space.id, ctx.user, f"{name}.deleted", label, obj.id, f"{ctx.user.name} deleted a {label}")
+        if getattr(obj, "visibility", "team") == "team":
+            await record_activity(db, ctx.space.id, ctx.user, f"{name}.deleted", label, obj.id, f"{ctx.user.name} deleted a {label}")
         await db.commit()
-        await _emit(db, ctx, f"{name}.changed", {"id": obj.id, "op": "delete"})
+        await _emit_scoped(db, ctx, obj, f"{name}.changed", {"id": obj.id, "op": "delete"})
         return {"ok": True}
+
+    @router.patch(f"/{prefix}/{{item_id}}/visibility", name=f"share_{name}")
+    async def set_visibility(item_id: str, body: "VisibilityIn", ctx: SpaceContext = Depends(writer_ctx), db: AsyncSession = Depends(get_db)):
+        obj = (await db.execute(select(model).where(model.id == item_id, model.space_id == ctx.space.id, model.deleted_at.is_(None)))).scalar_one_or_none()
+        require_object_read(ctx, obj)
+        # Only creators (or space admins/owners) may reshare an object.
+        if obj.created_by != ctx.user.id and not ctx.require("admin"):
+            raise forbidden("Only the creator can change sharing for this item")
+        if not hasattr(obj, "visibility"):
+            raise ApiError(400, "NOT_SHAREABLE", f"{label} does not support visibility settings")
+        new_vis = body.visibility
+        if new_vis not in VISIBILITY_VALUES:
+            raise ApiError(422, "VALIDATION_ERROR", f"visibility must be one of {VISIBILITY_VALUES}")
+        # Promote-to-team on a Personal Space is a no-op — Personal spaces
+        # have only one member, so 'team' visibility === 'private' in effect.
+        # We still record the intent so a future "Move to Team Space" can
+        # honor it.
+        obj.visibility = new_vis
+        obj.shared_with = sanitize_shared_with(body.shared_with) if new_vis == "specific" else []
+        # Guard against sharing to users who aren't Space members. Silently
+        # drop non-members rather than 4xx-ing so the UI can be permissive.
+        if obj.shared_with:
+            member_ids = set((await db.execute(select(SpaceMember.user_id).where(SpaceMember.space_id == ctx.space.id, SpaceMember.status == "active"))).scalars().all())
+            obj.shared_with = [e for e in obj.shared_with if e["user_id"] in member_ids]
+        title = getattr(obj, "title", None) or getattr(obj, "name", "")
+        # Log promotions to team so the activity feed reflects the share.
+        if new_vis == "team":
+            await record_activity(db, ctx.space.id, ctx.user, f"{name}.promoted", label, obj.id, f"{ctx.user.name} promoted {label} \"{title}\" to the Team")
+        elif new_vis == "specific":
+            await record_activity(db, ctx.space.id, ctx.user, f"{name}.shared", label, obj.id, f"{ctx.user.name} shared {label} \"{title}\" with {len(obj.shared_with)} people")
+        await db.commit()
+        # Emit a fresh scope-aware event so newly-authorized users receive
+        # the object and revoked users' UIs can prune it.
+        await _emit_scoped(db, ctx, obj, f"{name}.changed", {"id": obj.id, "op": "share", "visibility": new_vis})
+        return dump(obj)
 
 
 async def _notify_meeting(db, ctx, ev):

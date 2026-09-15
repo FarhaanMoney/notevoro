@@ -55,15 +55,35 @@ export default function CollaborativeDocEditor({
   const roomRef = useRef(null);
   const bootstrappedRef = useRef(false);
   const [status, setStatus] = useState('local');
+  const [persistenceReady, setPersistenceReady] = useState(false);
 
   // Persist to IndexedDB so edits survive reloads and offline periods.
+  // CRITICAL: The editor MUST NOT mount before this resolves, otherwise
+  // the y-prosemirror plugin will initialize the binding with an empty
+  // ProseMirror doc and immediately publish that empty state into the
+  // (freshly-restored) Yjs doc, wiping saved content on reload.
   const localPersistence = useMemo(
     () => new IndexeddbPersistence(`notevoro:yjs:${documentId}`, ydoc),
     [ydoc, documentId]
   );
 
+  useEffect(() => {
+    let cancelled = false;
+    localPersistence.whenSynced.then(() => {
+      if (!cancelled) setPersistenceReady(true);
+    }).catch(() => {
+      // If IndexedDB is unavailable (private mode, quota), fall back to
+      // in-memory-only editing rather than blocking the user forever.
+      if (!cancelled) setPersistenceReady(true);
+    });
+    // Fail-open after 1.5s to avoid stalling the UI on obscure browsers.
+    const t = setTimeout(() => { if (!cancelled) setPersistenceReady(true); }, 1500);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [localPersistence]);
+
   const editor = useEditor(
     {
+      immediatelyRender: false,
       editable: canWrite,
       extensions: [
         StarterKit.configure({ history: false }), // history handled by Yjs
@@ -81,26 +101,26 @@ export default function CollaborativeDocEditor({
         } catch {/* noop */}
       },
     },
-    [ydoc, awareness, canWrite]
+    [ydoc, awareness, canWrite, placeholder]
   );
 
   // One-time content seed: only if the Yjs doc is truly empty AFTER
-  // IndexedDB has attempted to load. Prevents duplicated content on reload.
+  // IndexedDB has attempted to load. Prevents duplicated content on reload
+  // AND prevents overwriting content that was restored from IndexedDB.
   useEffect(() => {
-    if (!editor) return;
-    let cancelled = false;
-    (async () => {
-      await localPersistence.whenSynced;
-      if (cancelled) return;
-      const empty = ydoc.getXmlFragment('default').length === 0 && !editor.state.doc.textContent;
-      if (empty && initialContent) {
-        // Seed with plain-text initial content; users can then edit richly.
-        editor.commands.setContent(initialContent);
-      }
-    })();
-    return () => { cancelled = true; };
+    if (!editor || !persistenceReady) return;
+    const yFragment = ydoc.getXmlFragment('default');
+    const editorEmpty = editor.state.doc.textContent === '' && editor.state.doc.childCount <= 1
+      && editor.state.doc.firstChild?.childCount === 0;
+    const yEmpty = yFragment.length === 0;
+    if (yEmpty && editorEmpty && initialContent) {
+      // Seed with plain-text initial content. Tiptap parses the string as
+      // HTML; a bare string becomes <p>string</p> which flows through the
+      // y-prosemirror binding into the Yjs doc + IndexedDB.
+      editor.commands.setContent(initialContent, false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]);
+  }, [editor, persistenceReady, initialContent]);
 
   useEffect(() => { onStatusChange?.(status); }, [status, onStatusChange]);
 
@@ -240,7 +260,13 @@ export default function CollaborativeDocEditor({
   return (
     <div className="nv-tiptap-wrap flex-1 min-h-0 overflow-auto nv-scroll" data-testid="collab-editor">
       <div className="px-10 py-6">
-        <EditorContent editor={editor} className="prose-nv prose-tiptap" />
+        {!persistenceReady ? (
+          <div className="text-[13px] nv-muted animate-pulse" data-testid="collab-editor-loading">Loading editor…</div>
+        ) : editor ? (
+          <EditorContent editor={editor} className="prose-nv prose-tiptap" />
+        ) : (
+          <div className="text-[13px] nv-muted animate-pulse" data-testid="collab-editor-loading">Loading editor…</div>
+        )}
       </div>
     </div>
   );

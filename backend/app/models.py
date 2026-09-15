@@ -72,6 +72,16 @@ class SpaceScoped:
     space_id: Mapped[str] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), nullable=False, index=True)
     created_by: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    # --- Visibility / ACL (per Notevoro "My Work" model) -----------------
+    # `visibility` = 'private' | 'specific' | 'team'
+    #   private  -> only the creator can access
+    #   specific -> only the creator + `shared_with` user_ids
+    #   team     -> every active member of the Space (default for Team Spaces)
+    # `shared_with` = optional array of {user_id, role} where role is 'viewer'|'editor'
+    # In Personal Spaces the value is always 'private' — the concept exists so that
+    # a personal object shared to a Team Space via "Promote" can carry ACL forward.
+    visibility: Mapped[str] = mapped_column(String(16), default="team", nullable=False, index=True)
+    shared_with: Mapped[list] = mapped_column(J, default=list, nullable=False)
 
 
 class Note(Base, IdMixin, TimestampMixin, SpaceScoped):

@@ -25,6 +25,42 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # ---- idempotent additive migrations (Aurora-compatible) --------
+        # In production we'd use Alembic; for now the app performs safe
+        # `ADD COLUMN IF NOT EXISTS` on the visibility/ACL columns so a
+        # cold start on an existing database picks them up without a
+        # manual step.
+        from sqlalchemy import text as _text
+        for _tbl in ("notes", "documents", "projects", "tasks", "events", "files", "records"):
+            try:
+                await conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS visibility VARCHAR(16) NOT NULL DEFAULT 'team'"))
+                await conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS shared_with JSONB NOT NULL DEFAULT '[]'::jsonb"))
+                await conn.execute(_text(f"CREATE INDEX IF NOT EXISTS ix_{_tbl}_visibility ON {_tbl} (visibility)"))
+            except Exception as _e:  # noqa: BLE001
+                # Table may not exist yet in this repo; log & continue.
+                logging.getLogger("notevoro.migrate").warning("skip %s: %s", _tbl, _e)
+        # In Personal Spaces every new object created going forward defaults
+        # to `private` (see items router), but existing rows must be back-
+        # filled so history doesn't accidentally become team-visible.
+        try:
+            await conn.execute(_text(
+                "UPDATE notes n SET visibility='private' "
+                "FROM spaces s WHERE n.space_id=s.id AND s.type='personal' AND n.visibility='team'"
+            ))
+            await conn.execute(_text(
+                "UPDATE documents d SET visibility='private' "
+                "FROM spaces s WHERE d.space_id=s.id AND s.type='personal' AND d.visibility='team'"
+            ))
+            await conn.execute(_text(
+                "UPDATE tasks t SET visibility='private' "
+                "FROM spaces s WHERE t.space_id=s.id AND s.type='personal' AND t.visibility='team'"
+            ))
+            await conn.execute(_text(
+                "UPDATE projects p SET visibility='private' "
+                "FROM spaces s WHERE p.space_id=s.id AND s.type='personal' AND p.visibility='team'"
+            ))
+        except Exception as _e:  # noqa: BLE001
+            logging.getLogger("notevoro.migrate").warning("backfill personal visibility skipped: %s", _e)
     yield
     await engine.dispose()
 
