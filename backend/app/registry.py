@@ -1,6 +1,7 @@
 """Canonical capability registry. Types: module | tool | view | ai | integration. Sidebar is derived from this."""
+from typing import List, Optional
 
-REG: list[dict] = []
+REG: List[dict] = []
 
 
 def cap(key, name, type_, category, section, icon, desc, kind="records", plan=None, requires=None, default=False, fields=None):
@@ -111,7 +112,7 @@ DEFAULT_PERSONAL = ["notes", "pages", "tasks", "calendar", "projects", "goals", 
 DEFAULT_TEAM = ["notes", "pages", "tasks", "calendar", "projects", "goals", "documents", "files", "knowledge", "chat", "meetings", "team", "board", "timeline", "table_view"]
 
 
-def sidebar_for(keys: list[str], order: list[str] | None = None):
+def sidebar_for(keys: List[str], order: Optional[List[str]] = None):
     enabled = [BY_KEY[k] for k in (order or keys) if k in BY_KEY and k in keys]
     for k in keys:
         if k in BY_KEY and BY_KEY[k] not in enabled:

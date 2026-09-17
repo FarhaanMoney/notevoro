@@ -42,7 +42,7 @@ class AskIn(BaseModel):
     capability: Optional[str] = None
 
 
-async def build_context(db, user: User, space_id: str | None) -> tuple[str, dict]:
+async def build_context(db, user: User, space_id: Optional[str]) -> tuple[str, dict]:
     """Scoped, minimized, permission-checked context. Never mixes Spaces."""
     ent = await entitlements(db, user)
     if not space_id:
@@ -72,7 +72,7 @@ async def agents():
 
 
 @router.get("/history")
-async def history(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: str | None = None, limit: int = 40):
+async def history(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: Optional[str] = None, limit: int = 40):
     stmt = select(VoroMessage).where(VoroMessage.user_id == user.id)
     stmt = stmt.where(VoroMessage.space_id == space_id) if space_id else stmt.where(VoroMessage.space_id.is_(None))
     rows = (await db.execute(stmt.order_by(VoroMessage.created_at.desc()).limit(limit))).scalars().all()
@@ -80,7 +80,7 @@ async def history(user: User = Depends(current_user), db: AsyncSession = Depends
 
 
 @router.get("/context")
-async def context(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: str | None = None):
+async def context(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: Optional[str] = None):
     _, meta = await build_context(db, user, space_id)
     return meta
 

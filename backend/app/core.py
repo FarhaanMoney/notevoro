@@ -2,6 +2,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -11,7 +12,7 @@ log = logging.getLogger("notevoro")
 
 
 class ApiError(HTTPException):
-    def __init__(self, status_code: int, code: str, message: str, details: dict | None = None):
+    def __init__(self, status_code: int, code: str, message: str, details: Optional[dict] = None):
         super().__init__(status_code=status_code, detail={"code": code, "message": message, "details": details or {}})
 
 

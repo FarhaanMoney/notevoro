@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,7 +8,7 @@ from .models import Activity, InboxEvent, Notification, SpaceMember, User
 from .realtime import hub
 
 
-async def record_activity(db: AsyncSession, space_id: str, actor: User, type_: str, entity_type: str, entity_id: str | None, summary: str, meta: dict | None = None):
+async def record_activity(db: AsyncSession, space_id: str, actor: User, type_: str, entity_type: str, entity_id: Optional[str], summary: str, meta: Optional[dict] = None):
     act = Activity(space_id=space_id, actor_id=actor.id, type=type_, entity_type=entity_type, entity_id=entity_id, summary=summary, meta=meta or {})
     db.add(act)
     await db.flush()
@@ -15,7 +17,7 @@ async def record_activity(db: AsyncSession, space_id: str, actor: User, type_: s
     return act
 
 
-async def notify(db: AsyncSession, user_ids, type_: str, title: str, body: str | None = None, link: str | None = None, space_id: str | None = None, exclude: str | None = None):
+async def notify(db: AsyncSession, user_ids, type_: str, title: str, body: Optional[str] = None, link: Optional[str] = None, space_id: Optional[str] = None, exclude: Optional[str] = None):
     created = []
     for uid in set(user_ids):
         if uid == exclude:
@@ -33,16 +35,16 @@ async def create_inbox_event(
     *,
     recipient_id: str,
     event_type: str,
-    sender_id: str | None = None,
-    source_space_id: str | None = None,
-    subject: str | None = None,
-    body: str | None = None,
-    object_type: str | None = None,
-    object_id: str | None = None,
-    permission: str | None = None,
-    link: str | None = None,
+    sender_id: Optional[str] = None,
+    source_space_id: Optional[str] = None,
+    subject: Optional[str] = None,
+    body: Optional[str] = None,
+    object_type: Optional[str] = None,
+    object_id: Optional[str] = None,
+    permission: Optional[str] = None,
+    link: Optional[str] = None,
     status: str = "pending",
-    meta: dict | None = None,
+    meta: Optional[dict] = None,
 ) -> InboxEvent:
     """Create a canonical Inbox event for `recipient_id` and push a
     real-time notification so the Brain Inbox unread counter updates
@@ -73,7 +75,7 @@ async def create_inbox_event(
     return evt
 
 
-def user_brief(u: User | None):
+def user_brief(u: Optional[User]):
     if not u:
         return None
     return {"id": u.id, "name": u.name, "email": u.email, "avatar_url": u.avatar_url, "title": u.title, "online": hub.is_online(u.id)}

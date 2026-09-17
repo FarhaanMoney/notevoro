@@ -34,7 +34,7 @@ async def notifications(user: User = Depends(current_user), db: AsyncSession = D
 
 
 @router.post("/notifications/read")
-async def read_notifications(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), id: str | None = None):
+async def read_notifications(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), id: Optional[str] = None):
     stmt = update(Notification).where(Notification.user_id == user.id, Notification.read_at.is_(None))
     if id:
         stmt = stmt.where(Notification.id == id)
@@ -126,7 +126,7 @@ async def simulate_expiry(user: User = Depends(current_user), db: AsyncSession =
 
 
 @router.post("/billing/webhook")
-async def billing_webhook(body: WebhookIn, db: AsyncSession = Depends(get_db), x_webhook_secret: str | None = Header(default=None)):
+async def billing_webhook(body: WebhookIn, db: AsyncSession = Depends(get_db), x_webhook_secret: Optional[str] = Header(default=None)):
     """Idempotent by event_id: duplicate/delayed deliveries are no-ops."""
     if settings.local_auth_secret and x_webhook_secret != settings.local_auth_secret:
         raise ApiError(401, "WEBHOOK_UNVERIFIED", "Webhook signature invalid")

@@ -126,7 +126,7 @@ def crud(model, prefix: str, label: str, schema, capability: str, order_by, on_c
     name = model.__tablename__
 
     @router.get(f"/{prefix}", name=f"list_{name}")
-    async def list_items(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = Depends(get_db), q: str | None = None, project_id: str | None = None, status: str | None = None, limit: int = 200, offset: int = 0, visibility: str | None = None, mine: bool = False):
+    async def list_items(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = Depends(get_db), q: Optional[str] = None, project_id: Optional[str] = None, status: Optional[str] = None, limit: int = 200, offset: int = 0, visibility: Optional[str] = None, mine: bool = False):
         stmt = select(model).where(model.space_id == ctx.space.id, model.deleted_at.is_(None))
         if q:
             cols = [getattr(model, c) for c in ("title", "name", "content", "description", "body") if hasattr(model, c)]
@@ -329,7 +329,7 @@ async def delete_record(capability_key: str, record_id: str, ctx: SpaceContext =
 
 # ---- Files (multipart upload -> storage adapter; metadata in Postgres)
 @router.get("/files")
-async def list_files(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = Depends(get_db), q: str | None = None):
+async def list_files(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = Depends(get_db), q: Optional[str] = None):
     stmt = select(FileObject).where(FileObject.space_id == ctx.space.id, FileObject.deleted_at.is_(None))
     if q:
         stmt = stmt.where(FileObject.name.ilike(f"%{q}%"))
@@ -338,7 +338,7 @@ async def list_files(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = 
 
 
 @router.post("/files", status_code=201)
-async def upload_file(file: UploadFile = File(...), ctx: SpaceContext = Depends(writer_ctx), db: AsyncSession = Depends(get_db), idempotency_key: str | None = Header(default=None)):
+async def upload_file(file: UploadFile = File(...), ctx: SpaceContext = Depends(writer_ctx), db: AsyncSession = Depends(get_db), idempotency_key: Optional[str] = Header(default=None)):
     data = await file.read()
     size_mb = max(1, len(data) // (1024 * 1024))
     ent = await entitlements(db, ctx.user)

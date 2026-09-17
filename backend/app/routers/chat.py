@@ -73,7 +73,7 @@ async def _conv_out(db, conv: Conversation, me: User):
 
 
 @router.get("/conversations")
-async def list_conversations(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: str | None = None):
+async def list_conversations(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: Optional[str] = None):
     stmt = select(Conversation).join(ConversationMember, ConversationMember.conversation_id == Conversation.id).where(ConversationMember.user_id == user.id)
     if space_id:
         stmt = stmt.where((Conversation.space_id == space_id) | (Conversation.space_id.is_(None)))
@@ -127,7 +127,7 @@ async def get_conversation(conv_id: str, user: User = Depends(current_user), db:
 
 
 @router.get("/conversations/{conv_id}/messages")
-async def list_messages(conv_id: str, user: User = Depends(current_user), db: AsyncSession = Depends(get_db), before: str | None = None, limit: int = 50):
+async def list_messages(conv_id: str, user: User = Depends(current_user), db: AsyncSession = Depends(get_db), before: Optional[str] = None, limit: int = 50):
     await _member(db, conv_id, user.id)
     stmt = select(Message, User).join(User, User.id == Message.sender_id).where(Message.conversation_id == conv_id)
     if before:
@@ -244,7 +244,7 @@ async def pin(conv_id: str, user: User = Depends(current_user), db: AsyncSession
 
 
 @router.get("/people")
-async def people(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: str | None = None):
+async def people(user: User = Depends(current_user), db: AsyncSession = Depends(get_db), space_id: Optional[str] = None):
     """People you can message: everyone who shares a Team Space with you."""
     my_spaces = select(SpaceMember.space_id).where(SpaceMember.user_id == user.id, SpaceMember.status == "active")
     stmt = select(User, SpaceMember.space_id).join(SpaceMember, SpaceMember.user_id == User.id).where(SpaceMember.space_id.in_(my_spaces), User.id != user.id)

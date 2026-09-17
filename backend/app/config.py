@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     aws_region: str = ""
     s3_bucket: str = ""
     sqs_queue_url: str = ""
-    local_storage_dir: str = "/app/backend/.storage"
+    local_storage_dir: str = "./.storage"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
     # --- Supabase Realtime (used for collaboration; blank => 503 REALTIME_NOT_CONFIGURED) ---

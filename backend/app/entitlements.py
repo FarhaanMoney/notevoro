@@ -1,5 +1,6 @@
 """ONE entitlement engine + ONE usage engine. Backend is the only source of truth."""
 from datetime import datetime, timedelta
+from typing import Optional
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,11 +22,11 @@ PLANS = {
 UNITS = {"ai_requests": "requests", "voro_actions": "actions", "transcription_minutes": "minutes", "cloud_storage_mb": "MB"}
 
 
-def period_key(dt: datetime | None = None) -> str:
+def period_key(dt: Optional[datetime] = None) -> str:
     return (dt or now()).strftime("%Y-%m")
 
 
-def period_reset(dt: datetime | None = None) -> str:
+def period_reset(dt: Optional[datetime] = None) -> str:
     d = (dt or now()).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     m = d.month % 12 + 1
     return d.replace(year=d.year + (1 if m == 1 else 0), month=m).isoformat()
@@ -92,8 +93,8 @@ async def require_feature(db: AsyncSession, user: User, feature: str):
     return ent
 
 
-async def consume(db: AsyncSession, user: User, resource: str, amount: int = 1, space_id: str | None = None,
-                  source: str = "api", idempotency_key: str | None = None, meta: dict | None = None):
+async def consume(db: AsyncSession, user: User, resource: str, amount: int = 1, space_id: Optional[str] = None,
+                  source: str = "api", idempotency_key: Optional[str] = None, meta: Optional[dict] = None):
     """Atomic check-and-increment: UPDATE ... WHERE amount + :n <= :limit. Race-safe across concurrent requests."""
     ent = await entitlements(db, user)
     limit = ent["limits"][resource]

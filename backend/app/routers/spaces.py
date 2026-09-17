@@ -59,7 +59,7 @@ class RoleIn(BaseModel):
     role: str = Field(pattern="^(admin|member|viewer)$")
 
 
-def space_out(space: Space, member: SpaceMember | None = None, extra=None):
+def space_out(space: Space, member: Optional[SpaceMember] = None, extra=None):
     d = dump(space)
     d["role"] = member.role if member else None
     d["sidebar"] = sidebar_for(space.enabled_capabilities or [], space.sidebar_order)
@@ -86,7 +86,7 @@ async def list_spaces(user: User = Depends(current_user), db: AsyncSession = Dep
 
 
 @router.post("", status_code=201)
-async def create_space(body: SpaceIn, user: User = Depends(current_user), db: AsyncSession = Depends(get_db), idempotency_key: str | None = Header(default=None)):
+async def create_space(body: SpaceIn, user: User = Depends(current_user), db: AsyncSession = Depends(get_db), idempotency_key: Optional[str] = Header(default=None)):
     if idempotency_key:
         prev = (await db.execute(select(IdempotencyKey).where(IdempotencyKey.user_id == user.id, IdempotencyKey.key == idempotency_key))).scalar_one_or_none()
         if prev:
