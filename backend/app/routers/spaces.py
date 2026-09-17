@@ -39,6 +39,7 @@ class SpacePatch(BaseModel):
     accent: Optional[str] = None
     settings: Optional[dict] = None
     voro_context: Optional[dict] = None
+    cover_image: Optional[str] = None
 
 
 class CapabilityIn(BaseModel):
@@ -62,6 +63,7 @@ def space_out(space: Space, member: SpaceMember | None = None, extra=None):
     d = dump(space)
     d["role"] = member.role if member else None
     d["sidebar"] = sidebar_for(space.enabled_capabilities or [], space.sidebar_order)
+    d["cover_image"] = getattr(space, "cover_image", None)
     if extra:
         d.update(extra)
     return d
@@ -171,7 +173,9 @@ async def get_space(ctx: SpaceContext = Depends(space_ctx), db: AsyncSession = D
 
 @router.patch("/{space_id}")
 async def update_space(body: SpacePatch, ctx: SpaceContext = Depends(admin_ctx), db: AsyncSession = Depends(get_db)):
-    for k, v in body.model_dump(exclude_none=True).items():
+    payload = body.model_dump(exclude_unset=True)
+    # cover_image may be explicitly set to null to remove — exclude_unset preserves that intent.
+    for k, v in payload.items():
         setattr(ctx.space, k, v)
     await record_activity(db, ctx.space.id, ctx.user, "space.updated", "space", ctx.space.id, f"{ctx.user.name} updated space settings")
     await db.commit()

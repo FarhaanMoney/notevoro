@@ -39,6 +39,16 @@ async def lifespan(app: FastAPI):
             except Exception as _e:  # noqa: BLE001
                 # Table may not exist yet in this repo; log & continue.
                 logging.getLogger("notevoro.migrate").warning("skip %s: %s", _tbl, _e)
+        # Additive: Space.cover_image (customizable landscape cover)
+        for _stmt in (
+            "ALTER TABLE spaces ADD COLUMN IF NOT EXISTS cover_image TEXT",
+            "ALTER TABLE spaces ADD COLUMN cover_image TEXT",  # SQLite fallback (no IF NOT EXISTS)
+        ):
+            try:
+                await conn.execute(_text(_stmt))
+                break
+            except Exception:  # noqa: BLE001
+                continue
         # In Personal Spaces every new object created going forward defaults
         # to `private` (see items router), but existing rows must be back-
         # filled so history doesn't accidentally become team-visible.

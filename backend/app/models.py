@@ -40,6 +40,7 @@ class Space(Base, IdMixin, TimestampMixin):
     sidebar_order: Mapped[list] = mapped_column(J, default=list)
     settings: Mapped[dict] = mapped_column(J, default=dict)
     voro_context: Mapped[dict] = mapped_column(J, default=dict)
+    cover_image: Mapped[Optional[str]] = mapped_column(Text)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 

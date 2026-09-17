@@ -29,15 +29,12 @@ export function Logo({ size = 28 }) {
 }
 
 const PRIMARY_NAV = [
-  { to: '/dashboard',              label: 'Home',        icon: 'home',       testid: 'nav-home',        end: true },
-  { to: '/dashboard/inbox',        label: 'Inbox',       icon: 'inbox',      testid: 'nav-inbox',       hasUnread: true },
-  { to: '/dashboard/spaces',       label: 'Spaces',      icon: 'grid-2x2',   testid: 'nav-spaces' },
-  { to: '/dashboard/vorohub',      label: 'VoroHub',     icon: 'sparkles',   testid: 'nav-vorohub' },
-  { to: '/dashboard/notes',        label: 'Notes',       icon: 'file-text',  testid: 'nav-notes' },
-  { to: '/dashboard/projects',     label: 'Projects',    icon: 'layers',     testid: 'nav-projects' },
-  { to: '/dashboard/transcriber',  label: 'Transcriber', icon: 'mic',        testid: 'nav-transcriber' },
-  { to: '/dashboard/tools',        label: 'Tools',       icon: 'grid',       testid: 'nav-tools' },
-  { to: '/dashboard/agents',       label: 'Agents',      icon: 'bot',        testid: 'nav-agents' },
+  { to: '/dashboard',             label: 'Home',    icon: 'home',      testid: 'nav-home',    end: true },
+  { to: '/dashboard/inbox',       label: 'Inbox',   icon: 'inbox',     testid: 'nav-inbox',   hasUnread: true },
+  { to: '/dashboard/spaces',      label: 'Spaces',  icon: 'grid-2x2',  testid: 'nav-spaces' },
+  { to: '/dashboard/vorohub',     label: 'VoroHub', icon: 'sparkles',  testid: 'nav-vorohub' },
+  { to: '/dashboard/tools',       label: 'Tools',   icon: 'grid',      testid: 'nav-tools' },
+  { to: '/dashboard/agents',      label: 'Agents',  icon: 'bot',       testid: 'nav-agents' },
 ];
 
 const FOOTER_NAV = [

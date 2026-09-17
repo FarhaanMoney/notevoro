@@ -394,10 +394,90 @@ frontend:
             /tasks, /calendar, /files, /meetings, /flashcards, /quizzes,
             /tests, /mind-maps, /research) redirect to their new home.
 
+  - task: "Space model: cover_image column + PATCH support"
+    implemented: true
+    working: true
+    file: "app/models.py, app/routers/spaces.py, server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "main"
+        -comment: |
+            Added `cover_image` (Text, nullable) to Space. `SpacePatch` now
+            accepts it and `update_space` uses `exclude_unset` so the caller
+            can explicitly set it to null to remove. Additive SQLite/Postgres
+            migration added to server.py lifespan. Verified round-trip:
+            PATCH {cover_image: "preset:sunset"} -> 200, GET shows sunset.
+            PATCH {cover_image: null} -> cover cleared. Admin-only (admin_ctx).
+
 agent_communication:
     -agent: "main"
     -message: |
-        Phase 2 frontend + Global Sidebar redesign complete.
+        Complete: Global sidebar + Space sidebar + Space Home redesign.
+
+        GLOBAL SIDEBAR (Brain) - 8 items, stable:
+          Home | Inbox | Spaces | VoroHub | Tools | Agents  ---  Progress | Settings
+          (Notes/Projects/Transcriber removed — they were the wrong pattern
+           per the "A Space is an environment, a module is a destination"
+           rule. Objects are discoverable via Spaces + Tools + Search.)
+
+        SPACE SIDEBAR (SpaceShell) - fully rebuilt:
+          - Fixed/sticky, compact 248px
+          - Space switcher header + "Search this space"
+          - Home | My Work (Team only)
+          - Collapsible sections with localStorage-persisted open state:
+              CREATE ▼   + New | Page | Note | Document | Whiteboard | Form | Dataset
+              WORK ▼     Tasks | Projects | Calendar | Meetings
+              KNOWLEDGE▼ Notes | Research | Knowledge | Files
+              COLLABORATE▼ Team | Chat | Inbox (Inbox links to the global
+                         Brain Inbox — no per-Space Inbox is ever created)
+          - CREATE items invoke the existing creation flow directly in the
+            current Space (reuses `POST /spaces/{id}/notes`,
+            `/documents`, `/pages` etc). No duplicate creation logic.
+          - `+ New` opens the existing QuickNewMenu (now supports a
+            renderTrigger prop so it can be inlined inside the sidebar).
+
+        SPACE HOME (SpaceHome.jsx) - completely rebuilt:
+          - Customizable landscape cover with 6 preset gradients +
+            uploaded image support (reuses existing /spaces/{id}/files
+            endpoint - no new storage system).
+          - Cover menu is admin-only. "Remove cover" sends null; other
+            members see the current cover thanks to Space PATCH.
+          - 2-column layout:
+              LEFT:  Continue Working (recent objects) + Active Projects
+              RIGHT: Upcoming | Recent Activity | Team
+          - All content pulled from existing `/spaces/{id}/home` endpoint.
+          - No hardcoded stats, no filler.
+
+        BACKEND:
+          - Space.cover_image column added (nullable Text). Additive
+            migration in server.py lifespan covers both SQLite
+            (bare ALTER) and Postgres (ADD COLUMN IF NOT EXISTS).
+          - SpacePatch accepts cover_image; update_space uses
+            exclude_unset so explicit null removes the cover.
+          - Verified round-trip: preset:sunset -> saved -> null -> cleared.
+
+        BREAKS/REMOVED: nothing. All existing per-Space module routes
+        (notes, documents, tasks, projects, calendar, meetings, files,
+        knowledge, m/{cap}) continue to work through the new Space sidebar.
+
+        Requesting frontend testing for the following flows:
+          A) Global sidebar shows exactly 8 items, none of the removed
+             ones (Notes/Projects/Transcriber) appear.
+          B) Clicking Spaces -> Team Space -> Space Home renders with
+             cover + header + 2-column body.
+          C) CREATE section: + New | Page | Note | Document work.
+             Whiteboard/Form/Dataset navigate to per-Space modules.
+          D) WORK/KNOWLEDGE/COLLABORATE sections collapse & remember state
+             across reloads.
+          E) COLLABORATE > Inbox goes to /dashboard/inbox (global).
+          F) Admin: Change cover -> pick preset -> reloads with new cover.
+             Change cover -> Remove cover -> cover cleared.
+             Non-admin members do NOT see the "Change cover" button.
+          G) Personal Space: no "My Work" or Team/Chat items.
+          H) SendComposer still works from Documents/Notes/Chat/Pages.
 
         Sidebar (11 items, compact, stable):
           Home / Inbox / Spaces / VoroHub / Notes / Projects /

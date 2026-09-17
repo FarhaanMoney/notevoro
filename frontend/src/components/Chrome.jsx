@@ -59,11 +59,12 @@ export function useQuickNew(spaceId) {
   return { run, pending, setPending, spaces: spaces || [], spaceId };
 }
 
-export function QuickNewMenu({ spaceId, compact }) {
+export function QuickNewMenu({ spaceId, compact, renderTrigger }) {
   const q = useQuickNew(spaceId);
+  const defaultTrigger = <button className="nv-btn nv-btn-primary" data-testid="quick-new-button"><Icon name="plus" size={15} /> New {!compact && <Icon name="chevron-down" size={13} />}</button>;
   return (
     <>
-      <Popover width={300} testId="quick-new-trigger" trigger={<button className="nv-btn nv-btn-primary" data-testid="quick-new-button"><Icon name="plus" size={15} /> New {!compact && <Icon name="chevron-down" size={13} />}</button>}>
+      <Popover width={300} testId="quick-new-trigger" trigger={renderTrigger ? renderTrigger({}) : defaultTrigger}>
         {(close) => (
           <div className="p-2 grid grid-cols-3 gap-1">
             {QUICK.map(([k, label, icon, tone]) => (
