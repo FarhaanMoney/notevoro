@@ -23,6 +23,8 @@ pub enum VaultError {
     Io(#[from] std::io::Error),
     #[error("db: {0}")]
     Db(#[from] rusqlite::Error),
+    #[error("walkdir: {0}")]
+    WalkDir(#[from] walkdir::Error),
 }
 
 impl Serialize for VaultError {
