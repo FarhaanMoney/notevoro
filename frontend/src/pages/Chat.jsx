@@ -9,6 +9,7 @@ import { onEvent, sendEvent } from '../lib/ws';
 import { Avatar, Icon, SpaceIcon } from '../lib/icons';
 import { ago, Empty, ErrorState, fmtTime, Loading } from '../lib/ui';
 import { useSpace } from './SpaceShell';
+import SendComposer from '../components/SendComposer';
 
 const FILE_TONE = (n = '') => (/\.(xlsx|csv)$/i.test(n) ? 'green' : /\.pdf$/i.test(n) ? 'red' : /\.(png|jpg|jpeg|gif|webp)$/i.test(n) ? 'pink' : 'blue');
 
@@ -63,6 +64,7 @@ function ConvRow({ c, active, presence, onClick }) {
 }
 
 function Thread({ conv, user, presence, showInfo, setShowInfo, spaceId, space }) {
+  const [sendMailOpen, setSendMailOpen] = useState(false);
   const qc = useQueryClient();
   const nav = useNavigate();
   const typingMap = useApp((s) => s.typing[conv.id]);
@@ -130,7 +132,7 @@ function Thread({ conv, user, presence, showInfo, setShowInfo, spaceId, space })
           {conv.type === 'direct' ? <Avatar user={peer} size={40} /> : <SpaceIcon icon={conv.icon || 'users'} accent={conv.accent || 'pink'} size={40} radius={12} />}
           <div className="flex-1 min-w-0"><div className="font-bold text-[15px] truncate" data-testid="thread-title">{conv.title}</div>
             <div className="text-[11.5px] flex items-center gap-1.5">{conv.type === 'direct' ? (presence.has(peer?.id) ? <><span className="w-1.5 h-1.5 rounded-full bg-[#22b573]" /><span className="text-[#1d9e63] font-semibold">Online</span></> : <span className="nv-muted">Offline</span>) : <span className="nv-muted">{conv.members.length} members · {conv.members.filter((m) => presence.has(m.id)).length} online</span>}</div></div>
-          <div className="flex items-center gap-1">{['phone', 'video', 'search'].map((i) => <button key={i} className="nv-btn nv-btn-ghost w-9 px-0" aria-label={i} onClick={() => toast.info(i === 'search' ? 'Use the search box in the conversation list.' : 'Calls run through Meetings — schedule one with Zoom, Meet or Teams.')} data-testid={`thread-${i}`}><Icon name={i} size={16} /></button>)}<button className="nv-btn nv-btn-ghost w-9 px-0" onClick={() => setShowInfo(!showInfo)} aria-label="Details" data-testid="thread-info-toggle"><Icon name="more-vertical" size={16} /></button></div>
+          <div className="flex items-center gap-1">{['phone', 'video', 'search'].map((i) => <button key={i} className="nv-btn nv-btn-ghost w-9 px-0" aria-label={i} onClick={() => toast.info(i === 'search' ? 'Use the search box in the conversation list.' : 'Calls run through Meetings — schedule one with Zoom, Meet or Teams.')} data-testid={`thread-${i}`}><Icon name={i} size={16} /></button>)}<button className="nv-btn nv-btn-soft h-8 px-2.5" onClick={() => setSendMailOpen(true)} aria-label="Send as Mail" data-testid="thread-send-mail"><Icon name="send" size={13} /> Mail</button><button className="nv-btn nv-btn-ghost w-9 px-0" onClick={() => setShowInfo(!showInfo)} aria-label="Details" data-testid="thread-info-toggle"><Icon name="more-vertical" size={16} /></button></div>
         </div>
         <div className="flex-1 overflow-auto nv-scroll px-5 py-4" data-testid="message-list">
           {status === 'loading' && <Loading label="Loading messages…" />}{status === 'error' && <ErrorState error={err} onRetry={load} compact />}
@@ -173,6 +175,7 @@ function Thread({ conv, user, presence, showInfo, setShowInfo, spaceId, space })
         </div>
       </div>
       {showInfo && <InfoPanel conv={conv} peer={peer} presence={presence} space={space} spaceId={spaceId} files={sharedFiles} msgs={msgs} onClose={() => setShowInfo(false)} />}
+      <SendComposer open={sendMailOpen} onClose={() => setSendMailOpen(false)} presetSpaceId={spaceId} lockSourceSpace />
     </>
   );
 }

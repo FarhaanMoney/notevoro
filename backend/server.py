@@ -15,7 +15,7 @@ from app.config import settings  # noqa: E402
 from app.core import RequestContextMiddleware, http_exception_handler, validation_exception_handler  # noqa: E402
 from app.db import Base, engine  # noqa: E402
 from app.realtime import hub  # noqa: E402
-from app.routers import account, auth, chat, collab, items, spaces, voro  # noqa: E402
+from app.routers import account, auth, chat, collab, inbox, items, pages, spaces, voro  # noqa: E402
 from app.storage import storage  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
         # cold start on an existing database picks them up without a
         # manual step.
         from sqlalchemy import text as _text
-        for _tbl in ("notes", "documents", "projects", "tasks", "events", "files", "records"):
+        for _tbl in ("notes", "documents", "projects", "tasks", "events", "files", "records", "pages"):
             try:
                 await conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS visibility VARCHAR(16) NOT NULL DEFAULT 'team'"))
                 await conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS shared_with JSONB NOT NULL DEFAULT '[]'::jsonb"))
@@ -71,7 +71,7 @@ app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in settings.co
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
-for r in (auth.router, spaces.router, items.router, chat.router, voro.router, account.router, collab.router):
+for r in (auth.router, spaces.router, items.router, pages.router, chat.router, voro.router, account.router, collab.router, inbox.router):
     app.include_router(r, prefix="/api/v1")
 
 

@@ -241,6 +241,73 @@ class Notification(Base, IdMixin, TimestampMixin):
     read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
+class Page(Base, IdMixin, TimestampMixin, SpaceScoped):
+    """Notion-styled nested page. First-class Notevoro object that can contain
+    rich content (Tiptap JSON), reference other objects, and nest other Pages.
+
+    Uses the SpaceScoped visibility/ACL model so a page created inside a Team
+    Space with visibility='private' becomes the user's My-Work draft; when they
+    are ready to share, they change visibility to 'specific' (+shared_with) or
+    'team'. The exact same rules apply as for Notes/Documents/Tasks.
+    """
+    __tablename__ = "pages"
+    __table_args__ = (Index("ix_pages_parent", "space_id", "parent_page_id"),)
+    title: Mapped[str] = mapped_column(String(300), default="Untitled")
+    icon: Mapped[Optional[str]] = mapped_column(String(80))     # emoji or lucide name
+    cover: Mapped[Optional[str]] = mapped_column(Text)           # URL or gradient key
+    content: Mapped[dict] = mapped_column(J, default=dict)       # Tiptap JSON doc
+    parent_page_id: Mapped[Optional[str]] = mapped_column(ForeignKey("pages.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class InboxEvent(Base, IdMixin, TimestampMixin):
+    """Canonical Inbox event — the single primitive backing the global Brain
+    Inbox and the Notevoro internal Mail/Send system.
+
+    An InboxEvent NEVER duplicates an object; it references it. When a share
+    is accepted, the recipient's access is granted on the CANONICAL object
+    (via that object's `shared_with` or a space membership row) — not by
+    copying content.
+
+    event_type:
+      'mail'         -> free-form async message (subject+body)
+      'share'        -> a sender shared a specific object with the recipient
+      'invitation'   -> the sender invited the recipient to a Team Space
+      'mention'      -> the recipient was @-mentioned in an object/message
+      'activity'     -> notable activity in a Space the recipient watches
+      'system'       -> platform/system event (no source_space_id)
+    """
+    __tablename__ = "inbox_events"
+    __table_args__ = (
+        Index("ix_inbox_recipient_created", "recipient_id", "created_at"),
+        Index("ix_inbox_recipient_read", "recipient_id", "read_at"),
+        Index("ix_inbox_recipient_space", "recipient_id", "source_space_id"),
+        CheckConstraint(
+            "event_type IN ('mail','share','invitation','mention','activity','system')",
+            name="ck_inbox_event_type",
+        ),
+        CheckConstraint(
+            "status IN ('pending','accepted','declined','archived')",
+            name="ck_inbox_status",
+        ),
+    )
+    recipient_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    source_space_id: Mapped[Optional[str]] = mapped_column(ForeignKey("spaces.id", ondelete="SET NULL"), index=True)
+    event_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    subject: Mapped[Optional[str]] = mapped_column(String(300))
+    body: Mapped[Optional[str]] = mapped_column(Text)
+    object_type: Mapped[Optional[str]] = mapped_column(String(32))   # 'page' | 'document' | 'note' | 'project' | 'task' | 'file' | 'meeting' | 'invitation'
+    object_id: Mapped[Optional[str]] = mapped_column(String(36))
+    permission: Mapped[Optional[str]] = mapped_column(String(16))    # 'viewer' | 'editor' when share
+    link: Mapped[Optional[str]] = mapped_column(Text)                # deep-link if applicable
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)
+    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    meta: Mapped[dict] = mapped_column(J, default=dict)
+
+
 class Activity(Base, IdMixin, TimestampMixin):
     __tablename__ = "activities"
     __table_args__ = (Index("ix_activity_space_created", "space_id", "created_at"),)

@@ -17,7 +17,7 @@ from ..models import (Activity, CalendarEvent, Conversation, ConversationMember,
                      Invitation, Note, Project, Space, SpaceMember, Task, User)
 from ..realtime import hub
 from ..registry import BY_KEY, DEFAULT_PERSONAL, DEFAULT_TEAM, REG, sidebar_for
-from ..services import notify, record_activity, user_brief
+from ..services import create_inbox_event, notify, record_activity, user_brief
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])
 
@@ -136,6 +136,22 @@ async def _invite(db, space: Space, inviter: User, email: str, role: str):
             db.add(ConversationMember(conversation_id=conv.id, user_id=existing_user.id))
         await db.flush()
         await notify(db, [existing_user.id], "invitation", f"{inviter.name} added you to {space.name}", "Open the Space to start collaborating.", f"/dashboard/spaces/{space.id}", space.id)
+        # Brain-only Inbox event — canonical invitation record so the global
+        # Inbox and its unread counter update immediately.
+        await create_inbox_event(
+            db,
+            recipient_id=existing_user.id,
+            sender_id=inviter.id,
+            source_space_id=space.id,
+            event_type="invitation",
+            subject=f"You've been added to {space.name}",
+            body=f"{inviter.name} added you to the {space.name} Space as {role}.",
+            object_type="space",
+            object_id=space.id,
+            permission=role,
+            link=f"/dashboard/spaces/{space.id}",
+            status="accepted",
+        )
         await hub.send_to_users([existing_user.id], "space.joined", {"space_id": space.id})
         return {"email": email, "status": "joined", "user": user_brief(existing_user)}
     inv = (await db.execute(select(Invitation).where(Invitation.space_id == space.id, Invitation.email == email))).scalar_one_or_none()

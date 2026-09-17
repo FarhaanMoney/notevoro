@@ -5,6 +5,7 @@ import { ago, Empty, ErrorState, Loading, Tag } from '../lib/ui';
 import { useCrud } from '../components/Forms';
 import { PageHeader, useSpace } from './SpaceShell';
 import { renderMarkdown } from './Documents';
+import SendComposer from '../components/SendComposer';
 
 export default function Notes() {
   const { spaceId, canWrite } = useSpace();
@@ -53,8 +54,10 @@ export function SaveState({ state }) {
 }
 
 function NoteEditor({ note, notes, canWrite, backlinks, onOpen, onDelete }) {
+  const { spaceId } = useSpace();
   const [f, setF] = useState({ title: note.title, content: note.content || '', tags: (note.tags || []).join(', ') });
   const [preview, setPreview] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const state = useAutosave(f, (v) => notes.update.mutateAsync({ id: note.id, title: v.title, content: v.content, tags: v.tags.split(',').map((s) => s.trim()).filter(Boolean) }));
   const links = [...(f.content.matchAll(/\[\[([^\]]+)\]\]/g))].map((m) => m[1]);
   return (
@@ -62,6 +65,7 @@ function NoteEditor({ note, notes, canWrite, backlinks, onOpen, onDelete }) {
       <div className="px-8 pt-6 flex items-center gap-3"><input className="flex-1 text-[24px] font-extrabold tracking-tight outline-none bg-transparent" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} disabled={!canWrite} data-testid="note-title-input" /><SaveState state={state} />
         <button className={`nv-btn nv-btn-ghost w-8 px-0 ${note.pinned ? 'text-[#6e56f5]' : ''}`} onClick={() => notes.update.mutate({ id: note.id, pinned: !note.pinned })} aria-label="Pin" data-testid="note-pin"><Icon name="pin" size={15} /></button>
         <button className={`nv-btn nv-btn-ghost w-8 px-0 ${preview ? 'text-[#6e56f5]' : ''}`} onClick={() => setPreview(!preview)} aria-label="Preview" data-testid="note-preview"><Icon name="eye" size={15} /></button>
+        <button className="nv-btn nv-btn-soft h-8 px-2.5" onClick={() => setSendOpen(true)} aria-label="Send" data-testid="note-send"><Icon name="send" size={13} /> Send</button>
         {canWrite && <button className="nv-btn nv-btn-ghost w-8 px-0 text-[#ee5a5a]" onClick={() => window.confirm('Delete this note?') && onDelete()} aria-label="Delete" data-testid="note-delete"><Icon name="trash-2" size={15} /></button>}</div>
       <div className="px-8 mt-1 flex items-center gap-2 text-xs nv-muted"><Icon name="tag" size={12} /><input className="bg-transparent outline-none flex-1" placeholder="Add tags, comma separated" value={f.tags} onChange={(e) => setF({ ...f, tags: e.target.value })} disabled={!canWrite} data-testid="note-tags-input" /><span>Edited {ago(note.updated_at)}</span></div>
       <div className="flex-1 min-h-0 flex">
@@ -72,6 +76,7 @@ function NoteEditor({ note, notes, canWrite, backlinks, onOpen, onDelete }) {
           {backlinks.length > 0 && <div><div className="nv-eyebrow mb-2">Backlinks</div>{backlinks.map((b) => <button key={b.id} className="block text-left nv-link mb-1" onClick={() => onOpen(b.id)}>{b.title}</button>)}</div>}
         </aside>}
       </div>
+      <SendComposer open={sendOpen} onClose={() => setSendOpen(false)} presetSpaceId={spaceId} lockSourceSpace object={{ type: 'note', id: note.id, title: f.title }} />
     </div>
   );
 }

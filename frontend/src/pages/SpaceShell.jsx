@@ -12,7 +12,7 @@ import { Logo } from './BrainLayout';
 const SpaceCtx = createContext(null);
 export const useSpace = () => useContext(SpaceCtx);
 
-const KIND_ROUTE = { notes: 'notes', documents: 'documents', files: 'files', knowledge: 'knowledge', tasks: 'tasks', projects: 'projects', calendar: 'calendar', meetings: 'meetings', chat: 'chat', inbox: 'inbox', team: 'team', activity: 'activity' };
+const KIND_ROUTE = { notes: 'notes', pages: 'pages', documents: 'documents', files: 'files', knowledge: 'knowledge', tasks: 'tasks', projects: 'projects', calendar: 'calendar', meetings: 'meetings', chat: 'chat', team: 'team', activity: 'activity' };
 export const capRoute = (c) => (c.kind === 'records' ? `m/${c.key}` : c.kind === 'tool' ? `tools/${c.key}` : c.kind === 'view' ? c.key : KIND_ROUTE[c.kind] || c.key);
 
 export default function SpaceShell() {
@@ -50,6 +50,9 @@ export default function SpaceShell() {
           </div>
           <nav className="flex-1 overflow-auto nv-scroll px-3 mt-2 space-y-0.5" data-testid="space-nav">
             <NavLink to={`/dashboard/spaces/${spaceId}`} end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} data-testid="space-nav-home"><Icon name="home" /> Home</NavLink>
+            {space.type === 'team' && (
+              <NavLink to={`/dashboard/spaces/${spaceId}/my-work`} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} data-testid="space-nav-my-work"><Icon name="user" /> My Work</NavLink>
+            )}
             {space.sidebar.map((sec) => (
               <div key={sec.section} className="pt-3">
                 <div className="nv-eyebrow px-3 mb-1">{sec.section}</div>

@@ -10,6 +10,7 @@ import { Field, Select, useCrud } from '../components/Forms';
 import { PageHeader, useSpace } from './SpaceShell';
 import { SaveState, useAutosave } from './Notes';
 import CollaborativeDocEditor, { CollabStatusPill } from '../components/CollaborativeDocEditor';
+import SendComposer from '../components/SendComposer';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 export function renderMarkdown(md = '') {
@@ -59,6 +60,7 @@ function DocEditor({ doc, docs, projects, canWrite, spaceId, onBack }) {
   const [mode, setMode] = useState('rich');
   const [showVersions, setShowVersions] = useState(false);
   const [collabStatus, setCollabStatus] = useState('local');
+  const [sendOpen, setSendOpen] = useState(false);
   const me = useApp((s) => s.user);
   const state = useAutosave(f, (v) => docs.update.mutateAsync({ id: doc.id, title: v.title, content: v.content, project_id: v.project_id || null }));
   const { data: versions = [] } = useQuery({ queryKey: ['doc-versions', doc.id, doc.version], queryFn: () => api.get(`/spaces/${spaceId}/documents/${doc.id}/versions`).then((r) => r.data), enabled: showVersions });
@@ -75,7 +77,8 @@ function DocEditor({ doc, docs, projects, canWrite, spaceId, onBack }) {
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={() => setShowVersions(!showVersions)} aria-label="History" data-testid="doc-history"><Icon name="history" size={15} /></button>
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={exportMd} aria-label="Export Markdown" data-testid="doc-export"><Icon name="download" size={15} /></button>
         <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={print} aria-label="Print / PDF" data-testid="doc-print"><Icon name="printer" size={15} /></button>
-        <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied'); }} aria-label="Share" data-testid="doc-share"><Icon name="share-2" size={15} /></button>
+        <button className="nv-btn nv-btn-soft h-8 px-2.5" onClick={() => setSendOpen(true)} aria-label="Send" data-testid="doc-send"><Icon name="send" size={13} /> Send</button>
+        <button className="nv-btn nv-btn-ghost w-8 px-0" onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied'); }} aria-label="Copy link" data-testid="doc-share"><Icon name="link" size={15} /></button>
         {canWrite && <button className="nv-btn nv-btn-ghost w-8 px-0 text-[#ee5a5a]" onClick={() => window.confirm('Delete this document?') && (docs.remove.mutate(doc.id), onBack())} aria-label="Delete" data-testid="doc-delete"><Icon name="trash-2" size={15} /></button>}
       </div>
       <div className="px-7 py-2 flex items-center gap-3 text-xs border-b border-[var(--nv-border)]"><Field label=""><Select value={f.project_id} onChange={(v) => setF({ ...f, project_id: v })} options={[['', 'No project'], ...projects.map((p) => [p.id, p.name])]} testId="doc-project-select" /></Field><span className="nv-muted">{mode === 'rich' ? 'Collaborative editor · Tiptap + Yjs' : 'Markdown · headings, lists, tables, code, links, [[backlinks]]'}</span></div>
@@ -94,6 +97,7 @@ function DocEditor({ doc, docs, projects, canWrite, spaceId, onBack }) {
         {mode === 'read' && <div className="flex-1 overflow-auto nv-scroll px-10 py-5 prose-nv" dangerouslySetInnerHTML={{ __html: renderMarkdown(f.content) }} data-testid="document-preview" />}
         {showVersions && <aside className="w-[260px] border-l border-[var(--nv-border)] p-4 overflow-auto nv-scroll" data-testid="doc-versions-panel"><div className="nv-eyebrow mb-2">Version history</div>{!versions.length && <div className="text-xs nv-muted">No previous versions yet.</div>}{versions.map((v) => <button key={v.id} className="w-full text-left p-2 rounded-lg hover:bg-[#f7f6fd] mb-1" onClick={() => canWrite && window.confirm(`Restore version ${v.version}?`) && setF({ ...f, content: v.content })} data-testid="doc-version"><div className="text-[12.5px] font-bold">Version {v.version}</div><div className="text-[11px] nv-muted">{ago(v.created_at)}</div></button>)}</aside>}
       </div>
+      <SendComposer open={sendOpen} onClose={() => setSendOpen(false)} presetSpaceId={spaceId} lockSourceSpace object={{ type: 'document', id: doc.id, title: f.title }} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ def cap(key, name, type_, category, section, icon, desc, kind="records", plan=No
 
 # ---- Core modules with dedicated engines
 cap("notes", "Notes", "module", "Knowledge", "KNOWLEDGE", "file-text", "Fast, linkable notes with tags, pins and backlinks.", kind="notes", default=True)
+cap("pages", "Pages", "module", "Knowledge", "KNOWLEDGE", "file-stack", "Notion-styled nested pages. Rich content, sub-pages, and object references.", kind="pages", default=True)
 cap("documents", "Documents", "module", "Knowledge", "KNOWLEDGE", "file", "Rich documents with version history and collaborative editing.", kind="documents")
 cap("files", "Files", "module", "Knowledge", "KNOWLEDGE", "folder", "Upload, preview and share files. Large files live in S3.", kind="files")
 cap("knowledge", "Knowledge Base", "module", "Knowledge", "KNOWLEDGE", "book-open", "Linked knowledge, references and semantic retrieval across the Space.", kind="knowledge")
@@ -19,7 +20,10 @@ cap("calendar", "Calendar", "module", "Productivity", "WORK", "calendar", "Event
 cap("goals", "Goals", "module", "Productivity", "WORK", "target", "Outcome goals with progress tracking.", fields=["target", "progress"])
 cap("meetings", "Meetings", "module", "Collaboration", "COLLABORATE", "video", "Agenda, attendees, notes, transcript and action items.", kind="meetings")
 cap("chat", "Chat", "module", "Collaboration", "COLLABORATE", "message-circle", "Direct messages, group chats and the Space conversation.", kind="chat")
-cap("inbox", "Inbox", "module", "Collaboration", "COLLABORATE", "inbox", "Mentions, assignments and unread messages in one place.", kind="inbox")
+# NOTE: `inbox` is intentionally NOT registered as a Space-level module.
+# Inbox is Brain-only (one global inbox aggregating events across all
+# authorized Spaces). Kept here as a docstring so nothing accidentally
+# re-adds it — see /api/v1/inbox and the Brain layout.
 cap("team", "Team", "module", "Collaboration", "COLLABORATE", "users", "Members, roles, invitations and presence.", kind="team")
 
 # ---- Knowledge (records)
@@ -103,8 +107,8 @@ for k, n, i, d in [("google", "Google Workspace", "mail", "Drive, Docs, Calendar
 
 BY_KEY = {c["key"]: c for c in REG}
 SECTION_ORDER = ["WORK", "LEARNING", "KNOWLEDGE", "COLLABORATE", "DATA", "TOOLS", "VIEWS"]
-DEFAULT_PERSONAL = ["notes", "tasks", "calendar", "projects", "goals", "documents", "files"]
-DEFAULT_TEAM = ["notes", "tasks", "calendar", "projects", "goals", "documents", "files", "knowledge", "chat", "meetings", "team", "board", "timeline", "table_view"]
+DEFAULT_PERSONAL = ["notes", "pages", "tasks", "calendar", "projects", "goals", "documents", "files"]
+DEFAULT_TEAM = ["notes", "pages", "tasks", "calendar", "projects", "goals", "documents", "files", "knowledge", "chat", "meetings", "team", "board", "timeline", "table_view"]
 
 
 def sidebar_for(keys: list[str], order: list[str] | None = None):

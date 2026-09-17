@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core import dump
-from .models import Activity, Notification, SpaceMember, User
+from .models import Activity, InboxEvent, Notification, SpaceMember, User
 from .realtime import hub
 
 
@@ -26,6 +26,51 @@ async def notify(db: AsyncSession, user_ids, type_: str, title: str, body: str |
     await db.flush()
     for n in created:
         await hub.send_to_users([n.user_id], "notification.created", dump(n))
+
+
+async def create_inbox_event(
+    db: AsyncSession,
+    *,
+    recipient_id: str,
+    event_type: str,
+    sender_id: str | None = None,
+    source_space_id: str | None = None,
+    subject: str | None = None,
+    body: str | None = None,
+    object_type: str | None = None,
+    object_id: str | None = None,
+    permission: str | None = None,
+    link: str | None = None,
+    status: str = "pending",
+    meta: dict | None = None,
+) -> InboxEvent:
+    """Create a canonical Inbox event for `recipient_id` and push a
+    real-time notification so the Brain Inbox unread counter updates
+    immediately.
+
+    IMPORTANT: This function does NOT enforce authorization. The caller is
+    responsible for verifying that (a) the sender may send from the given
+    source Space and (b) the sender may share the referenced object. See
+    routers/inbox.py::compose for the canonical flow.
+    """
+    evt = InboxEvent(
+        recipient_id=recipient_id,
+        sender_id=sender_id,
+        source_space_id=source_space_id,
+        event_type=event_type,
+        subject=subject,
+        body=body,
+        object_type=object_type,
+        object_id=object_id,
+        permission=permission,
+        link=link,
+        status=status,
+        meta=meta or {},
+    )
+    db.add(evt)
+    await db.flush()
+    await hub.send_to_users([recipient_id], "inbox.created", dump(evt))
+    return evt
 
 
 def user_brief(u: User | None):

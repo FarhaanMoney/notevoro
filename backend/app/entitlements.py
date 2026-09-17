@@ -40,16 +40,30 @@ async def get_subscription(db: AsyncSession, user_id: str) -> Subscription:
     return sub
 
 
+def _aware(dt):
+    """Ensure a datetime is tz-aware (UTC) — SQLite loses tz info on write,
+    which can cause `t > sub.expires_at` to raise TypeError. In production
+    (Aurora Postgres) tz is preserved; this shim just makes local dev work."""
+    if dt is None:
+        return None
+    if getattr(dt, "tzinfo", None) is None:
+        from datetime import timezone as _tz
+        return dt.replace(tzinfo=_tz.utc)
+    return dt
+
+
 def effective_state(sub: Subscription):
     """ACTIVE -> EXPIRING -> GRACE -> RESTRICTED lifecycle, computed server-side."""
     t = now()
+    expires_at = _aware(sub.expires_at)
+    grace_until = _aware(sub.grace_until)
     if sub.plan == "free":
         return "active", "free"
-    if sub.status == "canceled" or (sub.expires_at and t > sub.expires_at):
-        if sub.grace_until and t <= sub.grace_until:
+    if sub.status == "canceled" or (expires_at and t > expires_at):
+        if grace_until and t <= grace_until:
             return "grace", sub.plan
         return "restricted", "free"
-    if sub.expires_at and t > sub.expires_at - timedelta(days=7):
+    if expires_at and t > expires_at - timedelta(days=7):
         return "expiring", sub.plan
     return "active", sub.plan
 
