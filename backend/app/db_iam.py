@@ -5,6 +5,7 @@ This module provides database connection using AWS RDS IAM authentication tokens
 Tokens are generated dynamically and are valid for 15 minutes.
 """
 import asyncio
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -13,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -35,17 +38,29 @@ def get_iam_token() -> str:
     if not settings.db_username:
         raise ValueError("DB_USERNAME is required for IAM authentication")
     
+    # Log diagnostic information (no secrets)
+    logger.info("IAM authentication enabled for Aurora PostgreSQL")
+    logger.info("DB Host: %s", settings.db_host)
+    logger.info("DB Port: %s", settings.db_port)
+    logger.info("DB Username: %s", settings.db_username)
+    logger.info("DB Name: %s", settings.db_name)
+    logger.info("AWS Region: %s", settings.aws_region)
+    
     rds_client = boto3.client('rds', region_name=settings.aws_region)
     
     # Generate token for Aurora PostgreSQL
     # The token must be generated for the exact same hostname that will be used in the connection
-    token = rds_client.generate_db_auth_token(
-        DBHostname=settings.db_host,
-        Port=int(settings.db_port),
-        DBUsername=settings.db_username,
-    )
-    
-    return token
+    try:
+        token = rds_client.generate_db_auth_token(
+            DBHostname=settings.db_host,
+            Port=int(settings.db_port),
+            DBUsername=settings.db_username,
+        )
+        logger.info("IAM token generated successfully")
+        return token
+    except Exception as e:
+        logger.error(f"IAM token generation failed: {e.__class__.__name__}: {e}")
+        raise
 
 
 # Cache for IAM token to avoid generating new tokens on every connection
@@ -85,10 +100,20 @@ async def get_iam_connection_string() -> str:
     SSL is configured via connect_args in init_iam_engine for asyncpg.
     """
     token = await get_current_iam_token()
-    return (
+    
+    # Log connection attempt (no secrets)
+    logger.info("Building connection string for %s@%s:%s/%s", 
+                settings.db_username, settings.db_host, settings.db_port, settings.db_name)
+    logger.info("Connection uses IAM token authentication")
+    
+    connection_string = (
         f"postgresql+asyncpg://{settings.db_username}:{token}"
         f"@{settings.db_host}:{settings.db_port}/{settings.db_name}"
     )
+    
+    logger.info("Connection string length: %d (includes token)", len(connection_string))
+    
+    return connection_string
 
 
 # Global engine and session maker
@@ -108,8 +133,12 @@ async def init_iam_engine() -> AsyncEngine:
     if _engine is not None:
         return _engine
     
+    logger.info("Initializing IAM database engine")
+    
     # Get connection string with fresh IAM token
     connection_string = await get_iam_connection_string()
+    
+    logger.info("Creating SQLAlchemy async engine with IAM authentication")
     
     # Create engine with SSL/TLS configuration for Aurora
     # For asyncpg, we use connect_args with ssl=True to enable SSL
@@ -128,6 +157,9 @@ async def init_iam_engine() -> AsyncEngine:
     
     _session_local = async_sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)
     
+    logger.info("IAM database engine initialized successfully")
+    logger.info("Engine configured with pool_recycle=600s for token refresh")
+    
     return _engine
 
 
@@ -140,8 +172,15 @@ async def get_iam_db():
     if _engine is None:
         await init_iam_engine()
     
-    async with _session_local() as session:
-        yield session
+    logger.info("Attempting IAM database connection")
+    
+    try:
+        async with _session_local() as session:
+            logger.info("IAM database connection established successfully")
+            yield session
+    except Exception as e:
+        logger.error(f"IAM database connection failed: {e.__class__.__name__}: {e}")
+        raise
 
 
 def get_engine() -> AsyncEngine:

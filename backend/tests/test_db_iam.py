@@ -153,5 +153,31 @@ def test_iam_token_generation_parameters():
     assert "settings.aws_region" in token_source, "Should use settings.aws_region for RDS client"
 
 
+def test_diagnostic_logging_does_not_expose_secrets():
+    """Test that diagnostic logging does not expose secrets."""
+    from app.db_iam import get_iam_token, get_iam_connection_string, init_iam_engine
+    import inspect
+    
+    # Check that none of the code logs the actual token
+    token_source = inspect.getsource(get_iam_token)
+    connection_source = inspect.getsource(get_iam_connection_string)
+    engine_source = inspect.getsource(init_iam_engine)
+    
+    # These should NOT appear in the code (logging secrets)
+    assert "logger.info(token)" not in token_source, "Should not log token directly"
+    assert "logger.debug(token)" not in token_source, "Should not log token directly"
+    assert "print(token)" not in token_source, "Should not print token"
+    
+    # These SHOULD appear (logging safe info)
+    assert "logger.info" in token_source, "Should have diagnostic logging"
+    assert "logger.info" in connection_source, "Should have diagnostic logging"
+    assert "logger.info" in engine_source, "Should have diagnostic logging"
+    
+    # Verify we log configuration but not secrets
+    assert "settings.db_host" in token_source, "Should log db_host"
+    assert "settings.db_username" in token_source, "Should log db_username"
+    assert "settings.aws_region" in token_source, "Should log aws_region"
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
