@@ -13,7 +13,7 @@ from sqlalchemy import text  # noqa: E402
 from app import models  # noqa: E402,F401
 from app.config import settings  # noqa: E402
 from app.core import RequestContextMiddleware, http_exception_handler, validation_exception_handler  # noqa: E402
-from app.db import Base, engine  # noqa: E402
+from app.db import Base  # noqa: E402
 from app.realtime import hub  # noqa: E402
 from app.routers import account, auth, chat, collab, inbox, items, pages, spaces, voro  # noqa: E402
 from app.storage import storage  # noqa: E402
@@ -27,7 +27,10 @@ async def lifespan(app: FastAPI):
     from app.db import ensure_engine_initialized
     await ensure_engine_initialized()
     
-    async with engine.begin() as conn:
+    # Import engine after initialization to get the actual engine object
+    from app.db import engine as initialized_engine
+    
+    async with initialized_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # ---- idempotent additive migrations (Aurora-compatible) --------
         # In production we'd use Alembic; for now the app performs safe
@@ -76,7 +79,9 @@ async def lifespan(app: FastAPI):
         except Exception as _e:  # noqa: BLE001
             logging.getLogger("notevoro.migrate").warning("backfill personal visibility skipped: %s", _e)
     yield
-    await engine.dispose()
+    # Dispose the initialized engine
+    from app.db import engine as initialized_engine
+    await initialized_engine.dispose()
 
 
 app = FastAPI(title="Notevoro API", version="1.0.0", lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json")
@@ -99,7 +104,8 @@ async def ready():
     checks = {"database": "ok", "storage": storage.name, "auth_provider": __import__("app.auth", fromlist=["provider"]).provider.name,
               "ai": "configured" if settings.openai_api_key else "not_configured", "realtime": "configured" if settings.supabase_configured else "not_configured", "realtime_connections": len(hub.online_users())}
     try:
-        async with engine.connect() as conn:
+        from app.db import engine as initialized_engine
+        async with initialized_engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
     except Exception as exc:
         checks["database"] = f"error: {exc.__class__.__name__}"

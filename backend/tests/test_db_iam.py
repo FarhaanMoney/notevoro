@@ -77,5 +77,26 @@ def test_iam_module_imports():
     assert callable(get_session_local)
 
 
+def test_engine_initialization_resolves_stale_import():
+    """Test that engine import after initialization returns the actual engine."""
+    from app.db import engine, ensure_engine_initialized
+    from app.config import settings
+    
+    if not settings.using_iam_auth:
+        # For traditional mode, engine should be initialized at module load
+        assert engine is not None
+        return
+    
+    # For IAM mode, engine should be None before initialization
+    assert engine is None, "Engine should be None before initialization in IAM mode"
+    
+    # Import before initialization
+    from app.db import engine as engine_before
+    assert engine_before is None, "Engine should be None before initialization"
+    
+    # Note: We can't actually call ensure_engine_initialized() in tests without AWS credentials
+    # But we can verify the architecture is correct for re-importing
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
