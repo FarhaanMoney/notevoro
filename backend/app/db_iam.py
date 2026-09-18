@@ -77,11 +77,13 @@ async def get_current_iam_token() -> str:
 async def get_iam_connection_string() -> str:
     """
     Build a PostgreSQL connection string with a fresh IAM token.
+    
+    Includes SSL configuration for Aurora PostgreSQL connections.
     """
     token = await get_current_iam_token()
     return (
         f"postgresql+asyncpg://{settings.db_username}:{token}"
-        f"@{settings.db_host}:{settings.db_port}/{settings.db_name}"
+        f"@{settings.db_host}:{settings.db_port}/{settings.db_name}?sslmode=require"
     )
 
 
@@ -95,6 +97,7 @@ async def init_iam_engine() -> AsyncEngine:
     Initialize the SQLAlchemy async engine with IAM authentication.
     
     Uses pool_recycle to refresh connections before tokens expire.
+    SSL is configured via the connection string for Aurora PostgreSQL.
     """
     global _engine, _session_local
     
