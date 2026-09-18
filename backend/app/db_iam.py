@@ -87,7 +87,7 @@ async def get_iam_connection_string() -> str:
 
 # Global engine and session maker
 _engine: Optional[AsyncEngine] = None
-_Session_local: Optional[async_sessionmaker] = None
+_session_local: Optional[async_sessionmaker] = None
 
 
 async def init_iam_engine() -> AsyncEngine:
@@ -113,7 +113,7 @@ async def init_iam_engine() -> AsyncEngine:
         pool_recycle=600,  # Recycle connections after 10 minutes (tokens valid for 15)
     )
     
-    _session_local = async_sessionmaker(_engine, expire_on_commit=False)
+    _session_local = async_sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)
     
     return _engine
 
@@ -139,3 +139,17 @@ def get_engine() -> AsyncEngine:
     if _engine is None:
         raise RuntimeError("Engine not initialized. Call init_iam_engine() first.")
     return _engine
+
+
+def get_session_local() -> async_sessionmaker:
+    """
+    Get the SessionLocal for direct usage in routers.
+    
+    Note: For IAM auth, connections should be refreshed periodically.
+    This returns the session maker; the connection pool handles token expiration
+    via pool_recycle.
+    """
+    global _session_local
+    if _session_local is None:
+        raise RuntimeError("Engine not initialized. Call init_iam_engine() first.")
+    return _session_local
