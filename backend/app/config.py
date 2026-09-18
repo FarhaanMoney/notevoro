@@ -3,14 +3,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_env: str = "development"
-    database_url: str
+    database_url: str = ""
+    # Aurora PostgreSQL configuration
+    db_host: str = ""
+    db_port: str = "5432"
+    db_name: str = "postgres"
+    db_username: str = "postgres"
+    use_iam_auth: str = "false"  # Environment variable is string, convert to bool
+    aws_region: str = ""
     cors_origins: str = "https://notevoro.com,https://www.notevoro.com,http://127.0.0.1:1430"
     auth_provider: str = "local"
     local_auth_secret: str = "change-me"
     cognito_region: str = ""
     cognito_user_pool_id: str = ""
     cognito_client_id: str = ""
-    aws_region: str = ""
     s3_bucket: str = ""
     sqs_queue_url: str = ""
     local_storage_dir: str = "./.storage"
@@ -31,6 +37,10 @@ class Settings(BaseSettings):
     @property
     def supabase_admin_configured(self) -> bool:
         return bool(self.supabase_configured and self.supabase_service_role_key.strip())
+
+    @property
+    def using_iam_auth(self) -> bool:
+        return self.use_iam_auth.lower() == "true" and bool(self.db_host)
 
     google_client_id: str = ""
     google_client_secret: str = ""
