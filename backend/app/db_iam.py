@@ -78,12 +78,12 @@ async def get_iam_connection_string() -> str:
     """
     Build a PostgreSQL connection string with a fresh IAM token.
     
-    Includes SSL configuration for Aurora PostgreSQL connections.
+    SSL is configured via connect_args in init_iam_engine for asyncpg.
     """
     token = await get_current_iam_token()
     return (
         f"postgresql+asyncpg://{settings.db_username}:{token}"
-        f"@{settings.db_host}:{settings.db_port}/{settings.db_name}?sslmode=require"
+        f"@{settings.db_host}:{settings.db_port}/{settings.db_name}"
     )
 
 
@@ -97,7 +97,7 @@ async def init_iam_engine() -> AsyncEngine:
     Initialize the SQLAlchemy async engine with IAM authentication.
     
     Uses pool_recycle to refresh connections before tokens expire.
-    SSL is configured via the connection string for Aurora PostgreSQL.
+    SSL is configured via connect_args for asyncpg Aurora connections.
     """
     global _engine, _session_local
     
@@ -107,13 +107,19 @@ async def init_iam_engine() -> AsyncEngine:
     # Get connection string with fresh IAM token
     connection_string = await get_iam_connection_string()
     
-    # Create engine with pool_recycle to refresh connections before token expires
+    # Create engine with SSL/TLS configuration for Aurora
+    # For asyncpg, we use connect_args with ssl=True to enable SSL
+    # For Aurora PostgreSQL, we enable SSL without certificate verification
+    # as Aurora manages its own certificates
     _engine = create_async_engine(
         connection_string,
         pool_pre_ping=True,
         pool_size=10,
         max_overflow=20,
         pool_recycle=600,  # Recycle connections after 10 minutes (tokens valid for 15)
+        connect_args={
+            "ssl": True,  # Enable SSL for asyncpg
+        }
     )
     
     _session_local = async_sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)

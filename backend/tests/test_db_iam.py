@@ -99,25 +99,22 @@ def test_engine_initialization_resolves_stale_import():
 
 
 def test_iam_ssl_configuration():
-    """Test that IAM connection string includes SSL configuration."""
-    from app.db_iam import get_iam_connection_string
+    """Test that IAM SSL configuration uses asyncpg's native mechanism."""
+    from app.db_iam import get_iam_connection_string, init_iam_engine
     from app.config import settings
     
     if not settings.using_iam_auth:
         return  # Skip test if IAM is not configured
     
-    # We can't actually call the async function in a sync test without credentials
-    # But we can verify the function is callable and has the right signature
+    # Verify connection string does NOT contain sslmode (asyncpg doesn't accept it)
     import inspect
-    sig = inspect.signature(get_iam_connection_string)
-    assert len(sig.parameters) == 0, "get_iam_connection_string should take no parameters"
+    connection_string_source = inspect.getsource(get_iam_connection_string)
+    assert "sslmode" not in connection_string_source, "Connection string should not contain sslmode (asyncpg incompatible)"
     
-    # Verify the function is async
-    assert inspect.iscoroutinefunction(get_iam_connection_string), "get_iam_connection_string should be async"
-    
-    # Verify the source code includes SSL configuration
-    source = inspect.getsource(get_iam_connection_string)
-    assert "sslmode=require" in source, "Connection string should include sslmode=require"
+    # Verify init_iam_engine uses connect_args with ssl=True
+    engine_source = inspect.getsource(init_iam_engine)
+    assert '"ssl": True' in engine_source or "'ssl': True" in engine_source, "Engine should use connect_args with ssl=True"
+    assert "connect_args" in engine_source, "Engine should use connect_args for SSL configuration"
 
 
 if __name__ == '__main__':
