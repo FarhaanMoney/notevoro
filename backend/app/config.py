@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str
-    cors_origins: str = "https://notevoro.com,https://www.notevoro.com,http://localhost:3000,http://localhost:3001,http://127.0.0.1:*"
+    cors_origins: str = "https://notevoro.com,https://www.notevoro.com,http://127.0.0.1:1430"
     auth_provider: str = "local"
     local_auth_secret: str = "change-me"
     cognito_region: str = ""
