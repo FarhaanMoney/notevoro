@@ -23,6 +23,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure database engine is initialized before using it
+    from app.db import ensure_engine_initialized
+    await ensure_engine_initialized()
+    
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # ---- idempotent additive migrations (Aurora-compatible) --------
