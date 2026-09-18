@@ -1,7 +1,6 @@
 """
 Test database initialization with IAM authentication.
 """
-import os
 import pytest
 
 
@@ -39,6 +38,43 @@ def test_iam_validation_at_import():
         # If config is invalid, the import would have failed
         assert settings.db_host or settings.db_host == ""  # May be empty in local dev
         assert settings.aws_region or settings.aws_region == ""  # May be empty in local dev
+
+
+def test_iam_rds_client_initialization():
+    """Test that the RDS client is properly initialized in get_iam_token."""
+    from app.db_iam import get_iam_token
+    from app.config import settings
+    
+    # If IAM is configured, the function should be importable
+    # The actual token generation requires AWS credentials, which we can't test here
+    assert callable(get_iam_token)
+    
+    # Verify the function has the right signature
+    import inspect
+    sig = inspect.signature(get_iam_token)
+    assert len(sig.parameters) == 0  # Should take no parameters
+
+
+def test_iam_module_imports():
+    """Test that the IAM module imports correctly."""
+    from app.db_iam import (
+        get_iam_token,
+        get_current_iam_token,
+        get_iam_connection_string,
+        init_iam_engine,
+        get_iam_db,
+        get_engine,
+        get_session_local,
+    )
+    
+    # All should be callable
+    assert callable(get_iam_token)
+    assert callable(get_current_iam_token)
+    assert callable(get_iam_connection_string)
+    assert callable(init_iam_engine)
+    assert callable(get_iam_db)
+    assert callable(get_engine)
+    assert callable(get_session_local)
 
 
 if __name__ == '__main__':

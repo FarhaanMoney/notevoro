@@ -35,7 +35,7 @@ def get_iam_token() -> str:
     rds_client = boto3.client('rds', region_name=settings.aws_region)
     
     # Generate token for Aurora PostgreSQL
-    token = rds.generate_db_auth_token(
+    token = rds_client.generate_db_auth_token(
         DBHostname=settings.db_host,
         Port=int(settings.db_port),
         DBUsername=settings.db_username,
