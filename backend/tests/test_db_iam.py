@@ -117,5 +117,41 @@ def test_iam_ssl_configuration():
     assert "connect_args" in engine_source, "Engine should use connect_args for SSL configuration"
 
 
+def test_iam_token_is_passed_as_password():
+    """Test that IAM token is passed as the password in connection string."""
+    from app.db_iam import get_iam_connection_string
+    from app.config import settings
+    
+    if not settings.using_iam_auth:
+        return  # Skip test if IAM is not configured
+    
+    import inspect
+    connection_string_source = inspect.getsource(get_iam_connection_string)
+    
+    # Verify the connection string uses the token as password
+    assert "token" in connection_string_source, "Connection string should use token as password"
+    assert f"{settings.db_username}:" in connection_string_source, "Connection string should use db_username as username"
+    assert "await get_current_iam_token()" in connection_string_source, "Connection string should call get_current_iam_token()"
+
+
+def test_iam_token_generation_parameters():
+    """Test that IAM token generation uses correct parameters."""
+    from app.db_iam import get_iam_token
+    from app.config import settings
+    
+    if not settings.using_iam_auth:
+        return  # Skip test if IAM is not configured
+    
+    import inspect
+    token_source = inspect.getsource(get_iam_token)
+    
+    # Verify the token generation uses the correct parameters
+    assert "generate_db_auth_token" in token_source, "Should use generate_db_auth_token"
+    assert "DBHostname=settings.db_host" in token_source, "Should use settings.db_host as DBHostname"
+    assert "Port=int(settings.db_port)" in token_source, "Should use settings.db_port as Port"
+    assert "DBUsername=settings.db_username" in token_source, "Should use settings.db_username as DBUsername"
+    assert "settings.aws_region" in token_source, "Should use settings.aws_region for RDS client"
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

@@ -32,9 +32,13 @@ def get_iam_token() -> str:
     if not settings.aws_region:
         raise ValueError("AWS_REGION is required for IAM authentication")
     
+    if not settings.db_username:
+        raise ValueError("DB_USERNAME is required for IAM authentication")
+    
     rds_client = boto3.client('rds', region_name=settings.aws_region)
     
     # Generate token for Aurora PostgreSQL
+    # The token must be generated for the exact same hostname that will be used in the connection
     token = rds_client.generate_db_auth_token(
         DBHostname=settings.db_host,
         Port=int(settings.db_port),
